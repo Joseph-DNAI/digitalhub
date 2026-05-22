@@ -1,0 +1,25 @@
+{
+  "name": "digitalhub",
+  "version": "1.0.0",
+  "description": "Plataforma de entrega automática de produtos digitais integrada ao Kiwify e Yampi",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "multer": "^2.0.0",
+    "nodemailer": "^6.9.8",
+    "dotenv": "^16.4.1",
+    "lowdb": "1.0.0",
+    "express-rate-limit": "^7.1.5",
+    "helmet": "^7.1.0",
+    "morgan": "^1.10.0",
+    "winston": "^3.11.0",
+    "uuid": "^11.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.3"
+  }
+}
