@@ -1,114 +1,57 @@
 // src/services/emailService.js
-// Serviço de envio de email com PDF em anexo via Nodemailer
-
-const nodemailer = require('nodemailer');
 const fs = require('fs');
-const path = require('path');
 const logger = require('../config/logger');
 
-// ─── Criação do transporter ───────────────────────────────────────────────────
-
-function createTransporter() {
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS
-    },
-    tls: {
-      rejectUnauthorized: false
-    }
-  });
-}
-
-// ─── Substitui variáveis no template ─────────────────────────────────────────
+const RESEND_API_KEY = process.env.RESEND_API_KEY || process.env.SMTP_PASS;
+const FROM_NAME     = process.env.EMAIL_FROM_NAME    || 'Minha Loja Digital';
+const FROM_ADDRESS  = process.env.EMAIL_FROM_ADDRESS || 'onboarding@resend.dev';
 
 function renderTemplate(template, vars) {
-  const defaultTemplate = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-      <div style="background: #1D9E75; padding: 30px 24px; border-radius: 8px 8px 0 0;">
-        <h1 style="color: #fff; margin: 0; font-size: 22px;">🎉 Seu produto chegou!</h1>
-      </div>
-      <div style="background: #f9f9f9; padding: 28px 24px; border-radius: 0 0 8px 8px; border: 1px solid #e5e5e5;">
-        <p style="font-size: 16px;">Olá, <strong>{{nome}}</strong>!</p>
-        <p style="font-size: 15px; line-height: 1.6;">
-          Sua compra de <strong>{{produto}}</strong> foi confirmada com sucesso.<br>
-          O arquivo está disponível em anexo neste email.
-        </p>
-        <div style="background: #E1F5EE; border-left: 4px solid #1D9E75; padding: 14px 18px; border-radius: 4px; margin: 20px 0;">
-          <p style="margin: 0; font-size: 14px; color: #085041;">
-            📎 <strong>{{arquivo}}</strong> está em anexo. Salve em um local seguro!
-          </p>
-        </div>
-        <p style="font-size: 13px; color: #888; margin-top: 24px;">
-          Pedido: <code>{{pedido}}</code><br>
-          Em caso de dúvidas, responda este email.
-        </p>
-        <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 20px 0;" />
-        <p style="font-size: 12px; color: #aaa; margin: 0;">
-          Obrigado pela sua compra! — ${process.env.EMAIL_FROM_NAME || 'Loja Digital'}
-        </p>
-      </div>
-    </div>
-  `;
-
-  const html = template || defaultTemplate;
-
-  return html
-    .replace(/{{nome}}/g, vars.nome || 'Cliente')
+  const defaultTemplate = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#333;"><div style="background:#1D9E75;padding:30px 24px;border-radius:8px 8px 0 0;"><h1 style="color:#fff;margin:0;font-size:22px;">🎉 Seu produto chegou!</h1></div><div style="background:#f9f9f9;padding:28px 24px;border-radius:0 0 8px 8px;border:1px solid #e5e5e5;"><p style="font-size:16px;">Olá, <strong>{{nome}}</strong>!</p><p style="font-size:15px;line-height:1.6;">Sua compra de <strong>{{produto}}</strong> foi confirmada.<br>O arquivo está em anexo.</p><p style="font-size:13px;color:#888;">Pedido: <code>{{pedido}}</code></p></div></div>`;
+  return (template || defaultTemplate)
+    .replace(/{{nome}}/g,    vars.nome    || 'Cliente')
     .replace(/{{produto}}/g, vars.produto || 'Produto')
     .replace(/{{arquivo}}/g, vars.arquivo || 'arquivo.pdf')
-    .replace(/{{email}}/g, vars.email || '')
-    .replace(/{{pedido}}/g, vars.pedido || '');
+    .replace(/{{email}}/g,   vars.email   || '')
+    .replace(/{{pedido}}/g,  vars.pedido  || '');
 }
-
-// ─── Envio do email com PDF em anexo ─────────────────────────────────────────
 
 async function sendProductEmail({ buyerEmail, buyerName, productName, filePath, fileName, emailTemplate, orderId }) {
-  const transporter = createTransporter();
+  if (!RESEND_API_KEY) throw new Error('RESEND_API_KEY não configurada');
+  if (!filePath || !fs.existsSync(filePath)) throw new Error(`Arquivo não encontrado: ${filePath}`);
 
-  // Verifica se o arquivo existe
-  if (!filePath || !fs.existsSync(filePath)) {
-    throw new Error(`Arquivo não encontrado: ${filePath}`);
-  }
+  const htmlBody   = renderTemplate(emailTemplate, { nome: buyerName || buyerEmail, produto: productName, arquivo: fileName, email: buyerEmail, pedido: orderId });
+  const fileBase64 = fs.readFileSync(filePath).toString('base64');
 
-  const htmlBody = renderTemplate(emailTemplate, {
-    nome: buyerName || buyerEmail,
-    produto: productName,
-    arquivo: fileName,
-    email: buyerEmail,
-    pedido: orderId
+  logger.info(`Enviando email via Resend para ${buyerEmail} — produto: ${productName}`);
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method:  'POST',
+    headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from:        `${FROM_NAME} <${FROM_ADDRESS}>`,
+      to:          [buyerEmail],
+      subject:     `✅ Seu produto "${productName}" está aqui!`,
+      html:        htmlBody,
+      attachments: [{ filename: fileName, content: fileBase64 }]
+    })
   });
 
-  const mailOptions = {
-    from: `"${process.env.EMAIL_FROM_NAME || 'Loja Digital'}" <${process.env.EMAIL_FROM_ADDRESS || process.env.SMTP_USER}>`,
-    to: buyerEmail,
-    subject: `✅ Seu produto "${productName}" está aqui!`,
-    html: htmlBody,
-    attachments: [
-      {
-        filename: fileName,
-        path: filePath,
-        contentType: 'application/pdf'
-      }
-    ]
-  };
+  const result = await response.json();
+  if (!response.ok) throw new Error(`Resend erro: ${JSON.stringify(result)}`);
 
-  logger.info(`Enviando email para ${buyerEmail} — produto: ${productName}`);
-
-  const info = await transporter.sendMail(mailOptions);
-
-  logger.info(`Email enviado com sucesso! MessageId: ${info.messageId}`);
-  return info;
+  logger.info(`✅ Email enviado! ID: ${result.id}`);
+  return result;
 }
 
-// ─── Teste de conexão SMTP ────────────────────────────────────────────────────
-
 async function testSmtpConnection() {
-  const transporter = createTransporter();
-  await transporter.verify();
+  if (!RESEND_API_KEY) throw new Error('RESEND_API_KEY não configurada');
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: `${FROM_NAME} <${FROM_ADDRESS}>`, to: [process.env.SMTP_USER || 'test@test.com'], subject: 'Teste DigitalHub', html: '<p>Funcionando!</p>' })
+  });
+  if (!response.ok) { const err = await response.json(); throw new Error(JSON.stringify(err)); }
   return true;
 }
 
