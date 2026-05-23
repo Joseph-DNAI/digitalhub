@@ -60,6 +60,7 @@ app.use(morgan('combined', { stream: { write: msg => logger.info(msg.trim()) } }
 // ─── Painel frontend estático ─────────────────────────────────────────────────
 
 const publicPath = path.join(__dirname, '..', 'public');
+logger.info(`📁 Procurando painel em: ${publicPath} — existe: ${fs.existsSync(publicPath)}`);
 if (fs.existsSync(publicPath)) {
   app.use(express.static(publicPath));
   logger.info('📁 Painel estático servido em /');
