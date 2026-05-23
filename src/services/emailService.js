@@ -1,14 +1,12 @@
 // src/services/emailService.js
-// Envia email via API HTTP do Resend (sem SMTP, sem bloqueio de porta)
+// Envia email via Resend com PDF buscado do R2
 
-const fs = require('fs');
+const { downloadFileBuffer } = require('./storageService');
 const logger = require('../config/logger');
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || process.env.SMTP_PASS;
-const FROM_NAME     = process.env.EMAIL_FROM_NAME    || 'Minha Loja Digital';
-const FROM_ADDRESS  = process.env.EMAIL_FROM_ADDRESS || 'onboarding@resend.dev';
-
-// ─── Template HTML do email ───────────────────────────────────────────────────
+const FROM_NAME      = process.env.EMAIL_FROM_NAME    || 'Minha Loja Digital';
+const FROM_ADDRESS   = process.env.EMAIL_FROM_ADDRESS || 'onboarding@resend.dev';
 
 function renderTemplate(template, vars) {
   const defaultTemplate = `
@@ -45,15 +43,9 @@ function renderTemplate(template, vars) {
     .replace(/{{pedido}}/g,  vars.pedido  || '');
 }
 
-// ─── Envio via API HTTP do Resend ─────────────────────────────────────────────
-
 async function sendProductEmail({ buyerEmail, buyerName, productName, filePath, fileName, emailTemplate, orderId }) {
   if (!RESEND_API_KEY) throw new Error('RESEND_API_KEY não configurada');
-
-  // Verifica se o arquivo existe
-  if (!filePath || !fs.existsSync(filePath)) {
-    throw new Error(`Arquivo não encontrado: ${filePath}`);
-  }
+  if (!filePath)       throw new Error('Arquivo não configurado para este produto');
 
   const htmlBody = renderTemplate(emailTemplate, {
     nome:    buyerName || buyerEmail,
@@ -63,22 +55,10 @@ async function sendProductEmail({ buyerEmail, buyerName, productName, filePath, 
     pedido:  orderId
   });
 
-  // Lê o PDF e converte para base64
-  const fileBuffer  = fs.readFileSync(filePath);
-  const fileBase64  = fileBuffer.toString('base64');
-
-  const body = {
-    from:    `${FROM_NAME} <${FROM_ADDRESS}>`,
-    to:      [buyerEmail],
-    subject: `✅ Seu produto "${productName}" está aqui!`,
-    html:    htmlBody,
-    attachments: [
-      {
-        filename: fileName,
-        content:  fileBase64
-      }
-    ]
-  };
+  // Busca o arquivo do R2 como buffer
+  logger.info(`Buscando arquivo do R2: ${filePath}`);
+  const fileBuffer = await downloadFileBuffer(filePath);
+  const fileBase64 = fileBuffer.toString('base64');
 
   logger.info(`Enviando email via Resend para ${buyerEmail} — produto: ${productName}`);
 
@@ -88,43 +68,35 @@ async function sendProductEmail({ buyerEmail, buyerName, productName, filePath, 
       'Authorization': `Bearer ${RESEND_API_KEY}`,
       'Content-Type':  'application/json'
     },
-    body: JSON.stringify(body)
-  });
-
-  const result = await response.json();
-
-  if (!response.ok) {
-    throw new Error(`Resend API error: ${JSON.stringify(result)}`);
-  }
-
-  logger.info(`✅ Email enviado com sucesso! ID: ${result.id}`);
-  return result;
-}
-
-// ─── Teste de conexão ─────────────────────────────────────────────────────────
-
-async function testSmtpConnection() {
-  if (!RESEND_API_KEY) throw new Error('RESEND_API_KEY não configurada');
-
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${RESEND_API_KEY}`,
-      'Content-Type':  'application/json'
-    },
     body: JSON.stringify({
-      from:    `${FROM_NAME} <${FROM_ADDRESS}>`,
-      to:      [process.env.SMTP_USER || 'test@test.com'],
-      subject: 'Teste de conexão — DigitalHub',
-      html:    '<p>Conexão funcionando!</p>'
+      from:        `${FROM_NAME} <${FROM_ADDRESS}>`,
+      to:          [buyerEmail],
+      subject:     `✅ Seu produto "${productName}" está aqui!`,
+      html:        htmlBody,
+      attachments: [{ filename: fileName, content: fileBase64 }]
     })
   });
 
-  if (!response.ok) {
-    const err = await response.json();
-    throw new Error(`Resend erro: ${JSON.stringify(err)}`);
-  }
+  const result = await response.json();
+  if (!response.ok) throw new Error(`Resend erro: ${JSON.stringify(result)}`);
 
+  logger.info(`✅ Email enviado! ID: ${result.id}`);
+  return result;
+}
+
+async function testSmtpConnection() {
+  if (!RESEND_API_KEY) throw new Error('RESEND_API_KEY não configurada');
+  const response = await fetch('https://api.resend.com/emails', {
+    method:  'POST',
+    headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from:    `${FROM_NAME} <${FROM_ADDRESS}>`,
+      to:      [process.env.SMTP_USER || 'test@test.com'],
+      subject: 'Teste DigitalHub',
+      html:    '<p>Conexão funcionando!</p>'
+    })
+  });
+  if (!response.ok) { const err = await response.json(); throw new Error(JSON.stringify(err)); }
   return true;
 }
 
