@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DigitalHub — Painel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+<style>
+/* ── Reset & Tokens ─────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:        #0a0a0f;
+  --bg2:       #111118;
+  --bg3:       #18181f;
+  --border:    #22222e;
+  --border2:   #2e2e3e;
+  --accent:    #00e5a0;
+  --accent2:   #00b87a;
+  --accent-dim:#00e5a015;
+  --red:       #ff4f4f;
+  --red-dim:   #ff4f4f18;
+  --yellow:    #ffc94d;
+  --yellow-dim:#ffc94d15;
+  --text:      #f0f0f8;
+  --text2:     #888899;
+  --text3:     #44445a;
+  --radius:    10px;
+  --radius-lg: 16px;
+  --shadow:    0 2px 24px #00000060;
+}
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; }
+
+/* ── Scrollbar ──────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+
+/* ── Layout ─────────────────────────────────────────── */
+.app { display: flex; height: 100vh; overflow: hidden; }
+
+/* ── Sidebar ────────────────────────────────────────── */
+.sidebar {
+  width: 220px; flex-shrink: 0;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  padding: 24px 0;
+  transition: transform .3s;
+}
+.sidebar-logo {
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 20px 24px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+.logo-icon {
+  width: 34px; height: 34px; border-radius: 8px;
+  background: var(--accent); display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.logo-icon i { color: #000; font-size: 18px; }
+.logo-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px; letter-spacing: -.3px; }
+.logo-tag { font-size: 10px; color: var(--text2); margin-top: 1px; font-family: 'DM Mono', monospace; }
+
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 20px; margin: 1px 8px;
+  border-radius: var(--radius); cursor: pointer;
+  color: var(--text2); font-size: 13px; font-weight: 500;
+  transition: all .15s; user-select: none; border: none; background: none; width: calc(100% - 16px); text-align: left;
+}
+.nav-item:hover { color: var(--text); background: var(--bg3); }
+.nav-item.active { color: var(--accent); background: var(--accent-dim); }
+.nav-item i { font-size: 17px; flex-shrink: 0; }
+.nav-section { font-size: 10px; color: var(--text3); padding: 16px 20px 6px; letter-spacing: .08em; text-transform: uppercase; font-family: 'DM Mono', monospace; }
+
+.sidebar-footer {
+  margin-top: auto; padding: 16px 8px 0;
+  border-top: 1px solid var(--border);
+}
+.user-card {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: var(--radius);
+  background: var(--bg3);
+}
+.user-avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--accent-dim); border: 1px solid var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: var(--accent); font-weight: 600;
+}
+.user-name { font-size: 12px; font-weight: 500; }
+.user-role { font-size: 10px; color: var(--text2); font-family: 'DM Mono', monospace; }
+
+/* ── Main ───────────────────────────────────────────── */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+.topbar {
+  height: 56px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 28px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+}
+.topbar-title { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 700; }
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+
+.content { flex: 1; overflow-y: auto; padding: 28px; }
+
+/* ── Sections ───────────────────────────────────────── */
+.section { display: none; }
+.section.active { display: block; animation: fadeIn .2s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── Cards ──────────────────────────────────────────── */
+.card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 20px;
+  margin-bottom: 16px;
+}
+.card-title { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+.card-title i { color: var(--accent); }
+
+/* ── Stats grid ─────────────────────────────────────── */
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+.stat-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 18px 20px;
+  position: relative; overflow: hidden;
+}
+.stat-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: var(--accent);
+}
+.stat-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: .06em; font-family: 'DM Mono', monospace; margin-bottom: 8px; }
+.stat-val { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; }
+.stat-sub { font-size: 11px; color: var(--text2); margin-top: 4px; }
+
+/* ── Buttons ────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: var(--radius);
+  font-size: 13px; font-weight: 500; cursor: pointer; border: none;
+  font-family: 'DM Sans', sans-serif;
+  transition: all .15s;
+}
+.btn-primary { background: var(--accent); color: #000; }
+.btn-primary:hover { background: var(--accent2); }
+.btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border2); }
+.btn-ghost:hover { color: var(--text); border-color: var(--border2); background: var(--bg3); }
+.btn-danger { background: var(--red-dim); color: var(--red); border: 1px solid #ff4f4f30; }
+.btn-danger:hover { background: #ff4f4f25; }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+
+/* ── Forms ──────────────────────────────────────────── */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group.full { grid-column: 1 / -1; }
+.form-label { font-size: 11px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: .06em; font-family: 'DM Mono', monospace; }
+.form-input, .form-select, .form-textarea {
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--radius); padding: 9px 12px;
+  color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif;
+  transition: border-color .15s;
+  width: 100%;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  outline: none; border-color: var(--accent);
+}
+.form-textarea { min-height: 80px; resize: vertical; }
+.form-hint { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; }
+
+/* ── Upload zone ────────────────────────────────────── */
+.upload-zone {
+  border: 1.5px dashed var(--border2); border-radius: var(--radius);
+  padding: 20px; text-align: center; cursor: pointer;
+  transition: all .15s; background: var(--bg3);
+}
+.upload-zone:hover { border-color: var(--accent); background: var(--accent-dim); }
+.upload-zone.has-file { border-color: var(--accent); background: var(--accent-dim); }
+.upload-zone i { font-size: 26px; color: var(--text3); display: block; margin-bottom: 6px; }
+.upload-zone.has-file i { color: var(--accent); }
+.upload-title { font-size: 13px; font-weight: 500; }
+.upload-sub { font-size: 11px; color: var(--text2); margin-top: 3px; font-family: 'DM Mono', monospace; }
+
+/* ── Table ──────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th { font-size: 10px; font-weight: 500; color: var(--text3); text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); text-transform: uppercase; letter-spacing: .07em; font-family: 'DM Mono', monospace; }
+tbody td { padding: 12px 14px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: var(--bg3); }
+
+/* ── Badges ─────────────────────────────────────────── */
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 99px; font-size: 11px; font-weight: 500; font-family: 'DM Mono', monospace; }
+.badge-green  { background: #00e5a018; color: var(--accent); border: 1px solid #00e5a030; }
+.badge-red    { background: var(--red-dim); color: var(--red); border: 1px solid #ff4f4f30; }
+.badge-yellow { background: var(--yellow-dim); color: var(--yellow); border: 1px solid #ffc94d30; }
+.badge-gray   { background: var(--bg3); color: var(--text2); border: 1px solid var(--border2); }
+
+/* ── Product cards ──────────────────────────────────── */
+.products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.product-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 18px;
+  transition: border-color .15s;
+}
+.product-card:hover { border-color: var(--border2); }
+.product-thumb {
+  width: 100%; height: 90px; border-radius: var(--radius);
+  background: var(--accent-dim); border: 1px solid #00e5a020;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 14px;
+}
+.product-thumb i { font-size: 32px; color: var(--accent); }
+.product-name { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.product-desc { font-size: 12px; color: var(--text2); margin-bottom: 10px; min-height: 32px; }
+.product-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.product-price { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; color: var(--accent); }
+.product-ids { font-size: 10px; color: var(--text3); font-family: 'DM Mono', monospace; margin-bottom: 12px; line-height: 1.6; }
+
+/* ── Log ────────────────────────────────────────────── */
+.log-box {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius); font-family: 'DM Mono', monospace;
+  font-size: 11px; padding: 14px; max-height: 300px; overflow-y: auto;
+}
+.log-entry { display: flex; gap: 10px; margin-bottom: 5px; line-height: 1.5; }
+.log-time { color: var(--text3); white-space: nowrap; }
+.log-ok  { color: var(--accent); }
+.log-err { color: var(--red); }
+.log-inf { color: #60a5fa; }
+.log-warn{ color: var(--yellow); }
+
+/* ── Webhook URL box ────────────────────────────────── */
+.url-box {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 10px 14px; margin-bottom: 10px;
+}
+.url-box code { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--accent); flex: 1; word-break: break-all; }
+
+/* ── Modal ──────────────────────────────────────────── */
+.modal-bg {
+  display: none; position: fixed; inset: 0;
+  background: #00000088; backdrop-filter: blur(4px);
+  align-items: center; justify-content: center; z-index: 100;
+}
+.modal-bg.open { display: flex; }
+.modal {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: var(--radius-lg); padding: 24px;
+  width: 90%; max-width: 540px; max-height: 90vh; overflow-y: auto;
+  animation: fadeIn .2s ease;
+}
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.modal-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; }
+
+/* ── Login ──────────────────────────────────────────── */
+.login-screen {
+  position: fixed; inset: 0; background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200;
+}
+.login-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 40px;
+  width: 380px;
+}
+.login-logo { text-align: center; margin-bottom: 32px; }
+.login-logo .logo-icon { width: 48px; height: 48px; border-radius: 12px; background: var(--accent); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px; }
+.login-logo .logo-icon i { font-size: 24px; color: #000; }
+.login-logo h1 { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; }
+.login-logo p { font-size: 12px; color: var(--text2); margin-top: 4px; font-family: 'DM Mono', monospace; }
+.login-error { background: var(--red-dim); border: 1px solid #ff4f4f30; border-radius: var(--radius); padding: 10px 14px; font-size: 12px; color: var(--red); margin-bottom: 14px; display: none; }
+
+/* ── Toggle ─────────────────────────────────────────── */
+.toggle-wrap { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.toggle-wrap:last-child { border-bottom: none; }
+.toggle-info .tw-title { font-size: 13px; font-weight: 500; }
+.toggle-info .tw-desc  { font-size: 11px; color: var(--text2); margin-top: 2px; font-family: 'DM Mono', monospace; }
+.toggle { width: 40px; height: 22px; background: var(--border2); border-radius: 99px; position: relative; cursor: pointer; border: none; transition: background .2s; flex-shrink: 0; }
+.toggle.on { background: var(--accent); }
+.toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: left .2s; }
+.toggle.on::after { left: 21px; }
+
+/* ── Misc ───────────────────────────────────────────── */
+.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+.page-title { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; }
+.page-sub { font-size: 12px; color: var(--text2); margin-top: 2px; font-family: 'DM Mono', monospace; }
+.divider { height: 1px; background: var(--border); margin: 20px 0; }
+.empty { text-align: center; padding: 48px 20px; }
+.empty i { font-size: 40px; color: var(--text3); display: block; margin-bottom: 12px; }
+.empty p { font-size: 13px; color: var(--text2); }
+.mono { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text2); }
+.flex { display: flex; align-items: center; gap: 8px; }
+.ml-auto { margin-left: auto; }
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN ──────────────────────────────────────────── -->
+<div class="login-screen" id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-icon"><i class="ti ti-bolt"></i></div>
+      <h1>DigitalHub</h1>
+      <p>painel de controle</p>
+    </div>
+    <div class="login-error" id="login-error">Usuário ou senha incorretos.</div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label class="form-label">Usuário</label>
+      <input type="text" class="form-input" id="login-user" placeholder="admin" />
+    </div>
+    <div class="form-group" style="margin-bottom:20px;">
+      <label class="form-label">Senha</label>
+      <input type="password" class="form-input" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" />
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doLogin()">
+      <i class="ti ti-login"></i> Entrar
+    </button>
+  </div>
+</div>
+
+<!-- ── APP ────────────────────────────────────────────── -->
+<div class="app" id="app" style="display:none;">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon"><i class="ti ti-bolt"></i></div>
+      <div>
+        <div class="logo-name">DigitalHub</div>
+        <div class="logo-tag">v1.0 · painel</div>
+      </div>
+    </div>
+
+    <div class="nav-section">Principal</div>
+    <button class="nav-item active" onclick="switchTab('dashboard',this)">
+      <i class="ti ti-layout-dashboard"></i> Dashboard
+    </button>
+    <button class="nav-item" onclick="switchTab('produtos',this)">
+      <i class="ti ti-package"></i> Produtos
+    </button>
+    <button class="nav-item" onclick="switchTab('entregas',this)">
+      <i class="ti ti-mail-forward"></i> Entregas
+    </button>
+
+    <div class="nav-section">Sistema</div>
+    <button class="nav-item" onclick="switchTab('webhook',this)">
+      <i class="ti ti-webhook"></i> Webhook
+    </button>
+    <button class="nav-item" onclick="switchTab('config',this)">
+      <i class="ti ti-settings"></i> Configurações
+    </button>
+
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="user-avatar" id="user-avatar">A</div>
+        <div>
+          <div class="user-name" id="user-name-label">Admin</div>
+          <div class="user-role">administrador</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" style="margin-left:auto;padding:4px 8px;" onclick="doLogout()" title="Sair">
+          <i class="ti ti-logout" style="font-size:14px;"></i>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="topbar-title">Dashboard</div>
+      <div class="topbar-right">
+        <span class="mono" id="api-status" style="color:var(--accent);">● conectado</span>
+        <button class="btn btn-primary btn-sm" id="topbar-action" onclick="openModal()" style="display:none;">
+          <i class="ti ti-plus"></i> Novo produto
+        </button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ── DASHBOARD ── -->
+      <div id="tab-dashboard" class="section active">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Dashboard</div>
+            <div class="page-sub">visão geral do sistema</div>
+          </div>
+        </div>
+        <div class="stats-grid" id="stats-grid">
+          <div class="stat-card"><div class="stat-label">Vendas hoje</div><div class="stat-val" id="s-today">—</div><div class="stat-sub">entregas no dia</div></div>
+          <div class="stat-card"><div class="stat-label">Total entregues</div><div class="stat-val" id="s-delivered">—</div><div class="stat-sub">emails enviados</div></div>
+          <div class="stat-card"><div class="stat-label">Falhas</div><div class="stat-val" id="s-failed" style="color:var(--red);">—</div><div class="stat-sub">necessitam atenção</div></div>
+          <div class="stat-card"><div class="stat-label">Produtos</div><div class="stat-val" id="s-products">—</div><div class="stat-sub">cadastrados</div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><i class="ti ti-history"></i> Últimas entregas</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Comprador</th><th>Produto</th><th>Plataforma</th><th>Data</th><th>Status</th></tr></thead>
+              <tbody id="recent-deliveries"><tr><td colspan="5" style="text-align:center;color:var(--text3);padding:24px;">Carregando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PRODUTOS ── -->
+      <div id="tab-produtos" class="section">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Produtos</div>
+            <div class="page-sub">gerencie seus produtos digitais</div>
+          </div>
+          <button class="btn btn-primary" onclick="openModal()">
+            <i class="ti ti-plus"></i> Novo produto
+          </button>
+        </div>
+        <div class="products-grid" id="products-grid">
+          <div style="grid-column:1/-1;text-align:center;color:var(--text3);padding:40px;">Carregando...</div>
+        </div>
+      </div>
+
+      <!-- ── ENTREGAS ── -->
+      <div id="tab-entregas" class="section">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Entregas</div>
+            <div class="page-sub">histórico completo de envios</div>
+          </div>
+          <button class="btn btn-ghost" onclick="loadDeliveries()">
+            <i class="ti ti-refresh"></i> Atualizar
+          </button>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Comprador</th><th>Produto</th><th>Plataforma</th><th>Pedido</th><th>Data</th><th>Status</th></tr></thead>
+              <tbody id="deliveries-table"><tr><td colspan="6" style="text-align:center;color:var(--text3);padding:24px;">Carregando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── WEBHOOK ── -->
+      <div id="tab-webhook" class="section">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Webhook</div>
+            <div class="page-sub">integração com Kiwify e Yampi</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="ti ti-link"></i> URLs do Webhook</div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">Cole estas URLs nos painéis das plataformas:</div>
+          <div style="margin-bottom:8px;font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">KIWIFY</div>
+          <div class="url-box">
+            <code id="url-kiwify">—</code>
+            <button class="btn btn-ghost btn-sm" onclick="copyUrl('url-kiwify')"><i class="ti ti-copy"></i></button>
+          </div>
+          <div style="margin-bottom:8px;margin-top:14px;font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">YAMPI</div>
+          <div class="url-box">
+            <code id="url-yampi">—</code>
+            <button class="btn btn-ghost btn-sm" onclick="copyUrl('url-yampi')"><i class="ti ti-copy"></i></button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="ti ti-terminal"></i> Log de eventos</div>
+          <div class="log-box" id="webhook-log">
+            <div style="color:var(--text3);">Carregando logs...</div>
+          </div>
+          <div style="margin-top:12px;display:flex;gap:8px;">
+            <button class="btn btn-ghost btn-sm" onclick="loadLogs()"><i class="ti ti-refresh"></i> Atualizar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── CONFIG ── -->
+      <div id="tab-config" class="section">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Configurações</div>
+            <div class="page-sub">ajustes do sistema</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="ti ti-mail"></i> Email (SMTP/Resend)</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Serviço</label>
+              <select class="form-select">
+                <option>Resend API (recomendado)</option>
+                <option>Gmail SMTP</option>
+                <option>Outro SMTP</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nome do remetente</label>
+              <input type="text" class="form-input" placeholder="Minha Loja Digital" />
+            </div>
+            <div class="form-group full">
+              <label class="form-label">API Key / Senha</label>
+              <input type="password" class="form-input" placeholder="re_xxxxxxxxxxxx" />
+            </div>
+          </div>
+          <div style="margin-top:16px;display:flex;gap:8px;">
+            <button class="btn btn-primary" onclick="testEmail()"><i class="ti ti-send"></i> Testar conexão</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><i class="ti ti-shield"></i> Segurança</div>
+          <div class="toggle-wrap">
+            <div class="toggle-info">
+              <div class="tw-title">Verificar assinatura do webhook</div>
+              <div class="tw-desc">Valida token secreto em cada requisição</div>
+            </div>
+            <button class="toggle on" onclick="this.classList.toggle('on')"></button>
+          </div>
+          <div class="toggle-wrap">
+            <div class="toggle-info">
+              <div class="tw-title">Reenvio automático em falha</div>
+              <div class="tw-desc">Tenta reenviar até 3 vezes</div>
+            </div>
+            <button class="toggle on" onclick="this.classList.toggle('on')"></button>
+          </div>
+          <div class="toggle-wrap">
+            <div class="toggle-info">
+              <div class="tw-title">Notificar admin em falha</div>
+              <div class="tw-desc">Envia alerta por email em caso de erro</div>
+            </div>
+            <button class="toggle" onclick="this.classList.toggle('on')"></button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><i class="ti ti-key"></i> Alterar senha do painel</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Nova senha</label>
+              <input type="password" class="form-input" id="new-pass" placeholder="••••••••" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Confirmar senha</label>
+              <input type="password" class="form-input" id="confirm-pass" placeholder="••••••••" />
+            </div>
+          </div>
+          <button class="btn btn-primary" style="margin-top:16px;" onclick="changePass()"><i class="ti ti-lock"></i> Salvar senha</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL PRODUTO ── -->
+<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Novo produto</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label class="form-label">Nome do produto *</label>
+        <input type="text" class="form-input" id="m-name" placeholder="Ex: Ebook Marketing Digital" />
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Descrição</label>
+        <textarea class="form-textarea" id="m-desc" placeholder="Descrição do produto..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Preço (R$)</label>
+        <input type="number" class="form-input" id="m-price" placeholder="97.00" step="0.01" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="form-select" id="m-status">
+          <option value="active">Ativo</option>
+          <option value="inactive">Inativo</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">ID Kiwify</label>
+        <input type="text" class="form-input" id="m-kiwify" placeholder="prod_xxxxxxxx" />
+        <div class="form-hint">Kiwify → Produto → URL</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">ID Yampi</label>
+        <input type="text" class="form-input" id="m-yampi" placeholder="123456" />
+        <div class="form-hint">Yampi → Produto → ID</div>
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Arquivo PDF / Ebook</label>
+        <div class="upload-zone" id="upload-zone" onclick="document.getElementById('m-file').click()">
+          <i class="ti ti-cloud-upload" id="upload-icon"></i>
+          <div class="upload-title" id="upload-title">Clique para selecionar</div>
+          <div class="upload-sub" id="upload-sub">PDF, EPUB até 50MB</div>
+        </div>
+        <input type="file" id="m-file" accept=".pdf,.epub,.zip" style="display:none" onchange="handleFileSelect(this)" />
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Template de email (opcional)</label>
+        <textarea class="form-textarea" id="m-template" placeholder="Olá {{nome}}! Seu produto {{produto}} está em anexo. Pedido: {{pedido}}"></textarea>
+        <div class="form-hint">Variáveis: {{nome}} {{produto}} {{arquivo}} {{email}} {{pedido}}</div>
+      </div>
+    </div>
+    <input type="hidden" id="m-editing-id" value="" />
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveProduct()"><i class="ti ti-device-floppy"></i> Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Config ──────────────────────────────────────────────────────
+const API = localStorage.getItem('dh_api') || '';
+let currentUser = null;
+
+// Credenciais simples (em produção, mover para o backend)
+const CREDENTIALS = JSON.parse(localStorage.getItem('dh_creds') || '{"admin":"digitalhub2024"}');
+
+// ── Login ────────────────────────────────────────────────────────
+function doLogin() {
+  const user = document.getElementById('login-user').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const err  = document.getElementById('login-error');
+
+  if (CREDENTIALS[user] === pass) {
+    currentUser = user;
+    localStorage.setItem('dh_user', user);
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    document.getElementById('user-name-label').textContent = user;
+    document.getElementById('user-avatar').textContent = user[0].toUpperCase();
+    err.style.display = 'none';
+    initApp();
+  } else {
+    err.style.display = 'block';
+    document.getElementById('login-pass').value = '';
+  }
+}
+
+function doLogout() {
+  localStorage.removeItem('dh_user');
+  currentUser = null;
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+function changePass() {
+  const np = document.getElementById('new-pass').value;
+  const cp = document.getElementById('confirm-pass').value;
+  if (!np) return alert('Digite a nova senha');
+  if (np !== cp) return alert('Senhas não conferem');
+  CREDENTIALS[currentUser] = np;
+  localStorage.setItem('dh_creds', JSON.stringify(CREDENTIALS));
+  alert('Senha alterada com sucesso!');
+  document.getElementById('new-pass').value = '';
+  document.getElementById('confirm-pass').value = '';
+}
+
+// Auto-login se já estiver logado
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem('dh_user');
+  if (saved && CREDENTIALS[saved]) {
+    currentUser = saved;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    document.getElementById('user-name-label').textContent = saved;
+    document.getElementById('user-avatar').textContent = saved[0].toUpperCase();
+    initApp();
+  }
+});
+
+// ── API URL config ───────────────────────────────────────────────
+function getApiUrl() {
+  return localStorage.getItem('dh_api_url') || 'https://digitalhub-production.up.railway.app';
+}
+
+async function apiFetch(path, opts = {}) {
+  const url = getApiUrl() + path;
+  const res  = await fetch(url, opts);
+  return res.json();
+}
+
+// ── Init ─────────────────────────────────────────────────────────
+function initApp() {
+  const base = getApiUrl();
+  document.getElementById('url-kiwify').textContent = base + '/api/webhook/kiwify';
+  document.getElementById('url-yampi').textContent  = base + '/api/webhook/yampi';
+  loadDashboard();
+}
+
+// ── Tabs ─────────────────────────────────────────────────────────
+const TAB_TITLES = {
+  dashboard: 'Dashboard',
+  produtos:  'Produtos',
+  entregas:  'Entregas',
+  webhook:   'Webhook',
+  config:    'Configurações'
+};
+
+function switchTab(tab, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  if (btn) btn.classList.add('active');
+  document.getElementById('topbar-title').textContent = TAB_TITLES[tab] || tab;
+
+  if (tab === 'dashboard') loadDashboard();
+  if (tab === 'produtos')  loadProducts();
+  if (tab === 'entregas')  loadDeliveries();
+  if (tab === 'webhook')   loadLogs();
+}
+
+// ── Dashboard ────────────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    const [stats, products, deliveries] = await Promise.all([
+      apiFetch('/api/deliveries/stats'),
+      apiFetch('/api/products'),
+      apiFetch('/api/deliveries?limit=8')
+    ]);
+
+    document.getElementById('s-today').textContent     = stats.data?.today ?? '—';
+    document.getElementById('s-delivered').textContent = stats.data?.delivered ?? '—';
+    document.getElementById('s-failed').textContent    = stats.data?.failed ?? '—';
+    document.getElementById('s-products').textContent  = products.data?.length ?? '—';
+
+    renderRecentDeliveries(deliveries.data || []);
+  } catch (e) {
+    document.getElementById('api-status').textContent = '● desconectado';
+    document.getElementById('api-status').style.color = 'var(--red)';
+  }
+}
+
+function renderRecentDeliveries(items) {
+  const tbody = document.getElementById('recent-deliveries');
+  if (!items.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:24px;">Nenhuma entrega ainda</td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map(d => `
+    <tr>
+      <td>${d.buyer_email}</td>
+      <td>${d.product_name || '—'}</td>
+      <td><span class="badge badge-gray">${d.platform}</span></td>
+      <td class="mono">${formatDate(d.created_at)}</td>
+      <td>${statusBadge(d.status)}</td>
+    </tr>
+  `).join('');
+}
+
+// ── Produtos ─────────────────────────────────────────────────────
+async function loadProducts() {
+  const grid = document.getElementById('products-grid');
+  grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--text3);padding:40px;">Carregando...</div>';
+  try {
+    const res = await apiFetch('/api/products');
+    const items = res.data || [];
+    if (!items.length) {
+      grid.innerHTML = `<div style="grid-column:1/-1;" class="empty"><i class="ti ti-package"></i><p>Nenhum produto cadastrado ainda</p></div>`;
+      return;
+    }
+    grid.innerHTML = items.map(p => `
+      <div class="product-card">
+        <div class="product-thumb"><i class="ti ti-file-type-pdf"></i></div>
+        <div class="product-name">${p.name}</div>
+        <div class="product-desc">${p.description || 'Sem descrição'}</div>
+        <div class="product-meta">
+          <span class="product-price">R$ ${parseFloat(p.price||0).toFixed(2)}</span>
+          ${statusBadge(p.status === 'active' ? 'delivered' : 'failed', p.status === 'active' ? 'Ativo' : 'Inativo')}
+        </div>
+        <div class="product-ids">
+          ${p.kiwify_id ? `<div>🟢 Kiwify: ${p.kiwify_id}</div>` : ''}
+          ${p.yampi_id  ? `<div>🔵 Yampi: ${p.yampi_id}</div>`  : ''}
+          ${p.file_name ? `<div>📎 ${p.file_name}</div>`         : '<div style="color:var(--red)">⚠️ Sem arquivo PDF</div>'}
+        </div>
+        <div class="flex">
+          <button class="btn btn-ghost btn-sm" onclick="editProduct(${JSON.stringify(p).replace(/"/g,'&quot;')})">
+            <i class="ti ti-edit"></i> Editar
+          </button>
+          <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">
+            <i class="ti ti-trash"></i>
+          </button>
+        </div>
+      </div>
+    `).join('') + `
+      <div class="product-card" style="border:1.5px dashed var(--border2);display:flex;align-items:center;justify-content:center;min-height:200px;cursor:pointer;" onclick="openModal()">
+        <div style="text-align:center;">
+          <i class="ti ti-plus" style="font-size:28px;color:var(--text3);display:block;margin-bottom:8px;"></i>
+          <span style="font-size:13px;color:var(--text2);">Adicionar produto</span>
+        </div>
+      </div>
+    `;
+  } catch(e) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--red);padding:40px;">Erro ao carregar produtos</div>`;
+  }
+}
+
+// ── Entregas ─────────────────────────────────────────────────────
+async function loadDeliveries() {
+  const tbody = document.getElementById('deliveries-table');
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:24px;">Carregando...</td></tr>';
+  try {
+    const res = await apiFetch('/api/deliveries?limit=100');
+    const items = res.data || [];
+    if (!items.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:24px;">Nenhuma entrega ainda</td></tr>';
+      return;
+    }
+    tbody.innerHTML = items.map(d => `
+      <tr>
+        <td>${d.buyer_email}<br><span class="mono">${d.buyer_name||''}</span></td>
+        <td>${d.product_name||'—'}</td>
+        <td><span class="badge badge-gray">${d.platform}</span></td>
+        <td class="mono">${d.platform_order_id||'—'}</td>
+        <td class="mono">${formatDate(d.created_at)}</td>
+        <td>${statusBadge(d.status)}</td>
+      </tr>
+    `).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--red);padding:24px;">Erro ao carregar</td></tr>';
+  }
+}
+
+// ── Logs ─────────────────────────────────────────────────────────
+async function loadLogs() {
+  const box = document.getElementById('webhook-log');
+  try {
+    const res = await apiFetch('/api/deliveries/logs');
+    const items = res.data || [];
+    if (!items.length) {
+      box.innerHTML = '<div style="color:var(--text3);">Nenhum evento registrado</div>';
+      return;
+    }
+    box.innerHTML = items.map(l => `
+      <div class="log-entry">
+        <span class="log-time">${formatDate(l.created_at)}</span>
+        <span class="${l.status==='error'?'log-err':l.status==='processed'?'log-ok':'log-inf'}">${l.status==='error'?'✗':l.status==='processed'?'✓':'→'}</span>
+        <span>[${l.platform}] ${l.event_type} — ${l.status}</span>
+      </div>
+    `).join('');
+  } catch(e) {
+    box.innerHTML = '<div style="color:var(--red);">Erro ao carregar logs</div>';
+  }
+}
+
+// ── Modal produto ────────────────────────────────────────────────
+function openModal() {
+  document.getElementById('modal-title').textContent = 'Novo produto';
+  document.getElementById('m-name').value = '';
+  document.getElementById('m-desc').value = '';
+  document.getElementById('m-price').value = '';
+  document.getElementById('m-kiwify').value = '';
+  document.getElementById('m-yampi').value = '';
+  document.getElementById('m-template').value = '';
+  document.getElementById('m-editing-id').value = '';
+  document.getElementById('m-file').value = '';
+  document.getElementById('m-status').value = 'active';
+  resetUpload();
+  document.getElementById('modal-bg').classList.add('open');
+}
+
+function editProduct(p) {
+  document.getElementById('modal-title').textContent = 'Editar produto';
+  document.getElementById('m-name').value     = p.name || '';
+  document.getElementById('m-desc').value     = p.description || '';
+  document.getElementById('m-price').value    = p.price || '';
+  document.getElementById('m-kiwify').value   = p.kiwify_id || '';
+  document.getElementById('m-yampi').value    = p.yampi_id || '';
+  document.getElementById('m-template').value = p.email_template || '';
+  document.getElementById('m-editing-id').value = p.id;
+  document.getElementById('m-status').value   = p.status || 'active';
+  if (p.file_name) {
+    document.getElementById('upload-zone').classList.add('has-file');
+    document.getElementById('upload-icon').className = 'ti ti-file-check';
+    document.getElementById('upload-title').textContent = p.file_name;
+    document.getElementById('upload-sub').textContent = 'arquivo atual — selecione outro para substituir';
+  } else {
+    resetUpload();
+  }
+  document.getElementById('modal-bg').classList.add('open');
+}
+
+function closeModal() { document.getElementById('modal-bg').classList.remove('open'); }
+
+function handleFileSelect(input) {
+  if (input.files[0]) {
+    const f = input.files[0];
+    document.getElementById('upload-zone').classList.add('has-file');
+    document.getElementById('upload-icon').className = 'ti ti-file-check';
+    document.getElementById('upload-title').textContent = f.name;
+    document.getElementById('upload-sub').textContent = (f.size/1048576).toFixed(1) + ' MB';
+  }
+}
+
+function resetUpload() {
+  document.getElementById('upload-zone').classList.remove('has-file');
+  document.getElementById('upload-icon').className = 'ti ti-cloud-upload';
+  document.getElementById('upload-title').textContent = 'Clique para selecionar';
+  document.getElementById('upload-sub').textContent = 'PDF, EPUB até 50MB';
+}
+
+async function saveProduct() {
+  const name    = document.getElementById('m-name').value.trim();
+  const kiwify  = document.getElementById('m-kiwify').value.trim();
+  const yampi   = document.getElementById('m-yampi').value.trim();
+  const editId  = document.getElementById('m-editing-id').value;
+  const fileInp = document.getElementById('m-file');
+
+  if (!name) return alert('Informe o nome do produto');
+  if (!kiwify && !yampi) return alert('Informe ao menos o ID Kiwify ou Yampi');
+
+  const btn = event.currentTarget;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader ti-spin"></i> Salvando...';
+
+  try {
+    // 1. Salva/atualiza dados em JSON
+    const body = JSON.stringify({
+      name,
+      description:    document.getElementById('m-desc').value || null,
+      price:          parseFloat(document.getElementById('m-price').value) || 0,
+      kiwify_id:      kiwify || null,
+      yampi_id:       yampi  || null,
+      email_template: document.getElementById('m-template').value || null,
+      status:         document.getElementById('m-status').value
+    });
+
+    let productId = editId;
+
+    if (editId) {
+      await apiFetch(`/api/products/${editId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body });
+    } else {
+      const res = await apiFetch('/api/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
+      productId = res.data?.id;
+    }
+
+    // 2. Se tem arquivo novo, faz upload separado
+    if (fileInp.files[0] && productId) {
+      const fd = new FormData();
+      fd.append('file', fileInp.files[0]);
+      await fetch(getApiUrl() + `/api/products/${productId}`, { method: 'PUT', body: fd });
+    }
+
+    closeModal();
+    loadProducts();
+  } catch(e) {
+    alert('Erro ao salvar: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar';
+  }
+}
+
+async function deleteProduct(id) {
+  if (!confirm('Remover este produto? O arquivo também será deletado.')) return;
+  await apiFetch(`/api/products/${id}`, { method: 'DELETE' });
+  loadProducts();
+}
+
+// ── Email test ───────────────────────────────────────────────────
+async function testEmail() {
+  try {
+    const res = await apiFetch('/api/deliveries/test-smtp', { method: 'POST' });
+    alert(res.success ? '✅ Conexão OK!' : '❌ Erro: ' + res.error);
+  } catch(e) {
+    alert('Erro: ' + e.message);
+  }
+}
+
+// ── Helpers ──────────────────────────────────────────────────────
+function statusBadge(status, label) {
+  const map = {
+    delivered: ['badge-green',  label || 'Entregue'],
+    pending:   ['badge-yellow', label || 'Pendente'],
+    failed:    ['badge-red',    label || 'Falha'],
+    active:    ['badge-green',  label || 'Ativo'],
+    inactive:  ['badge-gray',   label || 'Inativo']
+  };
+  const [cls, txt] = map[status] || ['badge-gray', label || status];
+  return `<span class="badge ${cls}">${txt}</span>`;
+}
+
+function formatDate(dt) {
+  if (!dt) return '—';
+  const d = new Date(dt);
+  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+}
+
+function copyUrl(id) {
+  navigator.clipboard.writeText(document.getElementById(id).textContent).then(() => {
+    const btn = document.querySelector(`#${id} + button`);
+    // feedback visual breve
+  });
+}
+</script>
+</body>
+</html>
