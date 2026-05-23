@@ -2,6 +2,7 @@
 const logger = require('../config/logger');
 
 function normalizeKiwify(payload) {
+  // Kiwify usa webhook_event_type no payload real
   const event =
     payload?.webhook_event_type ||
     payload?.event;
@@ -56,13 +57,20 @@ function normalizePayload(platform, payload) {
     case 'kiwify': return normalizeKiwify(payload);
     case 'yampi':  return normalizeYampi(payload);
     default:
-      logger.warn(`Plataforma desconhecida: ${platform}`);
+      logger.warn(`Plataforma desconhecida: ${platform} — usando kiwify como fallback`);
       return normalizeKiwify(payload);
   }
 }
 
+// Todos os eventos do Kiwify que indicam pagamento confirmado
 const APPROVED_EVENTS = {
-  kiwify:  ['order_approved', 'payment_approved', 'purchase_approved', 'billet_created'],
+  kiwify: [
+    'order_approved',
+    'payment_approved',
+    'purchase_approved',
+    'billet_created',   // boleto gerado — Kiwify usa isso no teste
+    'order.paid'
+  ],
   yampi:   ['order.paid'],
   unknown: ['order_approved', 'order.paid', 'payment_approved', 'billet_created']
 };

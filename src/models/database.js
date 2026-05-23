@@ -1,154 +1,169 @@
 // src/models/database.js
-// Banco de dados JSON usando lowdb — sem compilação, funciona em qualquer sistema
+// Banco de dados PostgreSQL — persistente entre deploys
 
-const low  = require('lowdb');
-const FileSync = require('lowdb/adapters/FileSync');
-const path = require('path');
-const fs   = require('fs');
+const { Pool } = require('pg');
 const { v4: uuidv4 } = require('uuid');
+const logger = require('../config/logger');
 
-const DB_PATH = process.env.DB_PATH || './data/digitalhub.json';
-const dbDir   = path.dirname(DB_PATH);
-if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
 
-// ─── Inicialização ────────────────────────────────────────────────────────────
+// ─── Inicialização — cria tabelas se não existirem ────────────────────────────
 
-const adapter = new FileSync(DB_PATH);
-const db      = low(adapter);
+async function initDatabase() {
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS products (
+        id             TEXT PRIMARY KEY,
+        name           TEXT NOT NULL,
+        description    TEXT,
+        price          NUMERIC DEFAULT 0,
+        kiwify_id      TEXT,
+        yampi_id       TEXT,
+        file_path      TEXT,
+        file_name      TEXT,
+        email_template TEXT,
+        status         TEXT DEFAULT 'active',
+        created_at     TIMESTAMP DEFAULT NOW(),
+        updated_at     TIMESTAMP DEFAULT NOW()
+      );
 
-// Estrutura padrão do banco
-db.defaults({
-  products:     [],
-  deliveries:   [],
-  webhook_logs: []
-}).write();
+      CREATE TABLE IF NOT EXISTS deliveries (
+        id                TEXT PRIMARY KEY,
+        product_id        TEXT NOT NULL,
+        platform          TEXT DEFAULT 'unknown',
+        platform_order_id TEXT,
+        buyer_name        TEXT,
+        buyer_email       TEXT NOT NULL,
+        status            TEXT DEFAULT 'pending',
+        attempts          INTEGER DEFAULT 0,
+        error_message     TEXT,
+        delivered_at      TIMESTAMP,
+        created_at        TIMESTAMP DEFAULT NOW()
+      );
 
-function initDatabase() {
-  console.log('✅ Banco de dados iniciado:', DB_PATH);
-  return Promise.resolve(db);
+      CREATE TABLE IF NOT EXISTS webhook_logs (
+        id         TEXT PRIMARY KEY,
+        platform   TEXT DEFAULT 'unknown',
+        event_type TEXT,
+        payload    TEXT,
+        status     TEXT,
+        ip         TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    logger.info('✅ Banco de dados PostgreSQL iniciado');
+  } finally {
+    client.release();
+  }
 }
 
-// ─── Helper: timestamp ────────────────────────────────────────────────────────
+// ─── Helper ───────────────────────────────────────────────────────────────────
 
-function now() {
-  return new Date().toISOString().replace('T', ' ').slice(0, 19);
+async function query(sql, params = []) {
+  const result = await pool.query(sql, params);
+  return result.rows;
+}
+
+async function queryOne(sql, params = []) {
+  const rows = await query(sql, params);
+  return rows[0] || null;
 }
 
 // ─── Produtos ─────────────────────────────────────────────────────────────────
 
 const products = {
-  create(data) {
-    const record = {
-      id:             uuidv4(),
-      name:           data.name,
-      description:    data.description    || null,
-      price:          data.price          || 0,
-      kiwify_id:      data.kiwify_id      || null,
-      yampi_id:       data.yampi_id       || null,
-      file_path:      data.file_path      || null,
-      file_name:      data.file_name      || null,
-      email_template: data.email_template || null,
-      status:         data.status         || 'active',
-      created_at:     now(),
-      updated_at:     now()
-    };
-    db.get('products').push(record).write();
-    return record;
-  },
-
-  update(id, data) {
-    db.get('products')
-      .find({ id })
-      .assign({ ...data, updated_at: now() })
-      .write();
+  async create(data) {
+    const id = uuidv4();
+    await query(`
+      INSERT INTO products (id, name, description, price, kiwify_id, yampi_id, file_path, file_name, email_template, status)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+    `, [id, data.name, data.description||null, data.price||0, data.kiwify_id||null, data.yampi_id||null, data.file_path||null, data.file_name||null, data.email_template||null, data.status||'active']);
     return this.findById(id);
   },
 
-  delete(id) {
-    db.get('products').remove({ id }).write();
+  async update(id, data) {
+    const keys   = Object.keys(data);
+    const values = Object.values(data);
+    const sets   = keys.map((k, i) => `${k} = $${i + 1}`).join(', ');
+    await query(`UPDATE products SET ${sets}, updated_at = NOW() WHERE id = $${keys.length + 1}`, [...values, id]);
+    return this.findById(id);
   },
 
-  findById(id) {
-    return db.get('products').find({ id }).value() || null;
+  async delete(id) {
+    await query('DELETE FROM products WHERE id = $1', [id]);
   },
 
-  findByPlatformId(platform, platformId) {
-    if (platform === 'kiwify') {
-      return db.get('products').find({ kiwify_id: platformId, status: 'active' }).value() || null;
-    }
-    if (platform === 'yampi') {
-      return db.get('products').find({ yampi_id: platformId, status: 'active' }).value() || null;
-    }
-    return db.get('products').find(p => p.kiwify_id === platformId || p.yampi_id === platformId).value() || null;
+  async findById(id) {
+    return queryOne('SELECT * FROM products WHERE id = $1', [id]);
   },
 
-  findAll() {
-    return db.get('products').orderBy(['created_at'], ['desc']).value();
+  async findByPlatformId(platform, platformId) {
+    if (platform === 'kiwify') return queryOne("SELECT * FROM products WHERE kiwify_id = $1 AND status = 'active'", [platformId]);
+    if (platform === 'yampi')  return queryOne("SELECT * FROM products WHERE yampi_id = $1 AND status = 'active'", [platformId]);
+    return queryOne('SELECT * FROM products WHERE kiwify_id = $1 OR yampi_id = $1', [platformId]);
+  },
+
+  async findAll() {
+    return query('SELECT * FROM products ORDER BY created_at DESC');
   }
 };
 
 // ─── Entregas ─────────────────────────────────────────────────────────────────
 
 const deliveries = {
-  create(data) {
-    const record = {
-      id:                uuidv4(),
-      product_id:        data.product_id,
-      platform:          data.platform          || 'unknown',
-      platform_order_id: data.platform_order_id || null,
-      buyer_name:        data.buyer_name        || null,
-      buyer_email:       data.buyer_email,
-      status:            'pending',
-      attempts:          0,
-      error_message:     null,
-      delivered_at:      null,
-      created_at:        now()
-    };
-    db.get('deliveries').push(record).write();
-    return record.id;
+  async create(data) {
+    const id = uuidv4();
+    await query(`
+      INSERT INTO deliveries (id, product_id, platform, platform_order_id, buyer_name, buyer_email, status)
+      VALUES ($1,$2,$3,$4,$5,$6,'pending')
+    `, [id, data.product_id, data.platform||'unknown', data.platform_order_id||null, data.buyer_name||null, data.buyer_email]);
+    return id;
   },
 
-  updateStatus(id, status, errorMessage = null) {
-    db.get('deliveries')
-      .find({ id })
-      .assign({
-        status,
-        error_message: errorMessage,
-        delivered_at:  status === 'delivered' ? now() : undefined,
-        attempts:      (db.get('deliveries').find({ id }).value()?.attempts || 0) + 1
-      })
-      .write();
+  async updateStatus(id, status, errorMessage = null) {
+    await query(`
+      UPDATE deliveries SET status = $1, error_message = $2,
+        delivered_at = CASE WHEN $1 = 'delivered' THEN NOW() ELSE delivered_at END,
+        attempts = attempts + 1
+      WHERE id = $3
+    `, [status, errorMessage, id]);
   },
 
-  findAll(limit = 100) {
-    const all = db.get('deliveries').orderBy(['created_at'], ['desc']).value().slice(0, limit);
-    return all.map(d => {
-      const p = products.findById(d.product_id);
-      return { ...d, product_name: p?.name || 'Produto removido' };
-    });
+  async findAll(limit = 100) {
+    return query(`
+      SELECT d.*, p.name as product_name
+      FROM deliveries d LEFT JOIN products p ON d.product_id = p.id
+      ORDER BY d.created_at DESC LIMIT $1
+    `, [limit]);
   },
 
-  findPending() {
-    return db.get('deliveries')
-      .filter(d => ['pending', 'failed'].includes(d.status) && d.attempts < 3)
-      .value()
-      .map(d => {
-        const p = products.findById(d.product_id);
-        return { ...d, product_name: p?.name, file_path: p?.file_path, file_name: p?.file_name, email_template: p?.email_template };
-      });
+  async findPending() {
+    return query(`
+      SELECT d.*, p.name as product_name, p.file_path, p.file_name, p.email_template
+      FROM deliveries d LEFT JOIN products p ON d.product_id = p.id
+      WHERE d.status IN ('pending','failed') AND d.attempts < 3
+      ORDER BY d.created_at ASC
+    `);
   },
 
-  stats() {
-    const all = db.get('deliveries').value();
-    const today = now().slice(0, 10);
+  async stats() {
+    const [total, delivered, failed, today, byPlatform] = await Promise.all([
+      queryOne("SELECT COUNT(*) as n FROM deliveries"),
+      queryOne("SELECT COUNT(*) as n FROM deliveries WHERE status = 'delivered'"),
+      queryOne("SELECT COUNT(*) as n FROM deliveries WHERE status = 'failed'"),
+      queryOne("SELECT COUNT(*) as n FROM deliveries WHERE created_at::date = CURRENT_DATE"),
+      query("SELECT platform, COUNT(*) as n FROM deliveries GROUP BY platform")
+    ]);
     return {
-      total:     all.length,
-      delivered: all.filter(d => d.status === 'delivered').length,
-      failed:    all.filter(d => d.status === 'failed').length,
-      today:     all.filter(d => d.created_at?.startsWith(today)).length,
-      by_platform: Object.entries(
-        all.reduce((acc, d) => { acc[d.platform] = (acc[d.platform] || 0) + 1; return acc; }, {})
-      ).map(([platform, n]) => ({ platform, n }))
+      total:       parseInt(total.n),
+      delivered:   parseInt(delivered.n),
+      failed:      parseInt(failed.n),
+      today:       parseInt(today.n),
+      by_platform: byPlatform
     };
   }
 };
@@ -156,22 +171,17 @@ const deliveries = {
 // ─── Logs de Webhook ──────────────────────────────────────────────────────────
 
 const webhookLogs = {
-  create(data) {
-    const record = {
-      id:         uuidv4(),
-      platform:   data.platform   || 'unknown',
-      event_type: data.event_type || null,
-      payload:    data.payload    || null,
-      status:     data.status     || null,
-      ip:         data.ip         || null,
-      created_at: now()
-    };
-    db.get('webhook_logs').push(record).write();
-    return record.id;
+  async create(data) {
+    const id = uuidv4();
+    await query(`
+      INSERT INTO webhook_logs (id, platform, event_type, payload, status, ip)
+      VALUES ($1,$2,$3,$4,$5,$6)
+    `, [id, data.platform||'unknown', data.event_type||null, data.payload||null, data.status||null, data.ip||null]);
+    return id;
   },
 
-  findAll(limit = 50) {
-    return db.get('webhook_logs').orderBy(['created_at'], ['desc']).value().slice(0, limit);
+  async findAll(limit = 50) {
+    return query('SELECT * FROM webhook_logs ORDER BY created_at DESC LIMIT $1', [limit]);
   }
 };
 
