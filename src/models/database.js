@@ -13,6 +13,31 @@ const pool = new Pool({
 async function initDatabase() {
   const client = await pool.connect();
   try {
+    // Migração: limpa tabelas antigas sem tenant_id
+    await client.query(`
+      DO $$
+      BEGIN
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='deliveries')
+        AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='deliveries' AND column_name='tenant_id')
+        THEN
+          DROP TABLE IF EXISTS webhook_logs CASCADE;
+          DROP TABLE IF EXISTS deliveries CASCADE;
+          DROP TABLE IF EXISTS products CASCADE;
+          DROP TABLE IF EXISTS sessions CASCADE;
+          DROP TABLE IF EXISTS tenants CASCADE;
+          DROP TABLE IF EXISTS users CASCADE;
+          DROP TABLE IF EXISTS plans CASCADE;
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='products')
+        AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='tenant_id')
+        THEN
+          DROP TABLE IF EXISTS webhook_logs CASCADE;
+          DROP TABLE IF EXISTS deliveries CASCADE;
+          DROP TABLE IF EXISTS products CASCADE;
+        END IF;
+      END $$;
+    `);
+
     await client.query(`
       -- Planos disponíveis
       CREATE TABLE IF NOT EXISTS plans (

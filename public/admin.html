@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vaultly — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Satoshi:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0B1020;--bg2:#121A2E;--bg3:#172035;--bg4:#1E2A42;
+  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.10);
+  --indigo:#6C63FF;--cyan:#38BDF8;--emerald:#10B981;
+  --red:#F43F5E;--yellow:#F59E0B;
+  --text:#F8FAFC;--text2:#94A3B8;--text3:#3D4F6E;
+  --grad:linear-gradient(135deg,#6C63FF 0%,#38BDF8 100%);
+  --radius:12px;--radius-lg:18px;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Satoshi',sans-serif;font-size:14px;-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:99px}
+
+.topbar{
+  height:56px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 28px;background:var(--bg2);border-bottom:1px solid var(--border);
+}
+.topbar-brand{display:flex;align-items:center;gap:10px}
+.logo-mark{width:32px;height:32px;border-radius:8px;background:var(--grad);display:flex;align-items:center;justify-content:center}
+.logo-mark i{color:#fff;font-size:16px}
+.brand-name{font-size:16px;font-weight:800;letter-spacing:-.3px}
+.brand-tag{font-size:10px;color:var(--red);font-family:'JetBrains Mono',monospace;margin-left:6px;background:rgba(244,63,94,0.12);padding:2px 8px;border-radius:99px;border:1px solid rgba(244,63,94,0.25)}
+
+.content{padding:28px;max-width:1100px;margin:0 auto}
+
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.page-title{font-size:24px;font-weight:800;letter-spacing:-.5px}
+.page-sub{font-size:12px;color:var(--text2);margin-top:3px;font-family:'JetBrains Mono',monospace}
+
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px 20px;position:relative;overflow:hidden}
+.stat::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:var(--grad);opacity:.5}
+.stat-label{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.08em;font-family:'JetBrains Mono',monospace;margin-bottom:6px}
+.stat-val{font-size:28px;font-weight:800}
+
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:20px}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.card-title{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700}
+.card-title i{color:var(--indigo)}
+
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{font-size:10px;font-weight:600;color:var(--text3);text-align:left;padding:12px 16px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.08em;font-family:'JetBrains Mono',monospace}
+tbody td{padding:13px 16px;border-bottom:1px solid var(--border);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:rgba(255,255,255,0.02)}
+
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:'Satoshi',sans-serif;transition:all .2s}
+.btn-primary{background:var(--grad);color:#fff;box-shadow:0 4px 16px rgba(108,99,255,.3)}
+.btn-primary:hover{opacity:.9}
+.btn-ghost{background:rgba(255,255,255,.04);color:var(--text2);border:1px solid var(--border2)}
+.btn-ghost:hover{color:var(--text);background:rgba(255,255,255,.08)}
+.btn-danger{background:rgba(244,63,94,.12);color:var(--red);border:1px solid rgba(244,63,94,.25)}
+.btn-danger:hover{background:rgba(244,63,94,.2)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-xs{padding:3px 8px;font-size:11px}
+
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:600;font-family:'JetBrains Mono',monospace}
+.badge-green{background:rgba(16,185,129,.12);color:var(--emerald);border:1px solid rgba(16,185,129,.25)}
+.badge-red{background:rgba(244,63,94,.12);color:var(--red);border:1px solid rgba(244,63,94,.25)}
+.badge-indigo{background:rgba(108,99,255,.15);color:var(--indigo);border:1px solid rgba(108,99,255,.3)}
+.badge-yellow{background:rgba(245,158,11,.12);color:var(--yellow);border:1px solid rgba(245,158,11,.25)}
+.badge-gray{background:rgba(255,255,255,.05);color:var(--text2);border:1px solid var(--border2)}
+
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);align-items:center;justify-content:center;z-index:100}
+.modal-bg.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:26px;width:90%;max-width:480px;box-shadow:0 24px 80px rgba(0,0,0,.6)}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.modal-title{font-size:17px;font-weight:800}
+
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-label{font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.08em;font-family:'JetBrains Mono',monospace}
+.form-input,.form-select{background:rgba(255,255,255,.03);border:1px solid var(--border2);border-radius:var(--radius);padding:9px 12px;color:var(--text);font-size:13px;font-family:'Satoshi',monospace;transition:all .2s;width:100%}
+.form-input:focus,.form-select:focus{outline:none;border-color:var(--indigo);box-shadow:0 0 0 3px rgba(108,99,255,.1)}
+
+.login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:200}
+.login-card{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:40px;width:380px;box-shadow:0 32px 80px rgba(0,0,0,.5)}
+.login-logo{text-align:center;margin-bottom:32px}
+.login-logo .lmark{width:48px;height:48px;border-radius:12px;background:var(--grad);display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px}
+.login-logo h1{font-size:24px;font-weight:900}
+.login-logo p{font-size:11px;color:var(--text2);font-family:'JetBrains Mono',monospace;margin-top:4px}
+.login-error{background:rgba(244,63,94,.12);border:1px solid rgba(244,63,94,.3);border-radius:var(--radius);padding:10px 14px;font-size:12px;color:var(--red);margin-bottom:14px;display:none;font-family:'JetBrains Mono',monospace}
+
+.plan-badge{font-family:'JetBrains Mono',monospace;font-size:11px}
+.mono{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2)}
+.flex{display:flex;align-items:center;gap:8px}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-screen" id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="lmark"><i class="ti ti-shield-check" style="font-size:22px;color:#fff"></i></div>
+      <h1>Vaultly Admin</h1>
+      <p>painel administrativo</p>
+    </div>
+    <div class="login-error" id="login-error">Credenciais inválidas.</div>
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input type="email" class="form-input" id="login-email" placeholder="admin@vaultly.com" />
+    </div>
+    <div class="form-group" style="margin-bottom:20px">
+      <label class="form-label">Senha</label>
+      <input type="password" class="form-input" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" />
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:11px" onclick="doLogin()">
+      <i class="ti ti-login"></i> Entrar
+    </button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none">
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="logo-mark"><i class="ti ti-bolt"></i></div>
+      <span class="brand-name">Vaultly</span>
+      <span class="brand-tag">ADMIN</span>
+    </div>
+    <div class="flex">
+      <span class="mono" id="admin-name">—</span>
+      <button class="btn btn-ghost btn-sm" onclick="doLogout()"><i class="ti ti-logout"></i> Sair</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Gestão de Clientes</div>
+        <div class="page-sub">administre contas, planos e acessos</div>
+      </div>
+      <button class="btn btn-primary" onclick="openNewUser()">
+        <i class="ti ti-user-plus"></i> Novo cliente
+      </button>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat"><div class="stat-label">Total clientes</div><div class="stat-val" id="s-total">—</div></div>
+      <div class="stat"><div class="stat-label">Plano Free</div><div class="stat-val" id="s-free">—</div></div>
+      <div class="stat"><div class="stat-label">Plano Basic</div><div class="stat-val" id="s-basic">—</div></div>
+      <div class="stat"><div class="stat-label">Plano Pro</div><div class="stat-val" id="s-pro">—</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-users"></i> Clientes cadastrados</div>
+        <button class="btn btn-ghost btn-sm" onclick="loadUsers()"><i class="ti ti-refresh"></i> Atualizar</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Cliente</th><th>Email</th><th>Plano</th>
+              <th>Produtos</th><th>Entregas</th>
+              <th>Status</th><th>Desde</th><th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="users-table">
+            <tr><td colspan="8" style="text-align:center;color:var(--text3);padding:32px">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NOVO/EDITAR USUÁRIO -->
+<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Novo cliente</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Nome completo *</label>
+      <input type="text" class="form-input" id="m-name" placeholder="João Silva" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Email *</label>
+      <input type="email" class="form-input" id="m-email" placeholder="joao@email.com" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Senha *</label>
+      <input type="password" class="form-input" id="m-pass" placeholder="Mínimo 8 caracteres" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Plano</label>
+      <select class="form-select" id="m-plan">
+        <option value="free">Free — 1 produto, 50 entregas/mês</option>
+        <option value="basic">Basic — 5 produtos, 500 entregas/mês</option>
+        <option value="pro">Pro — ilimitado</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Status</label>
+      <select class="form-select" id="m-active">
+        <option value="true">Ativo</option>
+        <option value="false">Inativo</option>
+      </select>
+    </div>
+    <input type="hidden" id="m-editing-id" />
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="save-btn" onclick="saveUser()">
+        <i class="ti ti-device-floppy"></i> Salvar
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+let authToken = localStorage.getItem('vaultly_admin_token') || null;
+let currentAdmin = null;
+
+function getApiUrl() { return window.location.origin; }
+
+async function apiFetch(path, opts={}) {
+  const headers = { ...(opts.headers||{}) };
+  if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+  const res = await fetch(getApiUrl() + path, { ...opts, headers });
+  if (res.status === 401) { doLogout(); return {}; }
+  return res.json();
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  const err   = document.getElementById('login-error');
+
+  try {
+    const res = await fetch(getApiUrl() + '/api/auth/login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ email, password: pass })
+    });
+    const data = await res.json();
+    if (!data.success) { err.textContent = data.error || 'Credenciais inválidas'; err.style.display='block'; return; }
+    if (data.user?.role !== 'admin') { err.textContent = 'Acesso restrito ao administrador'; err.style.display='block'; return; }
+
+    authToken = data.token;
+    currentAdmin = data.user;
+    localStorage.setItem('vaultly_admin_token', authToken);
+    err.style.display = 'none';
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('admin-name').textContent = currentAdmin.name || currentAdmin.email;
+    loadUsers();
+  } catch(e) {
+    err.textContent = 'Erro de conexão'; err.style.display = 'block';
+  }
+}
+
+function doLogout() {
+  authToken = null;
+  localStorage.removeItem('vaultly_admin_token');
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+// Auto-login
+window.addEventListener('load', async () => {
+  if (authToken) {
+    try {
+      const res = await apiFetch('/api/auth/me');
+      if (res.success && res.user?.role === 'admin') {
+        currentAdmin = res.user;
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        document.getElementById('admin-name').textContent = currentAdmin.name || currentAdmin.email;
+        loadUsers();
+        return;
+      }
+    } catch(e){}
+    authToken = null;
+    localStorage.removeItem('vaultly_admin_token');
+  }
+});
+
+async function loadUsers() {
+  const tbody = document.getElementById('users-table');
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:32px">Carregando...</td></tr>';
+  try {
+    const res = await apiFetch('/api/admin/users');
+    const users = res.data || [];
+
+    // Stats
+    document.getElementById('s-total').textContent = users.length;
+    document.getElementById('s-free').textContent  = users.filter(u=>u.plan_id==='free').length;
+    document.getElementById('s-basic').textContent = users.filter(u=>u.plan_id==='basic').length;
+    document.getElementById('s-pro').textContent   = users.filter(u=>u.plan_id==='pro').length;
+
+    if (!users.length) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:32px">Nenhum cliente cadastrado</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = users.map(u => `
+      <tr>
+        <td><strong>${u.name}</strong>${u.role==='admin'?'<span class="badge badge-red" style="margin-left:6px">admin</span>':''}</td>
+        <td class="mono">${u.email}</td>
+        <td>${planBadge(u.plan_id)}</td>
+        <td class="mono">${u.product_count||0}</td>
+        <td class="mono">${u.delivery_count||0}</td>
+        <td>${u.is_active
+          ? '<span class="badge badge-green">Ativo</span>'
+          : '<span class="badge badge-red">Inativo</span>'}</td>
+        <td class="mono">${formatDate(u.created_at)}</td>
+        <td>
+          <div class="flex">
+            <button class="btn btn-ghost btn-xs" onclick='editUser(${JSON.stringify(u).replace(/'/g,"\\'")})'><i class="ti ti-edit"></i></button>
+            ${u.role!=='admin'?`<button class="btn btn-danger btn-xs" onclick="deleteUser('${u.id}','${u.name}')"><i class="ti ti-trash"></i></button>`:''}
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--red);padding:32px">Erro: ${e.message}</td></tr>`;
+  }
+}
+
+function openNewUser() {
+  document.getElementById('modal-title').textContent = 'Novo cliente';
+  ['m-name','m-email','m-pass'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('m-plan').value   = 'free';
+  document.getElementById('m-active').value = 'true';
+  document.getElementById('m-editing-id').value = '';
+  document.getElementById('modal-bg').classList.add('open');
+}
+
+function editUser(u) {
+  document.getElementById('modal-title').textContent = 'Editar cliente';
+  document.getElementById('m-name').value   = u.name || '';
+  document.getElementById('m-email').value  = u.email || '';
+  document.getElementById('m-pass').value   = '';
+  document.getElementById('m-plan').value   = u.plan_id || 'free';
+  document.getElementById('m-active').value = String(u.is_active !== false);
+  document.getElementById('m-editing-id').value = u.id;
+  document.getElementById('modal-bg').classList.add('open');
+}
+
+function closeModal() { document.getElementById('modal-bg').classList.remove('open'); }
+
+async function saveUser() {
+  const editId = document.getElementById('m-editing-id').value;
+  const name   = document.getElementById('m-name').value.trim();
+  const email  = document.getElementById('m-email').value.trim();
+  const pass   = document.getElementById('m-pass').value;
+  const plan   = document.getElementById('m-plan').value;
+  const active = document.getElementById('m-active').value === 'true';
+  const btn    = document.getElementById('save-btn');
+
+  if (!name || !email) return alert('Nome e email são obrigatórios');
+  if (!editId && !pass) return alert('Senha é obrigatória para novo cliente');
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader-2"></i> Salvando...';
+
+  try {
+    if (editId) {
+      const body = { name, plan_id: plan, is_active: active };
+      if (pass) body.password = pass;
+      await apiFetch(`/api/admin/users/${editId}`, {
+        method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+      });
+    } else {
+      await apiFetch('/api/admin/users', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ name, email, password: pass, plan_id: plan, is_active: active })
+      });
+    }
+    closeModal();
+    loadUsers();
+  } catch(e) {
+    alert('Erro: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar';
+  }
+}
+
+async function deleteUser(id, name) {
+  if (!confirm(`Remover o cliente "${name}"? Todos os dados serão deletados permanentemente.`)) return;
+  await apiFetch(`/api/admin/users/${id}`, { method:'DELETE' });
+  loadUsers();
+}
+
+function planBadge(plan) {
+  const map = {
+    free:  ['badge-gray',   'FREE'],
+    basic: ['badge-indigo', 'BASIC'],
+    pro:   ['badge-green',  'PRO']
+  };
+  const [cls, txt] = map[plan] || ['badge-gray', plan.toUpperCase()];
+  return `<span class="badge ${cls}">${txt}</span>`;
+}
+
+function formatDate(dt) {
+  if (!dt) return '—';
+  return new Date(dt).toLocaleDateString('pt-BR');
+}
+</script>
+</body>
+</html>

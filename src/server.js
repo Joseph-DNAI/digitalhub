@@ -61,19 +61,8 @@ app.use('/api/auth',      require('./routes/auth'));
 app.use('/api/admin',     require('./routes/admin'));
 app.use('/api/products',  require('./routes/products'));
 app.use('/api/deliveries',require('./routes/deliveries'));
+app.use('/api/tenants',   require('./routes/tenants'));
 
-// Rota de tenant info (URL do webhook para o painel)
-app.get('/api/tenants/me', require('./middleware/auth').requireAuth, async (req, res) => {
-  const base = process.env.BASE_URL || `https://digitalhub-production.up.railway.app`;
-  res.json({
-    success: true,
-    data: {
-      tenant_id:     req.tenantId,
-      webhook_kiwify: `${base}/api/webhook/${req.tenantId}/kiwify`,
-      webhook_yampi:  `${base}/api/webhook/${req.tenantId}/yampi`
-    }
-  });
-});
 
 app.get('/health', (req, res) => res.json({ status:'ok', version:'2.0.0', uptime: process.uptime(), timestamp: new Date().toISOString() }));
 
