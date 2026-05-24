@@ -79,15 +79,10 @@ app.use((err, req, res, next) => {
 
 app.use((req, res) => res.status(404).json({ error: 'Rota não encontrada' }));
 
-initDatabase().then(() => {
-  app.listen(PORT, () => {
-    logger.info(`🚀 Vaultly rodando na porta ${PORT}`);
-    logger.info(`🌐 Painel: ${process.env.BASE_URL || `http://localhost:${PORT}`}`);
-    startRetryJob();
-  });
-}).catch(err => {
-  console.error('❌ Falha ao iniciar banco:', err);
-  process.exit(1);
-});
-
-module.exports = app;
+async function startWithRetry(maxAttempts = 10, delayMs = 3000) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await initDatabase();
+      app.listen(PORT, () => {
+        logger.info(`🚀 Vaultly rodando na porta ${PORT}`);
+        logger.info(`🌐 Painel: ${process.env.BASE_URL || `http://localhost:${PORT}`
