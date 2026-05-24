@@ -1014,4 +1014,329 @@ const style = document.createElement('style');
 style.textContent = '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
 document.head.appendChild(style);
 
-// ── Tab navigation 
+// ── Tab navigation ───────────────────────────────────────────────
+const TAB_META = {
+  dashboard: { title: 'Dashboard',     sub: 'visão geral do sistema em tempo real' },
+  produtos:  { title: 'Produtos',      sub: 'gerencie seus produtos digitais' },
+  entregas:  { title: 'Entregas',      sub: 'histórico completo de envios automáticos' },
+  webhook:   { title: 'Webhook',       sub: 'integração com Kiwify e Yampi' },
+  config:    { title: 'Configurações', sub: 'ajustes do sistema Vaultly' },
+};
+
+function switchTab(name, el) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('tab-' + name)?.classList.add('active');
+  el?.classList.add('active');
+  const meta = TAB_META[name] || {};
+  document.getElementById('topbar-title').textContent = meta.title || name;
+  document.getElementById('topbar-sub').textContent   = meta.sub   || '';
+  const btn = document.getElementById('topbar-btn');
+  btn.style.display = name === 'produtos' ? 'flex' : 'none';
+  if (name === 'dashboard') loadDashboard();
+  if (name === 'produtos')  loadProducts();
+  if (name === 'entregas')  loadDeliveries();
+  if (name === 'webhook')   loadLogs();
+}
+
+// ── Helpers ──────────────────────────────────────────────────────
+function fmtDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit', year: '2-digit',
+    hour: '2-digit', minute: '2-digit'
+  });
+}
+
+function statusBadge(s) {
+  const map = {
+    delivered: ['emerald', 'Entregue'],
+    pending:   ['yellow',  'Pendente'],
+    failed:    ['red',     'Falhou'],
+  };
+  const [color, label] = map[s] || ['gray', s || 'Desconhecido'];
+  return `<span class="badge badge-${color}">${label}</span>`;
+}
+
+function platformBadge(p) {
+  if (p === 'kiwify') return `<span style="color:var(--emerald);font-size:11px;font-weight:600;">Kiwify</span>`;
+  if (p === 'yampi')  return `<span style="color:var(--cyan);font-size:11px;font-weight:600;">Yampi</span>`;
+  return `<span style="color:var(--text3);font-size:11px;">${p || '—'}</span>`;
+}
+
+// ── Dashboard ────────────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    const [statsRes, delivRes, prodRes] = await Promise.all([
+      apiFetch('/api/deliveries/stats'),
+      apiFetch('/api/deliveries?limit=5'),
+      apiFetch('/api/products'),
+    ]);
+    if (statsRes.success) {
+      document.getElementById('s-today').textContent     = statsRes.data.today     ?? '0';
+      document.getElementById('s-delivered').textContent = statsRes.data.delivered ?? '0';
+      document.getElementById('s-failed').textContent    = statsRes.data.failed    ?? '0';
+    }
+    if (prodRes.success) {
+      document.getElementById('s-products').textContent = prodRes.data.length;
+    }
+    const tbody = document.getElementById('recent-deliveries');
+    if (delivRes.success && delivRes.data.length) {
+      tbody.innerHTML = delivRes.data.map(d => `
+        <tr>
+          <td>
+            <span style="font-weight:500;">${d.buyer_name || '—'}</span><br>
+            <span style="font-size:11px;color:var(--text3);">${d.buyer_email}</span>
+          </td>
+          <td>${d.product_name || d.product_id || '—'}</td>
+          <td>${platformBadge(d.platform)}</td>
+          <td style="font-size:12px;color:var(--text2);">${fmtDate(d.created_at)}</td>
+          <td>${statusBadge(d.status)}</td>
+        </tr>`).join('');
+    } else {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:32px;">Nenhuma entrega ainda</td></tr>`;
+    }
+  } catch(e) {
+    console.error('loadDashboard:', e);
+  }
+}
+
+// ── Products ─────────────────────────────────────────────────────
+let productsCache = [];
+
+async function loadProducts() {
+  const grid = document.getElementById('products-grid');
+  grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--text3);padding:48px;">Carregando...</div>`;
+  try {
+    const res = await apiFetch('/api/products');
+    if (!res.success) throw new Error(res.error);
+    productsCache = res.data;
+    if (!res.data.length) {
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--text3);padding:48px;">
+        <i class="ti ti-packages" style="font-size:32px;display:block;margin-bottom:12px;opacity:0.4;"></i>
+        Nenhum produto cadastrado. Clique em <strong>Novo produto</strong> para começar.
+      </div>`;
+      return;
+    }
+    grid.innerHTML = res.data.map(p => `
+      <div class="product-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div style="width:40px;height:40px;border-radius:10px;background:rgba(108,99,255,0.15);display:flex;align-items:center;justify-content:center;">
+            <i class="ti ti-file-text" style="color:var(--indigo);font-size:18px;"></i>
+          </div>
+          <span class="badge badge-${p.status === 'active' ? 'emerald' : 'red'}" style="font-size:10px;">
+            ${p.status === 'active' ? 'Ativo' : 'Inativo'}
+          </span>
+        </div>
+        <div style="font-weight:600;font-size:14px;margin-bottom:6px;line-height:1.3;">${p.name}</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:12px;min-height:32px;">
+          ${p.description || '<span style="color:var(--text3);">Sem descrição</span>'}
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px;">
+          ${p.kiwify_id ? `<span class="badge badge-emerald" style="font-size:10px;">Kiwify</span>` : ''}
+          ${p.yampi_id  ? `<span class="badge badge-indigo"  style="font-size:10px;">Yampi</span>`  : ''}
+          ${p.file_name
+            ? `<span class="badge badge-gray" style="font-size:10px;"><i class="ti ti-paperclip"></i> ${p.file_name}</span>`
+            : `<span style="font-size:10px;color:var(--text3);">Sem arquivo</span>`}
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost btn-xs" style="flex:1;" onclick="editProduct('${p.id}')">
+            <i class="ti ti-pencil"></i> Editar
+          </button>
+          <button class="btn btn-ghost btn-xs" style="color:var(--red);" onclick="deleteProduct('${p.id}','${p.name.replace(/'/g, "\\'")}')">
+            <i class="ti ti-trash"></i>
+          </button>
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--red);padding:48px;">Erro ao carregar: ${e.message}</div>`;
+  }
+}
+
+// ── Deliveries ───────────────────────────────────────────────────
+async function loadDeliveries() {
+  const tbody = document.getElementById('deliveries-table');
+  tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:32px;">Carregando...</td></tr>`;
+  try {
+    const res = await apiFetch('/api/deliveries');
+    if (!res.success) throw new Error(res.error);
+    if (!res.data.length) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:32px;">Nenhuma entrega encontrada</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = res.data.map(d => `
+      <tr>
+        <td>
+          <span style="font-weight:500;">${d.buyer_name || '—'}</span><br>
+          <span style="font-size:11px;color:var(--text3);">${d.buyer_email}</span>
+        </td>
+        <td>${d.product_name || d.product_id || '—'}</td>
+        <td>${platformBadge(d.platform)}</td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);">${d.platform_order_id || '—'}</td>
+        <td style="font-size:12px;color:var(--text2);">${fmtDate(d.created_at)}</td>
+        <td>
+          ${statusBadge(d.status)}
+          ${d.error_message ? `<br><span style="font-size:10px;color:var(--red);" title="${d.error_message}">⚠ ver erro</span>` : ''}
+        </td>
+      </tr>`).join('');
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--red);padding:32px;">Erro: ${e.message}</td></tr>`;
+  }
+}
+
+// ── Webhook Logs ─────────────────────────────────────────────────
+async function loadLogs() {
+  const box = document.getElementById('webhook-log');
+  box.innerHTML = `<div style="color:var(--text3);">Carregando logs...</div>`;
+  try {
+    const res = await apiFetch('/api/deliveries/logs');
+    if (!res.success) throw new Error(res.error);
+    if (!res.data.length) {
+      box.innerHTML = `<div style="color:var(--text3);">Nenhum evento registrado ainda.</div>`;
+      return;
+    }
+    box.innerHTML = res.data.map(l => {
+      const color = l.status === 'ok' ? 'var(--emerald)' : l.status === 'error' ? 'var(--red)' : 'var(--yellow)';
+      return `<div style="margin-bottom:6px;font-size:12px;line-height:1.6;">
+        <span style="color:var(--text3);margin-right:8px;">${fmtDate(l.created_at)}</span>
+        <span style="color:${color};margin-right:8px;">[${(l.status || '?').toUpperCase()}]</span>
+        <span style="color:var(--text2);">${l.platform || '?'} · ${l.event_type || '?'}</span>
+        ${l.ip ? `<span style="color:var(--text3);font-size:11px;"> · ${l.ip}</span>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    box.innerHTML = `<div style="color:var(--red);">Erro ao carregar logs: ${e.message}</div>`;
+  }
+}
+
+// ── Modal Produto ────────────────────────────────────────────────
+function openModal() {
+  document.getElementById('m-name').value             = '';
+  document.getElementById('m-desc').value             = '';
+  document.getElementById('m-price').value            = '';
+  document.getElementById('m-status').value           = 'active';
+  document.getElementById('m-kiwify').value           = '';
+  document.getElementById('m-yampi').value            = '';
+  document.getElementById('m-template').value         = '';
+  document.getElementById('m-editing-id').value       = '';
+  document.getElementById('m-file').value             = '';
+  document.getElementById('upload-title').textContent = 'Clique para selecionar arquivo';
+  document.getElementById('upload-sub').textContent   = 'PDF, EPUB até 50MB · armazenado no Cloudflare R2';
+  document.getElementById('modal-title').textContent  = 'Novo produto';
+  document.getElementById('save-btn').innerHTML       = '<i class="ti ti-device-floppy"></i> Salvar produto';
+  document.getElementById('modal-bg').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal-bg').classList.remove('open');
+}
+
+function editProduct(id) {
+  const p = productsCache.find(x => x.id === id);
+  if (!p) return;
+  openModal();
+  document.getElementById('m-name').value         = p.name           || '';
+  document.getElementById('m-desc').value         = p.description    || '';
+  document.getElementById('m-price').value        = p.price          || '';
+  document.getElementById('m-status').value       = p.status         || 'active';
+  document.getElementById('m-kiwify').value       = p.kiwify_id      || '';
+  document.getElementById('m-yampi').value        = p.yampi_id       || '';
+  document.getElementById('m-template').value     = p.email_template || '';
+  document.getElementById('m-editing-id').value   = id;
+  if (p.file_name) {
+    document.getElementById('upload-title').textContent = p.file_name;
+    document.getElementById('upload-sub').textContent   = 'Arquivo atual · selecione outro para substituir';
+  }
+  document.getElementById('modal-title').textContent = 'Editar produto';
+  document.getElementById('save-btn').innerHTML      = '<i class="ti ti-device-floppy"></i> Atualizar produto';
+}
+
+function handleFileSelect(input) {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('upload-title').textContent = file.name;
+  document.getElementById('upload-sub').textContent   = (file.size / 1024 / 1024).toFixed(2) + ' MB selecionado';
+}
+
+async function saveProduct() {
+  const btn       = document.getElementById('save-btn');
+  const editingId = document.getElementById('m-editing-id').value;
+  const name      = document.getElementById('m-name').value.trim();
+  const kiwify_id = document.getElementById('m-kiwify').value.trim();
+  const yampi_id  = document.getElementById('m-yampi').value.trim();
+
+  if (!name)                   { alert('Informe o nome do produto'); return; }
+  if (!kiwify_id && !yampi_id) { alert('Informe pelo menos um ID (Kiwify ou Yampi)'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i> Salvando...';
+
+  try {
+    const form = new FormData();
+    form.append('name',           name);
+    form.append('description',    document.getElementById('m-desc').value);
+    form.append('price',          document.getElementById('m-price').value || '0');
+    form.append('status',         document.getElementById('m-status').value);
+    form.append('email_template', document.getElementById('m-template').value);
+    if (kiwify_id) form.append('kiwify_id', kiwify_id);
+    if (yampi_id)  form.append('yampi_id',  yampi_id);
+    const file = document.getElementById('m-file').files[0];
+    if (file) form.append('file', file);
+
+    const url    = editingId ? `/api/products/${editingId}` : '/api/products';
+    const method = editingId ? 'PUT' : 'POST';
+    const headers = authToken ? { 'Authorization': `Bearer ${authToken}` } : {};
+
+    const raw  = await fetch(getApiUrl() + url, { method, headers, body: form });
+    const data = await raw.json();
+    if (!data.success) throw new Error(data.error);
+
+    closeModal();
+    loadProducts();
+    if (document.getElementById('tab-dashboard').classList.contains('active')) loadDashboard();
+  } catch(e) {
+    alert('Erro ao salvar produto: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar produto';
+  }
+}
+
+async function deleteProduct(id, name) {
+  if (!confirm(`Excluir "${name}"?\nEsta ação não pode ser desfeita.`)) return;
+  try {
+    const res = await apiFetch(`/api/products/${id}`, { method: 'DELETE' });
+    if (!res.success) throw new Error(res.error);
+    loadProducts();
+    loadDashboard();
+  } catch(e) {
+    alert('Erro ao excluir: ' + e.message);
+  }
+}
+
+// ── Clipboard ────────────────────────────────────────────────────
+async function copyText(elemId, btn) {
+  const text = document.getElementById(elemId)?.textContent?.trim();
+  if (!text || text === '—') return;
+  try {
+    await navigator.clipboard.writeText(text);
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<i class="ti ti-check"></i>';
+    setTimeout(() => btn.innerHTML = orig, 1500);
+  } catch(e) {
+    prompt('Copie manualmente:', text);
+  }
+}
+
+// ── Testar Email ─────────────────────────────────────────────────
+async function testEmail() {
+  try {
+    const res = await apiFetch('/api/deliveries/test-smtp', { method: 'POST' });
+    alert(res.success ? '✅ ' + (res.message || 'Conexão SMTP OK!') : '❌ ' + (res.error || 'Falha na conexão'));
+  } catch(e) {
+    alert('❌ Erro: ' + e.message);
+  }
+}
+</script>
+</body>
+</html>
