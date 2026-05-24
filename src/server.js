@@ -52,19 +52,18 @@ app.use(morgan('combined', { stream: { write: msg => logger.info(msg.trim()) } }
 const publicPath = path.join(__dirname, '..', 'public');
 if (fs.existsSync(publicPath)) {
   app.use(express.static(publicPath));
-  logger.info(`📁 Painel em: ${publicPath}`);
+  logger.info('Painel em: ' + publicPath);
 }
 
 // Rotas
-app.use('/api/webhook',   webhookLimiter, require('./routes/webhook'));
-app.use('/api/auth',      require('./routes/auth'));
-app.use('/api/admin',     require('./routes/admin'));
-app.use('/api/products',  require('./routes/products'));
-app.use('/api/deliveries',require('./routes/deliveries'));
-app.use('/api/tenants',   require('./routes/tenants'));
+app.use('/api/webhook',    webhookLimiter, require('./routes/webhook'));
+app.use('/api/auth',       require('./routes/auth'));
+app.use('/api/admin',      require('./routes/admin'));
+app.use('/api/products',   require('./routes/products'));
+app.use('/api/deliveries', require('./routes/deliveries'));
+app.use('/api/tenants',    require('./routes/tenants'));
 
-
-app.get('/health', (req, res) => res.json({ status:'ok', version:'2.0.0', uptime: process.uptime(), timestamp: new Date().toISOString() }));
+app.get('/health', (req, res) => res.json({ status: 'ok', version: '2.0.0', uptime: process.uptime(), timestamp: new Date().toISOString() }));
 
 app.get('/', (req, res) => {
   const idx = path.join(publicPath, 'index.html');
@@ -73,16 +72,38 @@ app.get('/', (req, res) => {
 });
 
 app.use((err, req, res, next) => {
-  logger.error(`Erro global: ${err.message}`);
+  logger.error('Erro global: ' + err.message);
   res.status(500).json({ success: false, error: 'Erro interno do servidor' });
 });
 
-app.use((req, res) => res.status(404).json({ error: 'Rota não encontrada' }));
+app.use((req, res) => res.status(404).json({ error: 'Rota nao encontrada' }));
 
-async function startWithRetry(maxAttempts = 10, delayMs = 3000) {
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+async function startWithRetry(maxAttempts, delayMs) {
+  maxAttempts = maxAttempts || 10;
+  delayMs = delayMs || 3000;
+  for (var attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       await initDatabase();
-      app.listen(PORT, () => {
-        logger.info(`🚀 Vaultly rodando na porta ${PORT}`);
-        logger.info(`🌐 Painel: ${process.env.BASE_URL || `http://localhost:${PORT}`
+      app.listen(PORT, function() {
+        logger.info('Vaultly rodando na porta ' + PORT);
+        var painelUrl = process.env.BASE_URL || ('http://localhost:' + PORT);
+        logger.info('Painel: ' + painelUrl);
+        startRetryJob();
+      });
+      return;
+    } catch (err) {
+      logger.error('Tentativa ' + attempt + '/' + maxAttempts + ' - falha ao conectar ao banco: ' + err.message);
+      if (attempt === maxAttempts) {
+        logger.error('Numero maximo de tentativas atingido. Encerrando.');
+        process.exit(1);
+      }
+      var wait = delayMs * attempt;
+      logger.info('Aguardando ' + (wait / 1000) + 's antes de tentar novamente...');
+      await new Promise(function(resolve) { setTimeout(resolve, wait); });
+    }
+  }
+}
+
+startWithRetry();
+
+module.exports = app;
