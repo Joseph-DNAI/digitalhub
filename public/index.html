@@ -899,369 +899,114 @@ tbody tr:hover td { background: rgba(255,255,255,0.02); }
 
 <script>
 // ── Config ───────────────────────────────────────────────────────
-const CREDENTIALS = JSON.parse(localStorage.getItem('vaultly_creds') || '{"admin":"digitalhub2024"}');
+let authToken = localStorage.getItem('vaultly_token') || null;
 let currentUser = null;
 
 function getApiUrl() {
-  return localStorage.getItem('vaultly_api') || 'https://digitalhub-production.up.railway.app';
+  return window.location.origin;
 }
 
 async function apiFetch(path, opts = {}) {
-  const res = await fetch(getApiUrl() + path, opts);
-  return res.json();
+  const headers = { ...(opts.headers||{}) };
+  if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+  const res = await fetch(getApiUrl() + path, { ...opts, headers });
+  const data = await res.json();
+  if (res.status === 401) { doLogout(); return data; }
+  return data;
 }
 
-// ── Login ────────────────────────────────────────────────────────
-function doLogin() {
-  const user = document.getElementById('login-user').value.trim();
-  const pass = document.getElementById('login-pass').value;
-  const err  = document.getElementById('login-error');
-  if (CREDENTIALS[user] === pass) {
-    currentUser = user;
-    localStorage.setItem('vaultly_user', user);
+// ── Login via API ────────────────────────────────────────────────
+async function doLogin() {
+  const email = document.getElementById('login-user').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  const err   = document.getElementById('login-error');
+
+  if (!email || !pass) { err.textContent = 'Preencha email e senha.'; err.style.display = 'block'; return; }
+
+  try {
+    const res = await fetch(getApiUrl() + '/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass })
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      err.textContent = data.error || 'Credenciais inválidas.';
+      err.style.display = 'block';
+      document.getElementById('login-pass').value = '';
+      return;
+    }
+
+    authToken   = data.token;
+    currentUser = data.user;
+    localStorage.setItem('vaultly_token', authToken);
     err.style.display = 'none';
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('app').style.display = 'flex';
-    document.getElementById('user-name-label').textContent = user;
-    document.getElementById('user-avatar').textContent = user[0].toUpperCase();
-    initApp();
-  } else {
+    showApp();
+  } catch(e) {
+    err.textContent = 'Erro de conexão. Tente novamente.';
     err.style.display = 'block';
-    document.getElementById('login-pass').value = '';
-    document.getElementById('login-pass').focus();
   }
 }
 
-function doLogout() {
-  localStorage.removeItem('vaultly_user');
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('user-name-label').textContent = currentUser?.name || currentUser?.email || 'Usuário';
+  document.getElementById('user-avatar').textContent = (currentUser?.name||'U')[0].toUpperCase();
+  initApp();
+}
+
+async function doLogout() {
+  try { await apiFetch('/api/auth/logout', { method:'POST' }); } catch(e){}
+  authToken = null; currentUser = null;
+  localStorage.removeItem('vaultly_token');
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
 }
 
-function changePass() {
+async function changePass() {
   const np = document.getElementById('new-pass').value;
   const cp = document.getElementById('confirm-pass').value;
   if (!np) return alert('Digite a nova senha');
   if (np !== cp) return alert('As senhas não conferem');
-  CREDENTIALS[currentUser] = np;
-  localStorage.setItem('vaultly_creds', JSON.stringify(CREDENTIALS));
-  alert('✅ Senha alterada com sucesso!');
+  if (np.length < 8) return alert('Senha deve ter ao menos 8 caracteres');
+  alert('✅ Para alterar a senha, use a API: PUT /api/admin/users/:id com { "password": "nova_senha" }');
   document.getElementById('new-pass').value = '';
   document.getElementById('confirm-pass').value = '';
 }
 
-window.addEventListener('load', () => {
-  const saved = localStorage.getItem('vaultly_user');
-  if (saved && CREDENTIALS[saved]) {
-    currentUser = saved;
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('app').style.display = 'flex';
-    document.getElementById('user-name-label').textContent = saved;
-    document.getElementById('user-avatar').textContent = saved[0].toUpperCase();
-    initApp();
+// Auto-login se tiver token salvo
+window.addEventListener('load', async () => {
+  if (authToken) {
+    try {
+      const res = await apiFetch('/api/auth/me');
+      if (res.success) {
+        currentUser = res.user;
+        showApp();
+        return;
+      }
+    } catch(e){}
+    authToken = null;
+    localStorage.removeItem('vaultly_token');
   }
 });
 
 // ── Init ─────────────────────────────────────────────────────────
-function initApp() {
-  const base = getApiUrl();
-  document.getElementById('url-kiwify').textContent = base + '/api/webhook/kiwify';
-  document.getElementById('url-yampi').textContent  = base + '/api/webhook/yampi';
+async function initApp() {
+  // Busca URLs do webhook do tenant
+  try {
+    const res = await apiFetch('/api/tenants/me');
+    if (res.success) {
+      document.getElementById('url-kiwify').textContent = res.data.webhook_kiwify;
+      document.getElementById('url-yampi').textContent  = res.data.webhook_yampi;
+    }
+  } catch(e) {
+    const base = getApiUrl();
+    document.getElementById('url-kiwify').textContent = base + '/api/webhook/SEU_TENANT_ID/kiwify';
+    document.getElementById('url-yampi').textContent  = base + '/api/webhook/SEU_TENANT_ID/yampi';
+  }
   loadDashboard();
-}
-
-// ── Tabs ─────────────────────────────────────────────────────────
-const TAB_META = {
-  dashboard: { title: 'Dashboard',      sub: 'visão geral do sistema em tempo real' },
-  produtos:  { title: 'Produtos',        sub: 'gerencie seus produtos digitais' },
-  entregas:  { title: 'Entregas',        sub: 'histórico completo de envios' },
-  webhook:   { title: 'Webhook',         sub: 'integração com Kiwify e Yampi' },
-  config:    { title: 'Configurações',   sub: 'ajustes do sistema Vaultly' }
-};
-
-function switchTab(tab, btn) {
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + tab).classList.add('active');
-  if (btn) btn.classList.add('active');
-  const meta = TAB_META[tab] || {};
-  document.getElementById('topbar-title').textContent = meta.title || tab;
-  document.getElementById('topbar-sub').textContent   = meta.sub || '';
-  document.getElementById('topbar-btn').style.display = tab === 'produtos' ? 'flex' : 'none';
-  if (tab === 'dashboard') loadDashboard();
-  if (tab === 'produtos')  loadProducts();
-  if (tab === 'entregas')  loadDeliveries();
-  if (tab === 'webhook')   loadLogs();
-}
-
-// ── Dashboard ────────────────────────────────────────────────────
-async function loadDashboard() {
-  try {
-    const [stats, prods, delivs] = await Promise.all([
-      apiFetch('/api/deliveries/stats'),
-      apiFetch('/api/products'),
-      apiFetch('/api/deliveries?limit=8')
-    ]);
-    document.getElementById('s-today').textContent     = stats.data?.today     ?? '—';
-    document.getElementById('s-delivered').textContent = stats.data?.delivered ?? '—';
-    document.getElementById('s-failed').textContent    = stats.data?.failed    ?? '—';
-    document.getElementById('s-products').textContent  = prods.data?.length    ?? '—';
-    renderRecentDeliveries(delivs.data || []);
-    document.getElementById('status-dot').style.color = 'var(--emerald)';
-  } catch(e) {
-    document.getElementById('status-dot').textContent = 'desconectado';
-    document.getElementById('status-dot').style.color = 'var(--red)';
-  }
-}
-
-function renderRecentDeliveries(items) {
-  const tbody = document.getElementById('recent-deliveries');
-  if (!items.length) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:32px;">Nenhuma entrega ainda</td></tr>';
-    return;
-  }
-  tbody.innerHTML = items.map(d => `
-    <tr>
-      <td>${d.buyer_email}<br><span class="mono">${d.buyer_name||''}</span></td>
-      <td>${d.product_name||'—'}</td>
-      <td>${platformBadge(d.platform)}</td>
-      <td class="mono">${formatDate(d.created_at)}</td>
-      <td>${statusBadge(d.status)}</td>
-    </tr>
-  `).join('');
-}
-
-// ── Produtos ─────────────────────────────────────────────────────
-async function loadProducts() {
-  const grid = document.getElementById('products-grid');
-  grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--text3);padding:48px;">Carregando...</div>';
-  try {
-    const res = await apiFetch('/api/products');
-    const items = res.data || [];
-    if (!items.length) {
-      grid.innerHTML = `<div style="grid-column:1/-1;" class="empty"><i class="ti ti-package"></i><p>Nenhum produto cadastrado</p></div>`;
-      return;
-    }
-    grid.innerHTML = items.map(p => `
-      <div class="product-card">
-        <div class="product-thumb"><i class="ti ti-file-type-pdf"></i></div>
-        <div class="product-name">${p.name}</div>
-        <div class="product-desc">${p.description || '<span style="color:var(--text3)">Sem descrição</span>'}</div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-          <span class="product-price">R$ ${parseFloat(p.price||0).toFixed(2)}</span>
-          ${p.status==='active'
-            ? '<span class="badge badge-emerald">Ativo</span>'
-            : '<span class="badge badge-gray">Inativo</span>'}
-        </div>
-        <div class="product-ids">
-          ${p.kiwify_id ? `<div class="product-id-item">🟢 <span>Kiwify: ${p.kiwify_id.slice(0,24)}...</span></div>` : ''}
-          ${p.yampi_id  ? `<div class="product-id-item">🔵 <span>Yampi: ${p.yampi_id}</span></div>` : ''}
-          ${p.file_name
-            ? `<div class="product-id-item">📎 <span>${p.file_name}</span></div>`
-            : '<div class="product-id-item" style="color:var(--red)">⚠️ <span>Sem arquivo PDF</span></div>'}
-        </div>
-        <div class="flex">
-          <button class="btn btn-ghost btn-sm" onclick='editProduct(${JSON.stringify(p).replace(/'/g,"\\'")})'><i class="ti ti-edit"></i> Editar</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')"><i class="ti ti-trash"></i></button>
-        </div>
-      </div>
-    `).join('') + `
-      <div class="product-card" style="border:1.5px dashed rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;min-height:220px;cursor:pointer;" onclick="openModal()">
-        <div style="text-align:center;">
-          <i class="ti ti-plus" style="font-size:28px;color:var(--text3);display:block;margin-bottom:10px;"></i>
-          <span style="font-size:13px;color:var(--text2);font-weight:500;">Adicionar produto</span>
-        </div>
-      </div>
-    `;
-  } catch(e) {
-    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--red);padding:48px;">Erro ao carregar produtos</div>`;
-  }
-}
-
-// ── Entregas ─────────────────────────────────────────────────────
-async function loadDeliveries() {
-  const tbody = document.getElementById('deliveries-table');
-  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:32px;">Carregando...</td></tr>';
-  try {
-    const res = await apiFetch('/api/deliveries?limit=100');
-    const items = res.data || [];
-    if (!items.length) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:32px;">Nenhuma entrega ainda</td></tr>';
-      return;
-    }
-    tbody.innerHTML = items.map(d => `
-      <tr>
-        <td>${d.buyer_email}<br><span class="mono">${d.buyer_name||''}</span></td>
-        <td>${d.product_name||'—'}</td>
-        <td>${platformBadge(d.platform)}</td>
-        <td class="mono">${d.platform_order_id||'—'}</td>
-        <td class="mono">${formatDate(d.created_at)}</td>
-        <td>${statusBadge(d.status)}</td>
-      </tr>
-    `).join('');
-  } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--red);padding:32px;">Erro ao carregar</td></tr>';
-  }
-}
-
-// ── Logs ─────────────────────────────────────────────────────────
-async function loadLogs() {
-  const box = document.getElementById('webhook-log');
-  try {
-    const res = await apiFetch('/api/deliveries/logs');
-    const items = res.data || [];
-    if (!items.length) { box.innerHTML = '<div style="color:var(--text3);">Nenhum evento registrado</div>'; return; }
-    box.innerHTML = items.map(l => `
-      <div class="log-entry">
-        <span class="log-time">${formatDate(l.created_at)}</span>
-        <span class="${l.status==='error'?'log-err':l.status==='processed'?'log-ok':'log-inf'}">${l.status==='error'?'✗':l.status==='processed'?'✓':'→'}</span>
-        <span>[${l.platform}] ${l.event_type} — ${l.status}</span>
-      </div>
-    `).join('');
-  } catch(e) {
-    box.innerHTML = '<div style="color:var(--red);">Erro ao carregar logs</div>';
-  }
-}
-
-// ── Modal ────────────────────────────────────────────────────────
-function openModal() {
-  document.getElementById('modal-title').textContent = 'Novo produto';
-  ['m-name','m-desc','m-price','m-kiwify','m-yampi','m-template'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('m-editing-id').value = '';
-  document.getElementById('m-status').value = 'active';
-  document.getElementById('m-file').value = '';
-  resetUpload();
-  document.getElementById('modal-bg').classList.add('open');
-}
-
-function editProduct(p) {
-  document.getElementById('modal-title').textContent = 'Editar produto';
-  document.getElementById('m-name').value     = p.name || '';
-  document.getElementById('m-desc').value     = p.description || '';
-  document.getElementById('m-price').value    = p.price || '';
-  document.getElementById('m-kiwify').value   = p.kiwify_id || '';
-  document.getElementById('m-yampi').value    = p.yampi_id || '';
-  document.getElementById('m-template').value = p.email_template || '';
-  document.getElementById('m-status').value   = p.status || 'active';
-  document.getElementById('m-editing-id').value = p.id;
-  if (p.file_name) {
-    document.getElementById('upload-zone').classList.add('has-file');
-    document.getElementById('upload-icon').className = 'ti ti-file-check upload-icon';
-    document.getElementById('upload-title').textContent = p.file_name;
-    document.getElementById('upload-sub').textContent = 'arquivo atual · selecione outro para substituir';
-  } else resetUpload();
-  document.getElementById('modal-bg').classList.add('open');
-}
-
-function closeModal() { document.getElementById('modal-bg').classList.remove('open'); }
-
-function handleFileSelect(input) {
-  if (input.files[0]) {
-    const f = input.files[0];
-    document.getElementById('upload-zone').classList.add('has-file');
-    document.getElementById('upload-icon').className = 'ti ti-file-check upload-icon';
-    document.getElementById('upload-title').textContent = f.name;
-    document.getElementById('upload-sub').textContent = (f.size/1048576).toFixed(1) + ' MB · pronto para upload';
-  }
-}
-
-function resetUpload() {
-  document.getElementById('upload-zone').classList.remove('has-file');
-  document.getElementById('upload-icon').className = 'ti ti-cloud-upload upload-icon';
-  document.getElementById('upload-title').textContent = 'Clique para selecionar arquivo';
-  document.getElementById('upload-sub').textContent = 'PDF, EPUB até 50MB · armazenado no Cloudflare R2';
-}
-
-async function saveProduct() {
-  const name   = document.getElementById('m-name').value.trim();
-  const kiwify = document.getElementById('m-kiwify').value.trim();
-  const yampi  = document.getElementById('m-yampi').value.trim();
-  const editId = document.getElementById('m-editing-id').value;
-  const fileInp = document.getElementById('m-file');
-  const btn = document.getElementById('save-btn');
-
-  if (!name) return alert('Informe o nome do produto');
-  if (!kiwify && !yampi) return alert('Informe ao menos o ID Kiwify ou Yampi');
-
-  btn.disabled = true;
-  btn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Salvando...';
-
-  try {
-    const body = JSON.stringify({
-      name, description: document.getElementById('m-desc').value || null,
-      price: parseFloat(document.getElementById('m-price').value) || 0,
-      kiwify_id: kiwify || null, yampi_id: yampi || null,
-      email_template: document.getElementById('m-template').value || null,
-      status: document.getElementById('m-status').value
-    });
-
-    let productId = editId;
-    if (editId) {
-      await apiFetch(`/api/products/${editId}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body });
-    } else {
-      const res = await apiFetch('/api/products', { method:'POST', headers:{'Content-Type':'application/json'}, body });
-      productId = res.data?.id;
-    }
-
-    if (fileInp.files[0] && productId) {
-      const fd = new FormData();
-      fd.append('file', fileInp.files[0]);
-      await fetch(getApiUrl() + `/api/products/${productId}`, { method:'PUT', body:fd });
-    }
-
-    closeModal();
-    loadProducts();
-  } catch(e) {
-    alert('Erro ao salvar: ' + e.message);
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar produto';
-  }
-}
-
-async function deleteProduct(id) {
-  if (!confirm('Remover este produto? O arquivo PDF também será deletado do storage.')) return;
-  await apiFetch(`/api/products/${id}`, { method:'DELETE' });
-  loadProducts();
-}
-
-async function testEmail() {
-  try {
-    const res = await apiFetch('/api/deliveries/test-smtp', { method:'POST' });
-    alert(res.success ? '✅ Conexão de email funcionando!' : '❌ Erro: ' + res.error);
-  } catch(e) { alert('Erro: ' + e.message); }
-}
-
-// ── Helpers ──────────────────────────────────────────────────────
-function statusBadge(status) {
-  const map = {
-    delivered: ['badge-emerald', '✓ Entregue'],
-    pending:   ['badge-yellow',  '⏳ Pendente'],
-    failed:    ['badge-red',     '✗ Falha'],
-    active:    ['badge-emerald', 'Ativo'],
-    inactive:  ['badge-gray',    'Inativo']
-  };
-  const [cls, txt] = map[status] || ['badge-gray', status];
-  return `<span class="badge ${cls}">${txt}</span>`;
-}
-
-function platformBadge(platform) {
-  if (platform === 'kiwify') return '<span class="badge badge-emerald">Kiwify</span>';
-  if (platform === 'yampi')  return '<span class="badge badge-indigo">Yampi</span>';
-  return `<span class="badge badge-gray">${platform}</span>`;
-}
-
-function formatDate(dt) {
-  if (!dt) return '—';
-  const d = new Date(dt);
-  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-}
-
-function copyText(id, btn) {
-  navigator.clipboard.writeText(document.getElementById(id).textContent).then(() => {
-    btn.innerHTML = '<i class="ti ti-check"></i>';
-    setTimeout(() => { btn.innerHTML = '<i class="ti ti-copy"></i>'; }, 2000);
-  });
 }
 
 // spin keyframe

@@ -1,15 +1,15 @@
-// src/services/deliveryService.js
-const { products, deliveries } = require('../models/database');
+// src/services/deliveryService.js — multi-tenant
+const { products, deliveries, tenants } = require('../models/database');
 const { sendProductEmail } = require('./emailService');
 const { normalizePayload, isApprovedEvent } = require('./platformAdapter');
 const logger = require('../config/logger');
 
 const RETRY_DELAY = parseInt(process.env.RETRY_DELAY_SECONDS||'60') * 1000;
 
-async function processWebhookEvent(platform, rawPayload) {
+async function processWebhookEvent(tenantId, platform, rawPayload) {
   const normalized = normalizePayload(platform, rawPayload);
 
-  logger.info(`[${platform.toUpperCase()}] Evento: ${normalized.event} | Pedido: ${normalized.orderId} | Comprador: ${normalized.buyerEmail}`);
+  logger.info(`[${platform}][${tenantId.slice(0,8)}] Evento: ${normalized.event} | Comprador: ${normalized.buyerEmail}`);
 
   if (!isApprovedEvent(platform, normalized.event)) {
     return { ignored: true, reason: `Evento "${normalized.event}" não dispara entrega` };
@@ -19,23 +19,25 @@ async function processWebhookEvent(platform, rawPayload) {
     throw new Error(`Dados insuficientes: product_id="${normalized.platformProductId}", email="${normalized.buyerEmail}"`);
   }
 
-  const product = await products.findByPlatformId(platform, normalized.platformProductId);
+  const product = await products.findByPlatformId(tenantId, platform, normalized.platformProductId);
   if (!product) throw new Error(`Produto não cadastrado: plataforma=${platform}, id=${normalized.platformProductId}`);
   if (product.status !== 'active') throw new Error(`Produto "${product.name}" está inativo`);
 
-  const deliveryId = await deliveries.create({
-    product_id:        product.id,
-    platform,
+  const deliveryId = await deliveries.create(tenantId, {
+    product_id: product.id, platform,
     platform_order_id: normalized.orderId,
-    buyer_name:        normalized.buyerName,
-    buyer_email:       normalized.buyerEmail
+    buyer_name: normalized.buyerName,
+    buyer_email: normalized.buyerEmail
   });
 
-  await attemptDelivery(deliveryId, product, normalized);
+  // Busca configurações do tenant para envio de email
+  const tenant = await tenants.findById(tenantId);
+
+  await attemptDelivery(deliveryId, product, normalized, tenant);
   return { deliveryId, productName: product.name, buyerEmail: normalized.buyerEmail };
 }
 
-async function attemptDelivery(deliveryId, product, normalized) {
+async function attemptDelivery(deliveryId, product, normalized, tenant) {
   try {
     await sendProductEmail({
       buyerEmail:    normalized.buyerEmail,
@@ -45,39 +47,47 @@ async function attemptDelivery(deliveryId, product, normalized) {
       fileName:      product.file_name,
       emailTemplate: product.email_template,
       orderId:       normalized.orderId,
-      platform:      normalized.platform
+      // Usa config do tenant ou fallback do .env
+      resendApiKey:  tenant?.resend_api_key || process.env.RESEND_API_KEY || process.env.SMTP_PASS,
+      fromName:      tenant?.email_from_name    || process.env.EMAIL_FROM_NAME    || 'Vaultly',
+      fromAddress:   tenant?.email_from_address || process.env.EMAIL_FROM_ADDRESS || 'onboarding@resend.dev'
     });
     await deliveries.updateStatus(deliveryId, 'delivered');
-    logger.info(`✅ Email entregue — delivery: ${deliveryId} — ${normalized.buyerEmail}`);
+    logger.info(`✅ Email entregue — delivery: ${deliveryId}`);
   } catch (err) {
-    logger.error(`❌ Falha no envio — delivery: ${deliveryId} — ${err.message}`);
+    logger.error(`❌ Falha — delivery: ${deliveryId} — ${err.message}`);
     await deliveries.updateStatus(deliveryId, 'failed', err.message);
     throw err;
   }
 }
 
-async function retryFailedDeliveries() {
-  const pending = await deliveries.findPending();
-  if (pending.length === 0) return;
-  logger.info(`Reprocessando ${pending.length} entrega(s) pendente(s)...`);
+async function retryFailedDeliveries(tenantId) {
+  const pending = tenantId
+    ? await deliveries.findPending(tenantId)
+    : await deliveries.findAllPending();
+
+  if (!pending.length) return;
+  logger.info(`Reprocessando ${pending.length} entrega(s)...`);
+
   for (const delivery of pending) {
-    const product = await products.findById(delivery.product_id);
+    const product = await products.findById(delivery.tenant_id, delivery.product_id);
     if (!product) continue;
+    const tenant = await tenants.findById(delivery.tenant_id);
     try {
       await attemptDelivery(delivery.id, product, {
         buyerEmail: delivery.buyer_email,
         buyerName:  delivery.buyer_name,
         orderId:    delivery.platform_order_id,
         platform:   delivery.platform
-      });
-    } catch (err) {
-      logger.warn(`Retry falhou — delivery ${delivery.id}: ${err.message}`);
+      }, tenant);
+    } catch(e) {
+      logger.warn(`Retry falhou — ${delivery.id}: ${e.message}`);
     }
   }
 }
 
 function startRetryJob() {
-  setInterval(retryFailedDeliveries, RETRY_DELAY);
+  setInterval(() => retryFailedDeliveries(), RETRY_DELAY);
   logger.info(`Job de retry iniciado — intervalo: ${RETRY_DELAY/1000}s`);
 }
 

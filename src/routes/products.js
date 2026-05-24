@@ -1,26 +1,29 @@
-// src/routes/products.js
+// src/routes/products.js — multi-tenant
 const express  = require('express');
 const router   = express.Router();
 const multer   = require('multer');
 const path     = require('path');
 const fs       = require('fs');
-const { products }   = require('../models/database');
+const { products } = require('../models/database');
 const { uploadFile, deleteFile } = require('../services/storageService');
+const { requireAuth, requirePlanLimit } = require('../middleware/auth');
 const logger   = require('../config/logger');
+
+router.use(requireAuth);
 
 const UPLOADS_PATH = process.env.UPLOADS_PATH || './uploads';
 if (!fs.existsSync(UPLOADS_PATH)) fs.mkdirSync(UPLOADS_PATH, { recursive: true });
 
-// Multer salva temporariamente em disco antes de enviar ao R2
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOADS_PATH),
-  filename:    (req, file, cb) => cb(null, `${Date.now()}_${file.originalname.replace(/[^a-z0-9._-]/gi,'_')}`)
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, UPLOADS_PATH),
+    filename:    (req, file, cb) => cb(null, `${Date.now()}_${file.originalname.replace(/[^a-z0-9._-]/gi,'_')}`)
+  }),
+  limits: { fileSize: parseInt(process.env.MAX_FILE_SIZE_MB||'50') * 1024 * 1024 }
 });
 
-const upload = multer({ storage, limits: { fileSize: parseInt(process.env.MAX_FILE_SIZE_MB||'50') * 1024 * 1024 } });
-
-function uploadMiddleware(req, res, next) {
-  upload.single('file')(req, res, (err) => {
+function uploadMw(req, res, next) {
+  upload.single('file')(req, res, err => {
     if (err) return res.status(400).json({ success: false, error: err.message });
     next();
   });
@@ -28,7 +31,7 @@ function uploadMiddleware(req, res, next) {
 
 router.get('/', async (req, res) => {
   try {
-    const all = (await products.findAll()).map(({ file_path, ...p }) => p);
+    const all = (await products.findAll(req.tenantId)).map(({ file_path, ...p }) => p);
     res.json({ success: true, data: all });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -37,7 +40,7 @@ router.get('/', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
   try {
-    const p = await products.findById(req.params.id);
+    const p = await products.findById(req.tenantId, req.params.id);
     if (!p) return res.status(404).json({ success: false, error: 'Produto não encontrado' });
     const { file_path, ...safe } = p;
     res.json({ success: true, data: safe });
@@ -46,28 +49,24 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.post('/', uploadMiddleware, async (req, res) => {
+router.post('/', requirePlanLimit('product'), uploadMw, async (req, res) => {
   try {
     const { name, description, price, kiwify_id, yampi_id, email_template } = req.body;
     if (!name) return res.status(400).json({ success: false, error: 'Campo obrigatório: name' });
-    if (!kiwify_id && !yampi_id) return res.status(400).json({ success: false, error: 'Informe ao menos kiwify_id ou yampi_id' });
+    if (!kiwify_id && !yampi_id) return res.status(400).json({ success: false, error: 'Informe kiwify_id ou yampi_id' });
 
-    let r2Key  = null;
-    let fileName = null;
-
-    // Se enviou arquivo, faz upload para o R2
+    let r2Key = null, fileName = null;
     if (req.file) {
       r2Key    = await uploadFile(req.file.path, req.file.originalname);
       fileName = req.file.originalname;
     }
 
-    const created = await products.create({
+    const created = await products.create(req.tenantId, {
       name, description: description||null,
       price: parseFloat(price)||0,
       kiwify_id: kiwify_id||null, yampi_id: yampi_id||null,
       email_template: email_template||null,
-      file_path: r2Key,
-      file_name: fileName
+      file_path: r2Key, file_name: fileName
     });
 
     const { file_path, ...safe } = created;
@@ -78,9 +77,9 @@ router.post('/', uploadMiddleware, async (req, res) => {
   }
 });
 
-router.put('/:id', uploadMiddleware, async (req, res) => {
+router.put('/:id', uploadMw, async (req, res) => {
   try {
-    const existing = await products.findById(req.params.id);
+    const existing = await products.findById(req.tenantId, req.params.id);
     if (!existing) return res.status(404).json({ success: false, error: 'Produto não encontrado' });
 
     const updateData = {};
@@ -89,33 +88,27 @@ router.put('/:id', uploadMiddleware, async (req, res) => {
     });
 
     if (req.file) {
-      // Remove arquivo antigo do R2
-      if (existing.file_path) {
-        try { await deleteFile(existing.file_path); } catch (e) { logger.warn(`Não foi possível remover arquivo antigo: ${e.message}`); }
-      }
+      if (existing.file_path) { try { await deleteFile(existing.file_path); } catch(e){} }
       updateData.file_path = await uploadFile(req.file.path, req.file.originalname);
       updateData.file_name = req.file.originalname;
     }
 
     if (updateData.price !== undefined) updateData.price = parseFloat(updateData.price);
 
-    const updated = await products.update(req.params.id, updateData);
+    const updated = await products.update(req.tenantId, req.params.id, updateData);
     const { file_path, ...safe } = updated;
     res.json({ success: true, data: safe });
   } catch (err) {
-    logger.error(`Erro ao atualizar: ${err.message}`);
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
 router.delete('/:id', async (req, res) => {
   try {
-    const existing = await products.findById(req.params.id);
+    const existing = await products.findById(req.tenantId, req.params.id);
     if (!existing) return res.status(404).json({ success: false, error: 'Produto não encontrado' });
-    if (existing.file_path) {
-      try { await deleteFile(existing.file_path); } catch (e) { logger.warn(`Erro ao remover do R2: ${e.message}`); }
-    }
-    await products.delete(req.params.id);
+    if (existing.file_path) { try { await deleteFile(existing.file_path); } catch(e){} }
+    await products.delete(req.tenantId, req.params.id);
     res.json({ success: true, message: 'Produto removido' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
