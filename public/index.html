@@ -163,7 +163,7 @@ body::before {
 .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
 .topbar {
-  height: 60px; flex-shrink: 0;
+  height: 52px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 32px;
   background: rgba(11,16,32,0.6);
@@ -595,14 +595,33 @@ tbody tr:hover td { background: rgba(255,255,255,0.02); }
   <div class="main">
     <div class="topbar">
       <div class="topbar-left">
-        <div class="topbar-title" id="topbar-title">Dashboard</div>
-        <div class="topbar-sub" id="topbar-sub">visão geral do sistema</div>
+        <div class="topbar-title" id="topbar-title" style="font-size:13px;font-weight:600;color:var(--text2);letter-spacing:.02em;"></div>
       </div>
       <div class="topbar-right">
-        <div class="status-dot" id="status-dot" style="color:var(--text2);">conectado</div>
+        <!-- Entregas hoje -->
+        <div id="tb-deliveries-today" style="display:none;align-items:center;gap:5px;background:var(--emerald-dim);border:1px solid rgba(16,185,129,0.2);padding:4px 10px;border-radius:99px;font-size:12px;color:var(--emerald);font-weight:600;cursor:default;" title="Entregas hoje">
+          <i class="ti ti-package" style="font-size:13px;"></i>
+          <span id="tb-today-count">0</span>
+        </div>
+        <!-- Produtos pendentes -->
+        <div id="tb-unmatched" style="display:none;align-items:center;gap:5px;background:var(--yellow-dim);border:1px solid rgba(245,158,11,0.25);padding:4px 10px;border-radius:99px;font-size:12px;color:var(--yellow);font-weight:600;cursor:pointer;" title="Produtos não mapeados" onclick="switchTabById('produtos')">
+          <i class="ti ti-alert-triangle" style="font-size:13px;"></i>
+          <span id="tb-unmatched-count">0</span> pendentes
+        </div>
+        <!-- Novo produto (aba produtos) -->
         <button class="btn btn-primary btn-sm" id="topbar-btn" style="display:none;" onclick="openModal()">
           <i class="ti ti-plus"></i> Novo produto
         </button>
+        <!-- User + plano + logout -->
+        <div style="display:flex;align-items:center;gap:8px;padding-left:8px;border-left:1px solid var(--border);">
+          <div style="text-align:right;">
+            <div id="tb-username" style="font-size:12px;font-weight:600;color:var(--text);line-height:1.2;">—</div>
+            <div id="tb-plan" style="font-size:10px;color:var(--text3);"></div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="doLogout()" title="Sair" style="color:var(--text3);padding:4px 8px;">
+            <i class="ti ti-logout" style="font-size:15px;"></i>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -770,29 +789,97 @@ tbody tr:hover td { background: rgba(255,255,255,0.02); }
           </div>
         </div>
 
+        <!-- Status do remetente efetivo -->
+        <div id="email-status-card" class="card" style="border-color:var(--indigo);margin-bottom:8px;">
+          <div class="card-body" style="padding:14px 20px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div id="email-status-dot" style="width:8px;height:8px;border-radius:50%;background:var(--emerald);flex-shrink:0;"></div>
+              <div>
+                <div style="font-size:12px;color:var(--text2);">Enviando como</div>
+                <div id="email-status-label" style="font-size:14px;font-weight:600;color:var(--text);">Carregando...</div>
+              </div>
+              <div style="margin-left:auto;">
+                <button class="btn btn-ghost btn-sm" onclick="testEmail()">
+                  <i class="ti ti-send"></i> Testar envio
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="card">
           <div class="card-header">
-            <div class="card-title"><i class="ti ti-mail"></i> Serviço de Email</div>
-            <button class="btn btn-ghost btn-sm" onclick="testEmail()"><i class="ti ti-send"></i> Testar</button>
+            <div class="card-title"><i class="ti ti-mail"></i> Configurações de Email</div>
           </div>
           <div class="card-body">
-            <div class="form-grid">
-              <div class="form-group">
-                <label class="form-label">Provedor</label>
-                <select class="form-select">
-                  <option>Resend API (recomendado)</option>
-                  <option>Gmail SMTP</option>
-                  <option>Outro SMTP</option>
-                </select>
+
+            <!-- Bloco: identidade do remetente -->
+            <div style="margin-bottom:20px;">
+              <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:12px;">Identidade do Remetente</div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Nome do remetente</label>
+                  <input type="text" class="form-input" id="cfg-from-name" placeholder="Minha Loja Digital" />
+                  <div class="form-hint">Aparece no "De:" do email do comprador</div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Email remetente <span style="color:var(--text3);font-weight:400;">(opcional)</span></label>
+                  <input type="email" class="form-input" id="cfg-from-address" placeholder="entregas@sualojadigital.com.br" />
+                  <div class="form-hint">Deixe em branco para usar o domínio da plataforma</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Divisor com explicação do modelo híbrido -->
+            <div style="background:var(--bg4);border-radius:var(--radius);padding:14px 16px;margin-bottom:20px;border-left:3px solid var(--indigo);">
+              <div style="font-size:12px;font-weight:600;color:var(--cyan);margin-bottom:6px;">
+                <i class="ti ti-info-circle"></i> Como funciona o envio
+              </div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.7;">
+                Por padrão, seus emails são enviados pela <strong style="color:var(--text);">infraestrutura Vaultly</strong> — sem nenhuma configuração necessária.
+                Se quiser usar <strong style="color:var(--text);">sua própria conta Resend</strong> (para ter reputação separada, limites próprios ou remetente customizado),
+                preencha a API Key abaixo.
+              </div>
+            </div>
+
+            <!-- Bloco: Resend próprio (opcional) -->
+            <div>
+              <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:12px;">
+                Conta Resend Própria <span style="color:var(--indigo);font-size:10px;font-weight:600;background:rgba(108,99,255,0.12);padding:2px 7px;border-radius:99px;margin-left:4px;">OPCIONAL</span>
               </div>
               <div class="form-group">
-                <label class="form-label">Nome do remetente</label>
-                <input type="text" class="form-input" placeholder="Minha Loja Digital" />
+                <label class="form-label">API Key Resend</label>
+                <div style="display:flex;gap:8px;">
+                  <input type="password" class="form-input" id="cfg-resend-key" placeholder="re_xxxxxxxxxxxxxxxxxxxx" style="flex:1;" />
+                  <button class="btn btn-ghost btn-sm" onclick="toggleResendKey()" id="btn-toggle-key" title="Mostrar/ocultar">
+                    <i class="ti ti-eye"></i>
+                  </button>
+                </div>
+                <div class="form-hint">Crie em <a href="https://resend.com/api-keys" target="_blank" style="color:var(--indigo);">resend.com/api-keys</a> · Deixe em branco para usar a infraestrutura da plataforma</div>
               </div>
-              <div class="form-group full">
-                <label class="form-label">API Key / Senha</label>
-                <input type="password" class="form-input" placeholder="re_xxxxxxxxxxxx" />
+            </div>
+
+            <!-- Bloco: integração Yampi API (já implementado antes) -->
+            <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border);">
+              <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:12px;">Integração Yampi <span style="color:var(--text3);font-size:10px;font-weight:400;">(para importar produtos)</span></div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Alias da loja</label>
+                  <input type="text" class="form-input" id="cfg-yampi-alias" placeholder="minha-loja" />
+                  <div class="form-hint">URL da sua loja Yampi: yampi.com.br/<strong>alias</strong></div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Token API Yampi</label>
+                  <input type="password" class="form-input" id="cfg-yampi-token" placeholder="live_xxxxxxxxx" />
+                  <div class="form-hint">Yampi → Configurações → API</div>
+                </div>
               </div>
+            </div>
+
+            <div style="display:flex;justify-content:flex-end;margin-top:20px;">
+              <button class="btn btn-primary" onclick="saveEmailConfig()" id="btn-save-config">
+                <i class="ti ti-device-floppy"></i> Salvar configurações
+              </button>
             </div>
           </div>
         </div>
@@ -970,8 +1057,13 @@ async function doLogin() {
 function showApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
-  document.getElementById('user-name-label').textContent = currentUser?.name || currentUser?.email || 'Usuário';
-  document.getElementById('user-avatar').textContent = (currentUser?.name||'U')[0].toUpperCase();
+  var uname = currentUser ? (currentUser.name || currentUser.email || 'Usuário') : 'Usuário';
+  document.getElementById('user-name-label').textContent  = uname;
+  document.getElementById('user-avatar').textContent      = uname[0].toUpperCase();
+  // Topbar: nome + plano
+  var firstName = uname.split(' ')[0];
+  document.getElementById('tb-username').textContent = firstName;
+  document.getElementById('tb-plan').textContent     = currentUser ? (currentUser.plan_name || currentUser.plan_id || '') : '';
   initApp();
 }
 
@@ -981,6 +1073,86 @@ async function doLogout() {
   localStorage.removeItem('vaultly_token');
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
+}
+
+// ── Config: carregar e salvar ─────────────────────────────────────
+async function loadConfig() {
+  try {
+    const res = await apiFetch('/api/tenants/me');
+    if (!res.success) return;
+    const d = res.data;
+
+    // Preenche campos
+    document.getElementById('cfg-from-name').value    = d.email_from_name    || '';
+    document.getElementById('cfg-from-address').value = d.email_from_address || '';
+    document.getElementById('cfg-resend-key').value   = d.has_resend_key ? '••••••••••••••••' : '';
+    document.getElementById('cfg-yampi-alias').value  = d.yampi_store_alias  || '';
+    document.getElementById('cfg-yampi-token').value  = d.has_yampi_token    ? '••••••••••••••••' : '';
+
+    // Atualiza card de status
+    const label = document.getElementById('email-status-label');
+    const dot   = document.getElementById('email-status-dot');
+    if (d.using_platform_email) {
+      label.innerHTML = d.effective_from_name + ' &lt;' + d.effective_from_address + '&gt; &nbsp;<span style="font-size:11px;color:var(--text3);font-weight:400;">via infraestrutura Vaultly</span>';
+      dot.style.background = 'var(--cyan)';
+    } else {
+      label.innerHTML = d.effective_from_name + ' &lt;' + d.effective_from_address + '&gt; &nbsp;<span style="font-size:11px;color:var(--text3);font-weight:400;">conta Resend própria</span>';
+      dot.style.background = 'var(--emerald)';
+    }
+  } catch(e) {
+    console.error('loadConfig:', e);
+  }
+}
+
+async function saveEmailConfig() {
+  const btn = document.getElementById('btn-save-config');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i> Salvando...';
+
+  try {
+    const body = {};
+    const fromName    = document.getElementById('cfg-from-name').value.trim();
+    const fromAddress = document.getElementById('cfg-from-address').value.trim();
+    const resendKey   = document.getElementById('cfg-resend-key').value.trim();
+    const yampiAlias  = document.getElementById('cfg-yampi-alias').value.trim();
+    const yampiToken  = document.getElementById('cfg-yampi-token').value.trim();
+
+    if (fromName)    body.email_from_name    = fromName;
+    if (fromAddress) body.email_from_address = fromAddress;
+    // Nao sobrescreve chave existente se usuario deixou os pontos (placeholder)
+    if (resendKey && !resendKey.startsWith('•'))  body.resend_api_key   = resendKey;
+    if (yampiAlias)  body.yampi_store_alias  = yampiAlias;
+    if (yampiToken && !yampiToken.startsWith('•')) body.yampi_api_token = yampiToken;
+
+    const res = await apiFetch('/api/tenants/me', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!res.success) throw new Error(res.error);
+    await loadConfig(); // atualiza card de status
+    btn.innerHTML = '<i class="ti ti-check"></i> Salvo!';
+    setTimeout(function() {
+      btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar configurações';
+    }, 2000);
+  } catch(e) {
+    alert('Erro ao salvar: ' + e.message);
+    btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar configurações';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function toggleResendKey() {
+  const input = document.getElementById('cfg-resend-key');
+  const icon  = document.querySelector('#btn-toggle-key i');
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.className = 'ti ti-eye-off';
+  } else {
+    input.type = 'password';
+    icon.className = 'ti ti-eye';
+  }
 }
 
 async function changePass() {
@@ -1025,6 +1197,7 @@ async function initApp() {
     document.getElementById('url-yampi').textContent  = base + '/api/webhook/SEU_TENANT_ID/yampi';
   }
   loadDashboard();
+  loadUnmatchedProducts(); // popula pill de pendentes no topbar
 }
 
 // spin keyframe
@@ -1044,17 +1217,22 @@ const TAB_META = {
 function switchTab(name, el) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('tab-' + name)?.classList.add('active');
-  el?.classList.add('active');
-  const meta = TAB_META[name] || {};
+  document.getElementById('tab-' + name) && document.getElementById('tab-' + name).classList.add('active');
+  if (el) el.classList.add('active');
+  var meta = TAB_META[name] || {};
   document.getElementById('topbar-title').textContent = meta.title || name;
-  document.getElementById('topbar-sub').textContent   = meta.sub   || '';
-  const btn = document.getElementById('topbar-btn');
+  var btn = document.getElementById('topbar-btn');
   btn.style.display = name === 'produtos' ? 'flex' : 'none';
   if (name === 'dashboard') loadDashboard();
   if (name === 'produtos')  { loadProducts(); loadUnmatchedProducts(); }
   if (name === 'entregas')  loadDeliveries();
   if (name === 'webhook')   loadLogs();
+  if (name === 'config')    loadConfig();
+}
+
+function switchTabById(name) {
+  var navItem = document.querySelector('.nav-item[onclick*="' + name + '"]');
+  switchTab(name, navItem);
 }
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -1091,9 +1269,14 @@ async function loadDashboard() {
       apiFetch('/api/products'),
     ]);
     if (statsRes.success) {
-      document.getElementById('s-today').textContent     = statsRes.data.today     ?? '0';
-      document.getElementById('s-delivered').textContent = statsRes.data.delivered ?? '0';
-      document.getElementById('s-failed').textContent    = statsRes.data.failed    ?? '0';
+      document.getElementById('s-today').textContent     = statsRes.data.today     || '0';
+      document.getElementById('s-delivered').textContent = statsRes.data.delivered || '0';
+      document.getElementById('s-failed').textContent    = statsRes.data.failed    || '0';
+      // Topbar pill: entregas hoje
+      var todayCount = statsRes.data.today || 0;
+      var tbToday = document.getElementById('tb-deliveries-today');
+      document.getElementById('tb-today-count').textContent = todayCount;
+      tbToday.style.display = 'flex';
     }
     if (prodRes.success) {
       document.getElementById('s-products').textContent = prodRes.data.length;
@@ -1365,10 +1548,15 @@ async function loadUnmatchedProducts() {
     if (!res.success || !res.data.length) {
       box.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:16px 0;">Nenhum produto pendente — tudo mapeado!</div>';
       document.getElementById('unmatched-badge').style.display = 'none';
+    document.getElementById('tb-unmatched').style.display = 'none';
       return;
     }
     document.getElementById('unmatched-badge').textContent = res.data.length;
     document.getElementById('unmatched-badge').style.display = 'inline-block';
+    // Topbar pill: produtos pendentes
+    var tbUnmatched = document.getElementById('tb-unmatched');
+    document.getElementById('tb-unmatched-count').textContent = res.data.length;
+    tbUnmatched.style.display = 'flex';
     box.innerHTML = res.data.map(function(u) {
       return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">' +
         '<div>' +
