@@ -1130,6 +1130,7 @@ async function saveEmailConfig() {
       body: JSON.stringify(body)
     });
     if (!res.success) throw new Error(res.error);
+    _tenantConfigCache = null; // força recarga na próxima importação
     await loadConfig(); // atualiza card de status
     btn.innerHTML = '<i class="ti ti-check"></i> Salvo!';
     setTimeout(function() {
@@ -1604,38 +1605,98 @@ async function dismissUnmatched(id) {
 }
 
 // ── Importar da Plataforma ────────────────────────────────────────
+var _tenantConfigCache = null;
+
+async function getTenantConfig() {
+  if (_tenantConfigCache) return _tenantConfigCache;
+  var res = await apiFetch('/api/tenants/me');
+  if (res.success) { _tenantConfigCache = res.data; return res.data; }
+  return null;
+}
+
 async function importFromPlatform(platform) {
-  const btn = document.getElementById('btn-import-' + platform);
-  if (btn) { btn.disabled = true; btn.textContent = 'Buscando...'; }
-  const listEl = document.getElementById('platform-import-list');
+  var btn   = document.getElementById('btn-import-' + platform);
+  var listEl = document.getElementById('platform-import-list');
   if (listEl) listEl.innerHTML = '';
 
-  try {
-    const res = await apiFetch('/api/products/platform-list/' + platform);
-    if (!res.success) throw new Error(res.error);
-    if (!res.data.length) {
-      if (listEl) listEl.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:12px 0;">Nenhum produto encontrado na plataforma.</div>';
+  // Pré-verifica credenciais antes de chamar a API
+  var cfg = await getTenantConfig();
+
+  if (platform === 'yampi') {
+    if (!cfg || !cfg.yampi_store_alias || !cfg.has_yampi_token) {
+      if (listEl) listEl.innerHTML =
+        '<div style="background:var(--bg4);border:1px solid var(--border2);border-radius:var(--radius);padding:16px 18px;margin-top:4px;">' +
+          '<div style="font-size:13px;font-weight:600;color:var(--yellow);margin-bottom:8px;"><i class="ti ti-settings"></i> Configurar integração Yampi</div>' +
+          '<div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:12px;">' +
+            'Para importar produtos da Yampi, você precisa de duas informações:' +
+            '<br><br>' +
+            '<strong style="color:var(--text);">1. Alias da loja</strong> — a parte final da URL da sua loja:<br>' +
+            '<code style="background:var(--bg3);padding:2px 6px;border-radius:4px;font-size:11px;">yampi.com.br/<strong>seu-alias</strong></code>' +
+            '<br><br>' +
+            '<strong style="color:var(--text);">2. Token API</strong> — em Yampi: <em>Configurações → Integrações → API → Gerar token</em>' +
+          '</div>' +
+          '<button class="btn btn-primary btn-sm" onclick="switchTabById(\'config\')">' +
+            '<i class="ti ti-settings"></i> Ir para Configurações' +
+          '</button>' +
+        '</div>';
       return;
     }
+  }
+
+  if (platform === 'kiwify') {
+    if (listEl) listEl.innerHTML =
+      '<div style="background:var(--bg4);border:1px solid var(--border2);border-radius:var(--radius);padding:16px 18px;margin-top:4px;">' +
+        '<div style="font-size:13px;font-weight:600;color:var(--cyan);margin-bottom:8px;"><i class="ti ti-info-circle"></i> Kiwify — captura automática</div>' +
+        '<div style="font-size:12px;color:var(--text2);line-height:1.7;">' +
+          'A Kiwify não tem API pública de listagem de produtos. Mas não precisa! <br>' +
+          'Configure o webhook da Kiwify apontando para a sua URL Vaultly — na aba <strong style="color:var(--text);">Webhook</strong> — e os produtos aparecerão automaticamente aqui em <strong style="color:var(--yellow);">Produtos Pendentes</strong> quando chegarem os primeiros pedidos.' +
+        '</div>' +
+      '</div>';
+    return;
+  }
+
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i> Buscando...'; }
+
+  try {
+    var res = await apiFetch('/api/products/platform-list/' + platform);
+    if (!res.success) throw new Error(res.error);
+
+    if (!res.data || !res.data.length) {
+      if (listEl) listEl.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:12px 0;">Nenhum produto encontrado na sua loja Yampi.</div>';
+      return;
+    }
+
     if (listEl) {
-      listEl.innerHTML = '<div style="font-size:12px;color:var(--text2);margin-bottom:8px;">' + res.data.length + ' produto(s) encontrado(s) na ' + platform + ':</div>' +
+      listEl.innerHTML =
+        '<div style="font-size:12px;color:var(--text2);margin-bottom:10px;padding-top:4px;">' +
+          '<i class="ti ti-check" style="color:var(--emerald);"></i> ' + res.data.length + ' produto(s) encontrado(s) na Yampi:' +
+        '</div>' +
         res.data.map(function(p) {
-          var idField = platform === 'kiwify' ? 'kiwify_id' : 'yampi_id';
+          var safeName = p.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
           return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">' +
             '<div>' +
               '<div style="font-size:13px;font-weight:500;">' + p.name + '</div>' +
-              '<div style="font-size:11px;color:var(--text3);">ID: ' + p.platform_product_id + ' · ' + (p.status === 'active' ? 'Ativo' : 'Inativo') + '</div>' +
+              '<div style="font-size:11px;color:var(--text3);">ID: ' + p.platform_product_id +
+                (p.status !== 'active' ? ' · <span style="color:var(--red);">Inativo</span>' : ' · <span style="color:var(--emerald);">Ativo</span>') +
+              '</div>' +
             '</div>' +
-            '<button class="btn btn-ghost btn-xs" onclick="openModalFromPlatform(\'' + platform + '\',\'' + p.platform_product_id + '\',\'' + p.name.replace(/'/g, "\\'") + '\')">' +
+            '<button class="btn btn-ghost btn-xs" onclick="openModalFromPlatform(\'yampi\',\'' + p.platform_product_id + '\',\'' + safeName + '\')">' +
               '<i class="ti ti-plus"></i> Adicionar' +
             '</button>' +
           '</div>';
         }).join('');
     }
+    _tenantConfigCache = null; // limpa cache após operação
   } catch(e) {
-    if (listEl) listEl.innerHTML = '<div style="color:var(--red);font-size:12px;padding:8px 0;">' + e.message + '</div>';
+    var msg = e.message || 'Erro desconhecido';
+    if (listEl) listEl.innerHTML =
+      '<div style="background:var(--red-dim);border:1px solid rgba(244,63,94,0.2);border-radius:var(--radius);padding:14px 16px;margin-top:4px;">' +
+        '<div style="font-size:12px;font-weight:600;color:var(--red);margin-bottom:4px;"><i class="ti ti-alert-circle"></i> Erro ao conectar com a Yampi</div>' +
+        '<div style="font-size:12px;color:var(--text2);">' + msg + '</div>' +
+        '<div style="font-size:11px;color:var(--text3);margin-top:8px;">Verifique o alias e o token em <button class="btn btn-ghost btn-xs" onclick="switchTabById(\'config\')">Configurações</button></div>' +
+      '</div>';
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = 'Importar da ' + (platform === 'kiwify' ? 'Kiwify' : 'Yampi'); }
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-download"></i> Importar da Yampi'; }
   }
 }
 
