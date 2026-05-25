@@ -1,5 +1,5 @@
 // src/services/deliveryService.js — multi-tenant
-const { products, deliveries, tenants } = require('../models/database');
+const { products, deliveries, tenants, unmatchedProducts } = require('../models/database');
 const { sendProductEmail } = require('./emailService');
 const { normalizePayload, isApprovedEvent } = require('./platformAdapter');
 const logger = require('../config/logger');
@@ -20,8 +20,19 @@ async function processWebhookEvent(tenantId, platform, rawPayload) {
   }
 
   const product = await products.findByPlatformId(tenantId, platform, normalized.platformProductId);
-  if (!product) throw new Error(`Produto não cadastrado: plataforma=${platform}, id=${normalized.platformProductId}`);
-  if (product.status !== 'active') throw new Error(`Produto "${product.name}" está inativo`);
+  if (!product) {
+    // Salva como produto nao mapeado para o usuario vincular depois
+    await unmatchedProducts.upsert(tenantId, {
+      platform,
+      platform_product_id: normalized.platformProductId,
+      last_buyer_email: normalized.buyerEmail,
+      last_buyer_name:  normalized.buyerName,
+      last_order_id:    normalized.orderId
+    });
+    logger.warn('Produto nao mapeado salvo: plataforma=' + platform + ', id=' + normalized.platformProductId + ', comprador=' + normalized.buyerEmail);
+    return { ignored: true, reason: 'Produto nao mapeado — cadastre o produto e vincule o arquivo no painel', unmapped: true, platformProductId: normalized.platformProductId };
+  }
+  if (product.status !== 'active') throw new Error('Produto "' + product.name + '" esta inativo');
 
   const deliveryId = await deliveries.create(tenantId, {
     product_id: product.id, platform,

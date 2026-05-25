@@ -4,9 +4,10 @@ const router   = express.Router();
 const multer   = require('multer');
 const path     = require('path');
 const fs       = require('fs');
-const { products } = require('../models/database');
+const { products, unmatchedProducts, tenants } = require('../models/database');
 const { uploadFile, deleteFile } = require('../services/storageService');
 const { requireAuth, requirePlanLimit } = require('../middleware/auth');
+const { fetchYampiProducts, fetchKiwifyProducts } = require('../services/platformApiService');
 const logger   = require('../config/logger');
 
 router.use(requireAuth);
@@ -106,11 +107,55 @@ router.put('/:id', uploadMw, async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const existing = await products.findById(req.tenantId, req.params.id);
-    if (!existing) return res.status(404).json({ success: false, error: 'Produto não encontrado' });
+    if (!existing) return res.status(404).json({ success: false, error: 'Produto nao encontrado' });
     if (existing.file_path) { try { await deleteFile(existing.file_path); } catch(e){} }
     await products.delete(req.tenantId, req.params.id);
     res.json({ success: true, message: 'Produto removido' });
   } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ─── Produtos nao mapeados (capturados via webhook) ───────────────────────────
+
+router.get('/unmatched/list', async (req, res) => {
+  try {
+    const list = await unmatchedProducts.findAll(req.tenantId);
+    res.json({ success: true, data: list });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Descarta um produto nao mapeado (usuario decidiu ignorar)
+router.delete('/unmatched/:id', async (req, res) => {
+  try {
+    await unmatchedProducts.delete(req.tenantId, req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ─── Importar produtos da plataforma via API ──────────────────────────────────
+
+router.get('/platform-list/:platform', async (req, res) => {
+  try {
+    const tenant = await tenants.findById(req.tenantId);
+    const platform = req.params.platform;
+    let list = [];
+
+    if (platform === 'yampi') {
+      list = await fetchYampiProducts(tenant.yampi_store_alias, tenant.yampi_api_token);
+    } else if (platform === 'kiwify') {
+      list = await fetchKiwifyProducts(tenant.kiwify_api_key);
+    } else {
+      return res.status(400).json({ success: false, error: 'Plataforma invalida: ' + platform });
+    }
+
+    res.json({ success: true, data: list });
+  } catch (err) {
+    logger.error('Erro ao importar da plataforma: ' + err.message);
     res.status(500).json({ success: false, error: err.message });
   }
 });

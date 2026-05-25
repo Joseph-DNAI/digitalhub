@@ -670,10 +670,28 @@ tbody tr:hover td { background: rgba(255,255,255,0.02); }
             <div class="page-title">Produtos</div>
             <div class="page-sub">gerencie seus produtos digitais</div>
           </div>
-          <button class="btn btn-primary" onclick="openModal()">
-            <i class="ti ti-plus"></i> Novo produto
-          </button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-ghost" id="btn-import-yampi" onclick="importFromPlatform('yampi')" title="Requer yampi_store_alias e yampi_api_token nas Configurações">
+              <i class="ti ti-download"></i> Importar da Yampi
+            </button>
+            <button class="btn btn-primary" onclick="openModal()">
+              <i class="ti ti-plus"></i> Novo produto
+            </button>
+          </div>
         </div>
+
+        <!-- Produtos não mapeados (capturados via webhook) -->
+        <div id="unmatched-section" style="background:var(--bg3);border:1px solid var(--yellow);border-radius:var(--radius);padding:16px 20px;margin-bottom:24px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+            <i class="ti ti-alert-triangle" style="color:var(--yellow);font-size:16px;"></i>
+            <span style="font-weight:600;font-size:13px;color:var(--yellow);">Produtos Pendentes</span>
+            <span id="unmatched-badge" style="display:none;background:var(--yellow);color:#000;border-radius:99px;font-size:10px;font-weight:700;padding:2px 7px;"></span>
+            <span style="font-size:12px;color:var(--text2);margin-left:4px;">— chegaram via webhook mas ainda não têm arquivo vinculado</span>
+          </div>
+          <div id="unmatched-list" style="color:var(--text3);font-size:13px;">Verificando...</div>
+          <div id="platform-import-list" style="margin-top:8px;"></div>
+        </div>
+
         <div class="products-grid" id="products-grid">
           <div style="grid-column:1/-1;text-align:center;color:var(--text3);padding:48px;">Carregando...</div>
         </div>
@@ -1034,7 +1052,7 @@ function switchTab(name, el) {
   const btn = document.getElementById('topbar-btn');
   btn.style.display = name === 'produtos' ? 'flex' : 'none';
   if (name === 'dashboard') loadDashboard();
-  if (name === 'produtos')  loadProducts();
+  if (name === 'produtos')  { loadProducts(); loadUnmatchedProducts(); }
   if (name === 'entregas')  loadDeliveries();
   if (name === 'webhook')   loadLogs();
 }
@@ -1332,10 +1350,116 @@ async function copyText(elemId, btn) {
 async function testEmail() {
   try {
     const res = await apiFetch('/api/deliveries/test-smtp', { method: 'POST' });
-    alert(res.success ? '✅ ' + (res.message || 'Conexão SMTP OK!') : '❌ ' + (res.error || 'Falha na conexão'));
+    alert(res.success ? 'Conexão SMTP OK!' : 'Falha: ' + (res.error || 'desconhecido'));
   } catch(e) {
-    alert('❌ Erro: ' + e.message);
+    alert('Erro: ' + e.message);
   }
+}
+
+// ── Produtos Não Mapeados ─────────────────────────────────────────
+async function loadUnmatchedProducts() {
+  const box = document.getElementById('unmatched-list');
+  if (!box) return;
+  try {
+    const res = await apiFetch('/api/products/unmatched/list');
+    if (!res.success || !res.data.length) {
+      box.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:16px 0;">Nenhum produto pendente — tudo mapeado!</div>';
+      document.getElementById('unmatched-badge').style.display = 'none';
+      return;
+    }
+    document.getElementById('unmatched-badge').textContent = res.data.length;
+    document.getElementById('unmatched-badge').style.display = 'inline-block';
+    box.innerHTML = res.data.map(function(u) {
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">' +
+        '<div>' +
+          '<div style="font-size:13px;font-weight:600;color:var(--text);">' + u.platform_product_id + '</div>' +
+          '<div style="font-size:11px;color:var(--text2);margin-top:2px;">' +
+            platformBadge(u.platform) + ' &nbsp;· Visto ' + u.seen_count + 'x · Último: ' + (u.last_buyer_email || '?') +
+          '</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button class="btn btn-primary btn-xs" onclick="openModalFromUnmatched(\'' + u.id + '\',\'' + u.platform + '\',\'' + u.platform_product_id + '\')">' +
+            '<i class="ti ti-link"></i> Vincular' +
+          '</button>' +
+          '<button class="btn btn-ghost btn-xs" style="color:var(--red);" onclick="dismissUnmatched(\'' + u.id + '\')">' +
+            '<i class="ti ti-x"></i>' +
+          '</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  } catch(e) {
+    if (box) box.innerHTML = '<div style="color:var(--red);font-size:12px;">Erro: ' + e.message + '</div>';
+  }
+}
+
+function openModalFromUnmatched(unmatchedId, platform, platformProductId) {
+  openModal();
+  if (platform === 'kiwify') {
+    document.getElementById('m-kiwify').value = platformProductId;
+  } else {
+    document.getElementById('m-yampi').value = platformProductId;
+  }
+  document.getElementById('modal-title').textContent = 'Vincular produto ao arquivo';
+  document.getElementById('m-name').placeholder = 'Ex: Ebook SEO Completo';
+  // guarda o unmatchedId para apagar ao salvar
+  document.getElementById('save-btn').dataset.unmatchedId = unmatchedId;
+}
+
+async function dismissUnmatched(id) {
+  if (!confirm('Descartar este produto não mapeado?')) return;
+  try {
+    await apiFetch('/api/products/unmatched/' + id, { method: 'DELETE' });
+    loadUnmatchedProducts();
+  } catch(e) {
+    alert('Erro: ' + e.message);
+  }
+}
+
+// ── Importar da Plataforma ────────────────────────────────────────
+async function importFromPlatform(platform) {
+  const btn = document.getElementById('btn-import-' + platform);
+  if (btn) { btn.disabled = true; btn.textContent = 'Buscando...'; }
+  const listEl = document.getElementById('platform-import-list');
+  if (listEl) listEl.innerHTML = '';
+
+  try {
+    const res = await apiFetch('/api/products/platform-list/' + platform);
+    if (!res.success) throw new Error(res.error);
+    if (!res.data.length) {
+      if (listEl) listEl.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:12px 0;">Nenhum produto encontrado na plataforma.</div>';
+      return;
+    }
+    if (listEl) {
+      listEl.innerHTML = '<div style="font-size:12px;color:var(--text2);margin-bottom:8px;">' + res.data.length + ' produto(s) encontrado(s) na ' + platform + ':</div>' +
+        res.data.map(function(p) {
+          var idField = platform === 'kiwify' ? 'kiwify_id' : 'yampi_id';
+          return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">' +
+            '<div>' +
+              '<div style="font-size:13px;font-weight:500;">' + p.name + '</div>' +
+              '<div style="font-size:11px;color:var(--text3);">ID: ' + p.platform_product_id + ' · ' + (p.status === 'active' ? 'Ativo' : 'Inativo') + '</div>' +
+            '</div>' +
+            '<button class="btn btn-ghost btn-xs" onclick="openModalFromPlatform(\'' + platform + '\',\'' + p.platform_product_id + '\',\'' + p.name.replace(/'/g, "\\'") + '\')">' +
+              '<i class="ti ti-plus"></i> Adicionar' +
+            '</button>' +
+          '</div>';
+        }).join('');
+    }
+  } catch(e) {
+    if (listEl) listEl.innerHTML = '<div style="color:var(--red);font-size:12px;padding:8px 0;">' + e.message + '</div>';
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Importar da ' + (platform === 'kiwify' ? 'Kiwify' : 'Yampi'); }
+  }
+}
+
+function openModalFromPlatform(platform, platformProductId, name) {
+  openModal();
+  document.getElementById('m-name').value = name;
+  if (platform === 'kiwify') {
+    document.getElementById('m-kiwify').value = platformProductId;
+  } else {
+    document.getElementById('m-yampi').value = platformProductId;
+  }
+  document.getElementById('modal-title').textContent = 'Adicionar produto da ' + (platform === 'kiwify' ? 'Kiwify' : 'Yampi');
 }
 </script>
 </body>

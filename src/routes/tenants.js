@@ -24,7 +24,10 @@ router.get('/me', async (req, res) => {
         yampi_webhook_secret:   tenant?.yampi_webhook_secret  || null,
         email_from_name:        tenant?.email_from_name        || null,
         email_from_address:     tenant?.email_from_address     || null,
-        has_resend_key:         !!tenant?.resend_api_key
+        has_resend_key:         !!tenant?.resend_api_key,
+        has_kiwify_api_key:     !!tenant?.kiwify_api_key,
+        has_yampi_token:        !!tenant?.yampi_api_token,
+        yampi_store_alias:      tenant?.yampi_store_alias      || null
       }
     });
   } catch(err) {
@@ -38,7 +41,8 @@ router.put('/me', async (req, res) => {
     const allowed = [
       'kiwify_webhook_secret', 'yampi_webhook_secret',
       'email_from_name', 'email_from_address', 'resend_api_key',
-      'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass'
+      'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass',
+      'kiwify_api_key', 'yampi_api_token', 'yampi_store_alias'
     ];
     const updateData = {};
     allowed.forEach(f => {

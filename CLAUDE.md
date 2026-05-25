@@ -60,18 +60,20 @@ public/
 
 ---
 
-## Estado atual (atualizado em 2026-05-24)
+## Estado atual (atualizado em 2026-05-25)
 
 ### Resolvido recentemente
 - ✅ **Crash loop no Railway**: `ENOTFOUND postgres.railway.internal` → adicionado retry com backoff em `server.js` (`startWithRetry`)
 - ✅ **Painel sem interação**: todas as funções JS do `public/index.html` estavam faltando → implementadas: `switchTab`, `loadDashboard`, `loadProducts`, `loadDeliveries`, `loadLogs`, `openModal`, `closeModal`, `editProduct`, `deleteProduct`, `saveProduct`, `handleFileSelect`, `copyText`, `testEmail`
 - ✅ **SyntaxError no server.js**: template literals aninhados com emojis corromperam o arquivo → reescrito sem emojis
+- ✅ **Fluxo completo testado e funcionando**: webhook Kiwify → produto encontrado → arquivo baixado do R2 → email entregue via Resend
+- ✅ **Variáveis de ambiente Railway**: todas configuradas (RESEND_API_KEY, R2, DATABASE_URL, etc.)
 
 ### Pendente / próximos passos
-- [ ] Testar fluxo completo: cadastrar produto → disparar webhook de teste → confirmar entrega por email
-- [ ] Configurar SMTP/Resend no painel (aba Configurações)
-- [ ] Verificar se `admin.html` também precisa das funções JS (mesmo problema do index.html)
-- [ ] Variáveis de ambiente no Railway: `DATABASE_URL`, `SMTP_*`, `BASE_URL`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`
+- [ ] Verificar se `admin.html` precisa das funções JS (mesmo problema que o index.html tinha)
+- [ ] Configurar domínio verificado no Resend (atualmente usa `onboarding@resend.dev` — para produção real precisa de domínio próprio)
+- [ ] Configurar webhook real na Kiwify apontando para `https://digitalhub-production.up.railway.app/api/webhook/e962997b-ce3c-4521-a0cd-a42abcd74efa/kiwify`
+- [ ] Apagar `test-webhook.ps1` da pasta do projeto (contém credenciais)
 
 ---
 

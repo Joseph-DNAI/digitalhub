@@ -77,6 +77,9 @@ async function initDatabase() {
         email_from_name       TEXT DEFAULT 'Minha Loja',
         email_from_address    TEXT,
         resend_api_key        TEXT,
+        kiwify_api_key        TEXT,
+        yampi_api_token       TEXT,
+        yampi_store_alias     TEXT,
         created_at            TIMESTAMP DEFAULT NOW(),
         updated_at            TIMESTAMP DEFAULT NOW()
       );
@@ -128,6 +131,21 @@ async function initDatabase() {
         created_at TIMESTAMP DEFAULT NOW()
       );
 
+      -- Produtos vistos em webhooks mas sem cadastro no sistema
+      CREATE TABLE IF NOT EXISTS unmatched_products (
+        id                  TEXT PRIMARY KEY,
+        tenant_id           TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        platform            TEXT NOT NULL,
+        platform_product_id TEXT NOT NULL,
+        last_buyer_email    TEXT,
+        last_buyer_name     TEXT,
+        last_order_id       TEXT,
+        seen_count          INTEGER DEFAULT 1,
+        last_seen           TIMESTAMP DEFAULT NOW(),
+        created_at          TIMESTAMP DEFAULT NOW(),
+        UNIQUE(tenant_id, platform, platform_product_id)
+      );
+
       -- Tokens de sessão
       CREATE TABLE IF NOT EXISTS sessions (
         id         TEXT PRIMARY KEY,
@@ -136,6 +154,13 @@ async function initDatabase() {
         expires_at TIMESTAMP NOT NULL,
         created_at TIMESTAMP DEFAULT NOW()
       );
+    `);
+
+    // Migracoes incrementais — adiciona colunas novas se nao existirem
+    await client.query(`
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS kiwify_api_key    TEXT;
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS yampi_api_token    TEXT;
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS yampi_store_alias  TEXT;
     `);
 
     // Planos padrão
@@ -428,4 +453,42 @@ const plans = {
   async findById(id) { return queryOne('SELECT * FROM plans WHERE id=$1', [id]); }
 };
 
-module.exports = { initDatabase, pool, query, queryOne, users, sessions, tenants, products, deliveries, webhookLogs, plans };
+// ─── Unmatched Products ───────────────────────────────────────────────────────
+
+const unmatchedProducts = {
+  // Registra ou incrementa contador se ja existir
+  async upsert(tenantId, data) {
+    const id = uuidv4();
+    await query(`
+      INSERT INTO unmatched_products
+        (id, tenant_id, platform, platform_product_id, last_buyer_email, last_buyer_name, last_order_id)
+      VALUES ($1,$2,$3,$4,$5,$6,$7)
+      ON CONFLICT (tenant_id, platform, platform_product_id)
+      DO UPDATE SET
+        seen_count       = unmatched_products.seen_count + 1,
+        last_buyer_email = EXCLUDED.last_buyer_email,
+        last_buyer_name  = EXCLUDED.last_buyer_name,
+        last_order_id    = EXCLUDED.last_order_id,
+        last_seen        = NOW()
+    `, [id, tenantId, data.platform, data.platform_product_id,
+        data.last_buyer_email||null, data.last_buyer_name||null, data.last_order_id||null]);
+  },
+
+  async findAll(tenantId) {
+    return query(
+      'SELECT * FROM unmatched_products WHERE tenant_id=$1 ORDER BY last_seen DESC',
+      [tenantId]
+    );
+  },
+
+  async delete(tenantId, id) {
+    await query('DELETE FROM unmatched_products WHERE id=$1 AND tenant_id=$2', [id, tenantId]);
+  },
+
+  async count(tenantId) {
+    const r = await queryOne('SELECT COUNT(*) as n FROM unmatched_products WHERE tenant_id=$1', [tenantId]);
+    return parseInt(r.n);
+  }
+};
+
+module.exports = { initDatabase, pool, query, queryOne, users, sessions, tenants, products, deliveries, webhookLogs, plans, unmatchedProducts };
