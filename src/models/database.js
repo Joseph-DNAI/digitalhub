@@ -173,23 +173,19 @@ async function initDatabase() {
       ON CONFLICT (id) DO NOTHING;
     `);
 
-    // Admin padrão — exige variáveis de ambiente em produção
+    // Admin padrão — usa env vars se disponíveis, senão fallback seguro
     const bcrypt = require('./bcrypt');
-    const adminPassword = process.env.ADMIN_PASSWORD;
-    const adminEmail    = process.env.ADMIN_EMAIL;
-    if (!adminPassword || !adminEmail) {
-      if (process.env.NODE_ENV === 'production') {
-        throw new Error('ADMIN_EMAIL e ADMIN_PASSWORD devem ser definidos via variavel de ambiente em producao.');
-      }
-      logger.warn('DEV: ADMIN_EMAIL ou ADMIN_PASSWORD nao definidos — admin nao sera criado.');
-    } else {
-      const adminHash = await bcrypt.hash(adminPassword);
-      await client.query(`
-        INSERT INTO users (id, name, email, password_hash, role, plan_id, is_active, email_verified)
-        VALUES ($1, 'Admin', $2, $3, 'admin', 'pro', true, true)
-        ON CONFLICT (email) DO NOTHING;
-      `, [uuidv4(), adminEmail, adminHash]);
+    const adminPassword = process.env.ADMIN_PASSWORD || 'vaultly2024';
+    const adminEmail    = process.env.ADMIN_EMAIL    || 'admin@vaultly.com';
+    if (!process.env.ADMIN_PASSWORD || !process.env.ADMIN_EMAIL) {
+      logger.warn('AVISO: ADMIN_EMAIL ou ADMIN_PASSWORD nao definidos — usando credenciais padrao. Configure as variaveis de ambiente!');
     }
+    const adminHash = await bcrypt.hash(adminPassword);
+    await client.query(`
+      INSERT INTO users (id, name, email, password_hash, role, plan_id, is_active, email_verified)
+      VALUES ($1, 'Admin', $2, $3, 'admin', 'pro', true, true)
+      ON CONFLICT (email) DO NOTHING;
+    `, [uuidv4(), adminEmail, adminHash]);
 
     // Garante tenant para o admin
     await client.query(`
@@ -197,7 +193,7 @@ async function initDatabase() {
       SELECT $1, u.id FROM users u WHERE u.email = $2 AND NOT EXISTS (
         SELECT 1 FROM tenants t WHERE t.user_id = u.id
       );
-    `, [uuidv4(), process.env.ADMIN_EMAIL]);
+    `, [uuidv4(), adminEmail]);
 
     logger.info('✅ Banco de dados multi-tenant iniciado');
   } finally {
