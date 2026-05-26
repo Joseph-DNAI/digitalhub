@@ -15,12 +15,39 @@ router.use(requireAuth);
 const UPLOADS_PATH = process.env.UPLOADS_PATH || './uploads';
 if (!fs.existsSync(UPLOADS_PATH)) fs.mkdirSync(UPLOADS_PATH, { recursive: true });
 
+// Tipos de arquivo permitidos para produtos digitais
+const ALLOWED_MIMETYPES = [
+  'application/pdf',
+  'application/zip',
+  'application/x-zip-compressed',
+  'application/epub+zip',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/msword',
+  'text/plain',
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'audio/mpeg',
+  'audio/mp4',
+  'video/mp4',
+  'video/webm'
+];
+
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => cb(null, UPLOADS_PATH),
     filename:    (req, file, cb) => cb(null, `${Date.now()}_${file.originalname.replace(/[^a-z0-9._-]/gi,'_')}`)
   }),
-  limits: { fileSize: parseInt(process.env.MAX_FILE_SIZE_MB||'50') * 1024 * 1024 }
+  limits: { fileSize: parseInt(process.env.MAX_FILE_SIZE_MB||'50') * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (ALLOWED_MIMETYPES.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Tipo de arquivo nao permitido. Use PDF, ZIP, EPUB, DOCX, MP3, MP4 ou similares.'));
+    }
+  }
 });
 
 function uploadMw(req, res, next) {

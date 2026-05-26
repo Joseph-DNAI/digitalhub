@@ -13,15 +13,45 @@ const { startRetryJob } = require('./services/deliveryService');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc:  ["'self'", "'unsafe-inline'", "fonts.googleapis.com", "cdn.jsdelivr.net"],
+      styleSrc:   ["'self'", "'unsafe-inline'", "fonts.googleapis.com", "cdn.jsdelivr.net"],
+      fontSrc:    ["'self'", "fonts.gstatic.com", "cdn.jsdelivr.net"],
+      imgSrc:     ["'self'", "data:"],
+      connectSrc: ["'self'"]
+    }
+  },
+  crossOriginEmbedderPolicy: false
+}));
 app.set('trust proxy', 1);
-app.use(rateLimit({ windowMs: 15*60*1000, max: 500 }));
+
+// Rate limit geral
+app.use(rateLimit({ windowMs: 15*60*1000, max: 300 }));
+
+// Rate limit restrito para auth (anti brute-force)
+const authLimiter = rateLimit({
+  windowMs: 15*60*1000,
+  max: 20,
+  message: { success: false, error: 'Muitas tentativas. Aguarde 15 minutos.' }
+});
 
 const webhookLimiter = rateLimit({ windowMs: 60*1000, max: 60 });
 
-// CORS
+// CORS restrito à origem do app
+const allowedOrigins = [
+  process.env.BASE_URL,
+  'http://localhost:3000',
+  'http://localhost:3001'
+].filter(Boolean);
+
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
+  const origin = req.headers.origin;
+  if (!origin || allowedOrigins.some(o => origin.startsWith(o))) {
+    res.header('Access-Control-Allow-Origin', origin || allowedOrigins[0] || '*');
+  }
   res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization');
   if (req.method === 'OPTIONS') return res.sendStatus(200);
@@ -57,7 +87,7 @@ if (fs.existsSync(publicPath)) {
 
 // Rotas
 app.use('/api/webhook',    webhookLimiter, require('./routes/webhook'));
-app.use('/api/auth',       require('./routes/auth'));
+app.use('/api/auth',       authLimiter, require('./routes/auth'));
 app.use('/api/admin',      require('./routes/admin'));
 app.use('/api/products',   require('./routes/products'));
 app.use('/api/deliveries', require('./routes/deliveries'));

@@ -30,7 +30,7 @@ router.post('/register', async (req, res) => {
 
   } catch (err) {
     logger.error(`Erro no cadastro: ${err.message}`);
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({ success: false, error: 'Erro ao criar conta. Tente novamente.' });
   }
 });
 
@@ -54,7 +54,7 @@ router.post('/login', async (req, res) => {
 
   } catch (err) {
     logger.error(`Erro no login: ${err.message}`);
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({ success: false, error: 'Erro ao fazer login. Tente novamente.' });
   }
 });
 
@@ -65,7 +65,8 @@ router.post('/logout', requireAuth, async (req, res) => {
     if (token) await sessions.delete(token);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    logger.error(`Erro no logout: ${err.message}`);
+    res.status(500).json({ success: false, error: 'Erro interno.' });
   }
 });
 
@@ -75,7 +76,8 @@ router.get('/me', requireAuth, async (req, res) => {
     const user = await users.findById(req.user.user_id);
     res.json({ success: true, user: sanitizeUser(user) });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    logger.error(`Erro em /me: ${err.message}`);
+    res.status(500).json({ success: false, error: 'Erro interno.' });
   }
 });
 
@@ -85,7 +87,8 @@ router.get('/plans', async (req, res) => {
     const all = await plans.findAll();
     res.json({ success: true, data: all });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    logger.error(`Erro em /plans: ${err.message}`);
+    res.status(500).json({ success: false, error: 'Erro interno.' });
   }
 });
 

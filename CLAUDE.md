@@ -4,6 +4,65 @@
 
 ---
 
+## Regra de Memória Automática (SEMPRE SEGUIR)
+
+Durante qualquer sessão de trabalho neste projeto, a IA deve **atualizar automaticamente** as notas em:
+
+```
+C:\Users\jojop\OneDrive\Documentos\Obsidian Vault\C04.Notas da IA\
+```
+
+### Quando atualizar sem precisar ser pedido:
+
+| Gatilho | O que fazer |
+|---|---|
+| Funcionalidade nova implementada | Mover de "Pendente" para "Resolvido" no Contexto |
+| Nova pendência identificada | Adicionar em "Pendente" no Contexto |
+| Decisão de design/arquitetura tomada | Registrar no Contexto + Sessões |
+| Novo link, URL ou endpoint relevante | Adicionar no Contexto |
+| Preços, planos ou configs alterados | Atualizar tabela de Planos no Contexto |
+| Arquivo criado ou modificado | Registrar no Registro de Sessões |
+| Novo tema ou tópico importante surgir | Criar nova seção ou nota separada |
+| Fim de sessão | Adicionar bloco de data no Registro de Sessões |
+
+### Arquivos de notas
+
+| Arquivo | Caminho completo | Para que serve |
+|---|---|---|
+| Contexto geral | `C:\Users\jojop\OneDrive\Documentos\Obsidian Vault\C04.Notas da IA\Vaultly — Contexto do Projeto.md` | Stack, estado atual, pendências, regras |
+| Registro de sessões | `C:\Users\jojop\OneDrive\Documentos\Obsidian Vault\C04.Notas da IA\Vaultly — Registro de Sessões.md` | Histórico cronológico de sessões |
+| Nota do projeto | `C:\Users\jojop\OneDrive\Documentos\Obsidian Vault\B01.Projetos\Webhook Yampi e Kiwify\Webhook Yampi e Kiwify.md` | Resumo executivo linkado ao vault |
+| Novos temas | `C:\Users\jojop\OneDrive\Documentos\Obsidian Vault\C04.Notas da IA\Vaultly — [Tema].md` | Criar quando um tópico novo merece arquivo próprio |
+
+### O que atualizar em cada arquivo
+
+- **Contexto do Projeto** — mudanças de stack, configs, planos, resolver/adicionar pendências
+- **Registro de Sessões** — bloco de data ao final de cada sessão com resumo do que foi feito
+- **Nota do Projeto** — URLs, planos, pendências e seção "Resolvido recentemente"
+
+### Formato do bloco de sessão (Registro de Sessões)
+
+```markdown
+## 📅 YYYY-MM-DD
+
+### O que foi feito
+- Item 1
+- Item 2
+
+### Arquivos modificados / criados
+- `caminho/arquivo.ext` — criado / modificado
+
+### Decisões importantes
+- Decisão ou contexto relevante
+
+### Próximos passos
+- [ ] Pendência 1
+```
+
+> **Importante:** A atualização das notas deve ser silenciosa — não perguntar ao usuário se deve atualizar, apenas fazer ao final de cada conjunto de ações relevantes.
+
+---
+
 ## O que é este projeto
 
 **Vaultly** (anteriormente DigitalHub) é uma plataforma SaaS de entrega automática de produtos digitais (PDFs, ebooks, arquivos).

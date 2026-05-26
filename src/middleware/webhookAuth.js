@@ -16,9 +16,10 @@ async function verifyWebhookSignature(req, res, next) {
   const platform = detectPlatform(req);
   req.webhookPlatform = platform;
 
-  // Busca secret do tenant se disponível
-  let secret = null;
   const { tenantId } = req.params;
+
+  // Busca secret do tenant
+  let secret = null;
   if (tenantId) {
     try {
       const { tenants } = require('../models/database');
@@ -28,7 +29,9 @@ async function verifyWebhookSignature(req, res, next) {
           ? tenant.yampi_webhook_secret
           : tenant.kiwify_webhook_secret;
       }
-    } catch(e) {}
+    } catch (e) {
+      logger.error('Erro ao buscar tenant para validacao de webhook: ' + e.message);
+    }
   }
 
   // Fallback para variáveis de ambiente
@@ -39,12 +42,17 @@ async function verifyWebhookSignature(req, res, next) {
   }
   if (!secret) secret = process.env.WEBHOOK_SECRET;
 
-  // Se não há secret configurado, permite (modo dev)
+  // Sem secret configurado: bloqueia em producao, libera apenas em dev
   if (!secret) {
-    logger.warn(`Webhook sem secret configurado — tenant: ${tenantId} — validação desativada`);
+    if (process.env.NODE_ENV === 'production') {
+      logger.warn('Webhook bloqueado: nenhum secret configurado — tenant: ' + tenantId);
+      return res.status(401).json({ error: 'Webhook nao autorizado' });
+    }
+    logger.warn('DEV: Webhook sem secret — validacao desativada');
     return next();
   }
 
+  // Sem assinatura no header/query: bloqueia sempre
   const signature =
     req.headers['x-kiwify-signature'] ||
     req.headers['x-yampi-hmac-sha256'] ||
@@ -52,8 +60,8 @@ async function verifyWebhookSignature(req, res, next) {
     '';
 
   if (!signature) {
-    logger.warn(`Requisição sem assinatura — tenant: ${tenantId}`);
-    return next(); // Permite sem assinatura (Kiwify às vezes envia via query)
+    logger.warn('Webhook bloqueado: sem assinatura — platform: ' + platform + ' tenant: ' + tenantId);
+    return res.status(401).json({ error: 'Assinatura ausente' });
   }
 
   try {
@@ -64,20 +72,30 @@ async function verifyWebhookSignature(req, res, next) {
       .digest('hex');
 
     const sigClean = signature.replace('sha256=', '');
-    const sigBuf   = Buffer.from(sigClean.padEnd(expected.length, '0'), 'hex');
     const expBuf   = Buffer.from(expected, 'hex');
 
-    if (sigBuf.length === expBuf.length && crypto.timingSafeEqual(sigBuf, expBuf)) {
-      logger.debug(`Assinatura válida — ${platform} — tenant: ${tenantId}`);
-    } else {
-      logger.warn(`Assinatura inválida — ${platform} — tenant: ${tenantId}`);
-      // Não bloqueia — apenas loga. Para bloquear, descomente:
-      // return res.status(401).json({ error: 'Assinatura inválida' });
+    let sigBuf;
+    try {
+      sigBuf = Buffer.from(sigClean, 'hex');
+    } catch (e) {
+      sigBuf = Buffer.alloc(0);
     }
+
+    const valid =
+      sigBuf.length === expBuf.length &&
+      crypto.timingSafeEqual(sigBuf, expBuf);
+
+    if (!valid) {
+      logger.warn('Webhook bloqueado: assinatura invalida — ' + platform + ' — tenant: ' + tenantId);
+      return res.status(401).json({ error: 'Assinatura invalida' });
+    }
+
+    logger.debug('Assinatura valida — ' + platform + ' — tenant: ' + tenantId);
     next();
-  } catch(err) {
-    logger.error(`Erro na verificação: ${err.message}`);
-    next();
+
+  } catch (err) {
+    logger.error('Erro na verificacao do webhook: ' + err.message);
+    return res.status(500).json({ error: 'Erro interno na validacao' });
   }
 }
 

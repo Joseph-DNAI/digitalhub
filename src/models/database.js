@@ -173,14 +173,23 @@ async function initDatabase() {
       ON CONFLICT (id) DO NOTHING;
     `);
 
-    // Admin padrão
+    // Admin padrão — exige variáveis de ambiente em produção
     const bcrypt = require('./bcrypt');
-    const adminHash = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'vaultly2024');
-    await client.query(`
-      INSERT INTO users (id, name, email, password_hash, role, plan_id, is_active, email_verified)
-      VALUES ($1, 'Admin', $2, $3, 'admin', 'pro', true, true)
-      ON CONFLICT (email) DO NOTHING;
-    `, [uuidv4(), process.env.ADMIN_EMAIL || 'admin@vaultly.com', adminHash]);
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    const adminEmail    = process.env.ADMIN_EMAIL;
+    if (!adminPassword || !adminEmail) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('ADMIN_EMAIL e ADMIN_PASSWORD devem ser definidos via variavel de ambiente em producao.');
+      }
+      logger.warn('DEV: ADMIN_EMAIL ou ADMIN_PASSWORD nao definidos — admin nao sera criado.');
+    } else {
+      const adminHash = await bcrypt.hash(adminPassword);
+      await client.query(`
+        INSERT INTO users (id, name, email, password_hash, role, plan_id, is_active, email_verified)
+        VALUES ($1, 'Admin', $2, $3, 'admin', 'pro', true, true)
+        ON CONFLICT (email) DO NOTHING;
+      `, [uuidv4(), adminEmail, adminHash]);
+    }
 
     // Garante tenant para o admin
     await client.query(`
@@ -188,7 +197,7 @@ async function initDatabase() {
       SELECT $1, u.id FROM users u WHERE u.email = $2 AND NOT EXISTS (
         SELECT 1 FROM tenants t WHERE t.user_id = u.id
       );
-    `, [uuidv4(), process.env.ADMIN_EMAIL || 'admin@vaultly.com']);
+    `, [uuidv4(), process.env.ADMIN_EMAIL]);
 
     logger.info('✅ Banco de dados multi-tenant iniciado');
   } finally {
