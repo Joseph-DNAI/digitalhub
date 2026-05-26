@@ -424,6 +424,14 @@ const deliveries = {
     `);
   },
 
+  // Retorna as N entregas mais recentes do tenant (para checar plataforma usada)
+  async findByTenant(tenantId, limit) {
+    return query(
+      'SELECT platform FROM deliveries WHERE tenant_id=$1 AND platform IS NOT NULL ORDER BY created_at DESC LIMIT $2',
+      [tenantId, limit || 10]
+    );
+  },
+
   async stats(tenantId) {
     const [total, delivered, failed, today] = await Promise.all([
       queryOne("SELECT COUNT(*) as n FROM deliveries WHERE tenant_id=$1", [tenantId]),

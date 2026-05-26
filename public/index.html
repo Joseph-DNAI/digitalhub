@@ -939,6 +939,74 @@ tbody tr:hover td { background: rgba(255,255,255,0.02); }
   </div>
 </div>
 
+<!-- ── MODAL UPGRADE ── -->
+<div id="upgrade-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:16px;" onclick="if(event.target===this)hideUpgradeModal()">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;max-width:520px;width:100%;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,0.5);">
+    <!-- Header gradiente -->
+    <div style="background:linear-gradient(135deg,#6C63FF,#38BDF8);padding:28px 28px 24px;position:relative;">
+      <button onclick="hideUpgradeModal()" style="position:absolute;top:14px;right:14px;background:rgba(255,255,255,0.15);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">&#x2715;</button>
+      <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.75);text-transform:uppercase;margin-bottom:6px;">Recurso Premium</div>
+      <h2 style="color:#fff;margin:0;font-size:22px;font-weight:700;">Desbloqueie tudo com o plano pago</h2>
+      <p style="color:rgba(255,255,255,0.85);margin:8px 0 0;font-size:14px;">Prioridade na fila, sem marcas d'agua e acesso a todos os relatórios.</p>
+    </div>
+    <!-- Comparação de planos -->
+    <div style="padding:24px 28px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:24px;">
+        <!-- Free -->
+        <div style="border:1px solid var(--border);border-radius:10px;padding:14px 12px;text-align:center;">
+          <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;">Free</div>
+          <div style="font-size:20px;font-weight:700;color:var(--text);">R$0</div>
+          <hr style="border:none;border-top:1px solid var(--border);margin:10px 0;"/>
+          <ul style="list-style:none;padding:0;margin:0;text-align:left;font-size:11px;color:var(--text2);line-height:2;">
+            <li><span style="color:var(--emerald);">&#10003;</span> 1 plataforma</li>
+            <li><span style="color:var(--emerald);">&#10003;</span> 10 entregas visíveis</li>
+            <li><span style="color:var(--red);">&#10005;</span> Fila prioritária</li>
+            <li><span style="color:var(--red);">&#10005;</span> Sem marca Vaultly</li>
+            <li><span style="color:var(--red);">&#10005;</span> Logs de webhook</li>
+            <li><span style="color:var(--red);">&#10005;</span> Relatórios completos</li>
+          </ul>
+        </div>
+        <!-- Basic -->
+        <div style="border:2px solid #6C63FF;border-radius:10px;padding:14px 12px;text-align:center;position:relative;">
+          <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#6C63FF;color:#fff;font-size:10px;font-weight:700;padding:2px 10px;border-radius:20px;white-space:nowrap;">POPULAR</div>
+          <div style="font-size:12px;font-weight:600;color:#6C63FF;margin-bottom:8px;">Basic</div>
+          <div style="font-size:20px;font-weight:700;color:var(--text);">R$47<span style="font-size:11px;font-weight:400;color:var(--text3);">/mês</span></div>
+          <hr style="border:none;border-top:1px solid var(--border);margin:10px 0;"/>
+          <ul style="list-style:none;padding:0;margin:0;text-align:left;font-size:11px;color:var(--text2);line-height:2;">
+            <li><span style="color:var(--emerald);">&#10003;</span> 2 plataformas</li>
+            <li><span style="color:var(--emerald);">&#10003;</span> 500 entregas/mês</li>
+            <li><span style="color:var(--emerald);">&#10003;</span> Fila prioritária</li>
+            <li><span style="color:var(--emerald);">&#10003;</span> Sem marca Vaultly</li>
+            <li><span style="color:var(--emerald);">&#10003;</span> Logs de webhook</li>
+            <li><span style="color:var(--red);">&#10005;</span> Relatórios avançados</li>
+          </ul>
+        </div>
+        <!-- Pro -->
+        <div style="border:1px solid var(--border);border-radius:10px;padding:14px 12px;text-align:center;">
+          <div style="font-size:12px;font-weight:600;color:var(--cyan);margin-bottom:8px;">Pro</div>
+          <div style="font-size:20px;font-weight:700;color:var(--text);">R$97<span style="font-size:11px;font-weight:400;color:var(--text3);">/mês</span></div>
+          <hr style="border:none;border-top:1px solid var(--border);margin:10px 0;"/>
+          <ul style="list-style:none;padding:0;margin:0;text-align:left;font-size:11px;color:var(--text2);line-height:2;">
+            <li><span style="color:var(--emerald);">&#10003;</span> Plataformas ilimitadas</li>
+            <li><span style="color:var(--emerald);">&#10003;</span> Entregas ilimitadas</li>
+            <li><span style="color:var(--emerald);">&#10003;</span> Fila prioritária</li>
+            <li><span style="color:var(--emerald);">&#10003;</span> Sem marca Vaultly</li>
+            <li><span style="color:var(--emerald);">&#10003;</span> Logs de webhook</li>
+            <li><span style="color:var(--emerald);">&#10003;</span> Relatórios avançados</li>
+          </ul>
+        </div>
+      </div>
+      <!-- CTAs -->
+      <a href="/landing.html#pricing" style="display:block;background:linear-gradient(135deg,#6C63FF,#38BDF8);color:#fff;text-align:center;padding:14px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;margin-bottom:10px;">
+        Ver planos e assinar agora
+      </a>
+      <button onclick="hideUpgradeModal()" style="display:block;width:100%;background:transparent;border:1px solid var(--border2);color:var(--text2);padding:10px;border-radius:10px;cursor:pointer;font-size:13px;">
+        Continuar no plano Free
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ── MODAL PRODUTO ── -->
 <div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeModal()">
   <div class="modal">
@@ -1261,6 +1329,30 @@ function platformBadge(p) {
   return `<span style="color:var(--text3);font-size:11px;">${p || '—'}</span>`;
 }
 
+// ── Upgrade helpers ──────────────────────────────────────────────
+function upgradeBanner(title, desc) {
+  return `<div style="margin:16px 0;padding:20px 24px;background:linear-gradient(135deg,rgba(108,99,255,0.08),rgba(56,189,248,0.06));border:1px solid rgba(108,99,255,0.2);border-radius:12px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+    <div style="flex:1;min-width:200px;">
+      <div style="font-size:14px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:6px;">
+        <i class="ti ti-lock" style="color:var(--indigo);"></i> ${title}
+      </div>
+      <div style="font-size:13px;color:var(--text2);">${desc}</div>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="showUpgradeModal()" style="flex-shrink:0;">
+      <i class="ti ti-rocket"></i> Fazer upgrade
+    </button>
+  </div>`;
+}
+
+function showUpgradeModal() {
+  const el = document.getElementById('upgrade-modal');
+  if (el) { el.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+}
+function hideUpgradeModal() {
+  const el = document.getElementById('upgrade-modal');
+  if (el) { el.style.display = 'none'; document.body.style.overflow = ''; }
+}
+
 // ── Dashboard ────────────────────────────────────────────────────
 async function loadDashboard() {
   try {
@@ -1270,10 +1362,15 @@ async function loadDashboard() {
       apiFetch('/api/products'),
     ]);
     if (statsRes.success) {
-      document.getElementById('s-today').textContent     = statsRes.data.today     || '0';
-      document.getElementById('s-delivered').textContent = statsRes.data.delivered || '0';
-      document.getElementById('s-failed').textContent    = statsRes.data.failed    || '0';
-      // Topbar pill: entregas hoje
+      document.getElementById('s-today').textContent = statsRes.data.today || '0';
+      if (statsRes.plan_restricted) {
+        const lockHtml = '<span onclick="showUpgradeModal()" style="cursor:pointer;opacity:0.45;font-size:13px;" title="Disponivel no plano Basic"><i class="ti ti-lock"></i> Basic</span>';
+        document.getElementById('s-delivered').innerHTML = lockHtml;
+        document.getElementById('s-failed').innerHTML    = lockHtml;
+      } else {
+        document.getElementById('s-delivered').textContent = statsRes.data.delivered || '0';
+        document.getElementById('s-failed').textContent    = statsRes.data.failed    || '0';
+      }
       var todayCount = statsRes.data.today || 0;
       var tbToday = document.getElementById('tb-deliveries-today');
       document.getElementById('tb-today-count').textContent = todayCount;
@@ -1378,9 +1475,19 @@ async function loadDeliveries() {
         <td style="font-size:12px;color:var(--text2);">${fmtDate(d.created_at)}</td>
         <td>
           ${statusBadge(d.status)}
-          ${d.error_message ? `<br><span style="font-size:10px;color:var(--red);" title="${d.error_message}">⚠ ver erro</span>` : ''}
+          ${d.error_message ? `<br><span style="font-size:10px;color:var(--red);" title="${d.error_message}">ver erro</span>` : ''}
         </td>
       </tr>`).join('');
+    // Plano Free: banner de upgrade abaixo da tabela
+    if (res.plan_restricted) {
+      const container = document.getElementById('deliveries-table').closest('table').parentElement;
+      if (!document.getElementById('deliveries-upgrade-banner')) {
+        const banner = document.createElement('div');
+        banner.id = 'deliveries-upgrade-banner';
+        banner.innerHTML = upgradeBanner('Historico completo disponivel no plano Basic', 'Vendo apenas as 10 entregas mais recentes.');
+        container.appendChild(banner);
+      }
+    }
   } catch(e) {
     tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--red);padding:32px;">Erro: ${e.message}</td></tr>`;
   }
@@ -1392,6 +1499,10 @@ async function loadLogs() {
   box.innerHTML = `<div style="color:var(--text3);">Carregando logs...</div>`;
   try {
     const res = await apiFetch('/api/deliveries/logs');
+    if (res.plan_restricted) {
+      box.innerHTML = upgradeBanner('Logs de atividade disponiveis no plano Basic', 'Acompanhe cada notificacao de compra em tempo real, com status e detalhes completos.');
+      return;
+    }
     if (!res.success) throw new Error(res.error);
     if (!res.data.length) {
       box.innerHTML = `<div style="color:var(--text3);">Nenhum evento registrado ainda.</div>`;

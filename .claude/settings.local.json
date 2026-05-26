@@ -7,7 +7,8 @@
       "Bash(rm \"C:/Users/jojop/OneDrive/Documentos/Projetos/Webhook Yampi e Kiwify/digitalhub-multi/.git/index.lock\")",
       "Bash(rm \"C:/Users/jojop/OneDrive/Documentos/Projetos/Webhook Yampi e Kiwify/digitalhub-multi/.git/HEAD.lock\" && git add src/server.js && git commit -m \"fix: corrige sintaxe do server.js\" && git push)",
       "Bash(claude --version)",
-      "Bash(cd \"C:/Users/jojop/OneDrive/Documentos/Projetos/Webhook Yampi e Kiwify/digitalhub-multi\" && rm -f .git/index.lock .git/HEAD.lock && git add . && git commit -m \"fix: desabilita CSP que quebrou scripts inline do painel\" && git push)"
+      "Bash(cd \"C:/Users/jojop/OneDrive/Documentos/Projetos/Webhook Yampi e Kiwify/digitalhub-multi\" && rm -f .git/index.lock .git/HEAD.lock && git add . && git commit -m \"fix: desabilita CSP que quebrou scripts inline do painel\" && git push)",
+      "Bash(cd \"C:/Users/jojop/OneDrive/Documentos/Projetos/Webhook Yampi e Kiwify/digitalhub-multi\" && rm -f .git/index.lock .git/HEAD.lock && git add . && git commit -m \"feat: monetizacao plano free + seguranca + modal upgrade\" && git push)"
     ],
     "additionalDirectories": [
       "C:\\Users\\jojop\\OneDrive\\Documentos\\Projetos\\Webhook Yampi e Kiwify\\digitalhub-multi\\.git"
