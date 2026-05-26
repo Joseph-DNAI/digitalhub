@@ -658,11 +658,19 @@ tbody tr:hover td { background: rgba(255,255,255,0.02); }
             <div class="stat-val" id="s-failed" style="color:var(--red);">—</div>
             <div class="stat-sub">necessitam atenção</div>
           </div>
-          <div class="stat-card">
-            <div class="stat-icon indigo"><i class="ti ti-packages"></i></div>
-            <div class="stat-label">Produtos</div>
-            <div class="stat-val" id="s-products">—</div>
-            <div class="stat-sub">cadastrados na plataforma</div>
+          <div class="stat-card" id="stat-products-card">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+              <div>
+                <div class="stat-icon indigo" id="products-icon"><i class="ti ti-packages"></i></div>
+                <div class="stat-label">Produtos</div>
+                <div class="stat-val" id="s-products">—</div>
+                <div class="stat-sub" id="products-sub">cadastrados na plataforma</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;padding-top:2px;flex-shrink:0;">
+                <div style="font-size:9px;color:var(--text3);font-family:'JetBrains Mono',monospace;letter-spacing:.06em;text-transform:uppercase;">24h · vendas</div>
+                <svg id="sparkline-svg" width="80" height="44" viewBox="0 0 80 44" fill="none" style="display:block;"></svg>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1132,6 +1140,7 @@ function showApp() {
   var firstName = uname.split(' ')[0];
   document.getElementById('tb-username').textContent = firstName;
   document.getElementById('tb-plan').textContent     = currentUser ? (currentUser.plan_name || currentUser.plan_id || '') : '';
+  document.getElementById('topbar-title').textContent = 'visão geral do sistema em tempo real';
   initApp();
 }
 
@@ -1289,7 +1298,7 @@ function switchTab(name, el) {
   document.getElementById('tab-' + name) && document.getElementById('tab-' + name).classList.add('active');
   if (el) el.classList.add('active');
   var meta = TAB_META[name] || {};
-  document.getElementById('topbar-title').textContent = meta.title || name;
+  document.getElementById('topbar-title').textContent = meta.sub || '';
   var btn = document.getElementById('topbar-btn');
   btn.style.display = name === 'produtos' ? 'flex' : 'none';
   if (name === 'dashboard') loadDashboard();
@@ -1353,12 +1362,87 @@ function hideUpgradeModal() {
   if (el) { el.style.display = 'none'; document.body.style.overflow = ''; }
 }
 
+// ── Sparkline ────────────────────────────────────────────────────
+function renderSparkline(deliveries, productCount) {
+  var svg = document.getElementById('sparkline-svg');
+  if (!svg) return;
+
+  // Agrupa entregas nas últimas 24h por hora (24 buckets)
+  var now = Date.now();
+  var buckets = new Array(24).fill(0);
+  var msPerHour = 3600000;
+  (deliveries || []).forEach(function(d) {
+    var t = new Date(d.created_at).getTime();
+    var hoursAgo = Math.floor((now - t) / msPerHour);
+    if (hoursAgo >= 0 && hoursAgo < 24) buckets[23 - hoursAgo]++;
+  });
+
+  var isEmpty = productCount === 0;
+  var hasData = buckets.some(function(v) { return v > 0; });
+  var max = Math.max.apply(null, buckets.concat([1]));
+  var W = 80, H = 44, padX = 3, padY = 5;
+
+  // Pontos normalizados
+  var pts = buckets.map(function(v, i) {
+    return [
+      padX + (i / 23) * (W - padX * 2),
+      H - padY - (v / max) * (H - padY * 2)
+    ];
+  });
+
+  // Caminho suave com cubic bezier
+  var pathD = 'M ' + pts[0][0].toFixed(1) + ',' + pts[0][1].toFixed(1);
+  for (var i = 1; i < pts.length; i++) {
+    var p0 = pts[i - 1], p1 = pts[i];
+    var cpx = ((p0[0] + p1[0]) / 2).toFixed(1);
+    pathD += ' C ' + cpx + ',' + p0[1].toFixed(1) + ' ' + cpx + ',' + p1[1].toFixed(1) + ' ' + p1[0].toFixed(1) + ',' + p1[1].toFixed(1);
+  }
+  var last  = pts[pts.length - 1];
+  var first = pts[0];
+  var fillD = pathD + ' L ' + last[0].toFixed(1) + ',' + H + ' L ' + first[0].toFixed(1) + ',' + H + ' Z';
+
+  // Cores: inativo = cinza apagado, ativo = índigo
+  var lineColor = isEmpty ? 'rgba(61,79,110,0.45)' : (hasData ? '#6C63FF' : 'rgba(108,99,255,0.35)');
+  var fillColor = isEmpty ? 'rgba(61,79,110,0.08)' : (hasData ? 'rgba(108,99,255,0.14)' : 'rgba(108,99,255,0.06)');
+
+  var inner =
+    '<path d="' + fillD + '" fill="' + fillColor + '"/>' +
+    '<path d="' + pathD + '" stroke="' + lineColor + '" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>';
+
+  // Ponto ativo na última hora com movimento
+  if (!isEmpty && hasData) {
+    inner += '<circle cx="' + last[0].toFixed(1) + '" cy="' + last[1].toFixed(1) + '" r="2.5" fill="#6C63FF" opacity="0.9"/>';
+    inner += '<circle cx="' + last[0].toFixed(1) + '" cy="' + last[1].toFixed(1) + '" r="2.5" fill="none" stroke="#6C63FF" stroke-width="1" opacity="0.5">' +
+      '<animate attributeName="r" from="2.5" to="6" dur="1.5s" repeatCount="indefinite"/>' +
+      '<animate attributeName="opacity" from="0.5" to="0" dur="1.5s" repeatCount="indefinite"/>' +
+      '</circle>';
+  }
+  svg.innerHTML = inner;
+
+  // Estado do card
+  var card = document.getElementById('stat-products-card');
+  var icon = document.getElementById('products-icon');
+  var sub  = document.getElementById('products-sub');
+  var val  = document.getElementById('s-products');
+  if (isEmpty) {
+    if (card) card.style.borderColor = 'rgba(61,79,110,0.3)';
+    if (icon) { icon.style.background = 'rgba(61,79,110,0.1)'; icon.style.color = 'var(--text3)'; }
+    if (sub)  sub.textContent  = 'sem produtos cadastrados';
+    if (val)  val.style.color  = 'var(--text3)';
+  } else {
+    if (card) card.style.borderColor = '';
+    if (icon) { icon.style.background = ''; icon.style.color = ''; }
+    if (sub)  sub.textContent  = 'cadastrados na plataforma';
+    if (val)  val.style.color  = '';
+  }
+}
+
 // ── Dashboard ────────────────────────────────────────────────────
 async function loadDashboard() {
   try {
     const [statsRes, delivRes, prodRes] = await Promise.all([
       apiFetch('/api/deliveries/stats'),
-      apiFetch('/api/deliveries?limit=5'),
+      apiFetch('/api/deliveries?limit=100'),
       apiFetch('/api/products'),
     ]);
     if (statsRes.success) {
@@ -1377,11 +1461,13 @@ async function loadDashboard() {
       tbToday.style.display = 'flex';
     }
     if (prodRes.success) {
-      document.getElementById('s-products').textContent = prodRes.data.length;
+      var productCount = prodRes.data.length;
+      document.getElementById('s-products').textContent = productCount;
+      renderSparkline(delivRes.success ? delivRes.data : [], productCount);
     }
     const tbody = document.getElementById('recent-deliveries');
     if (delivRes.success && delivRes.data.length) {
-      tbody.innerHTML = delivRes.data.map(d => `
+      tbody.innerHTML = delivRes.data.slice(0,5).map(d => `
         <tr>
           <td>
             <span style="font-weight:500;">${d.buyer_name || '—'}</span><br>
