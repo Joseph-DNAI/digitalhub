@@ -79,4 +79,42 @@ router.post('/test-smtp', async (req, res) => {
   }
 });
 
+// Simula um evento de compra aprovada — util para testes sem depender da plataforma
+router.post('/simulate', async (req, res) => {
+  try {
+    const { processWebhookEvent } = require('../services/deliveryService');
+    const platform   = (req.body.platform || 'kiwify').toLowerCase();
+    const productId  = String(req.body.product_id  || 'test_product_id');
+    const buyerEmail = req.body.buyer_email || req.user.email || 'teste@vaultly.com';
+    const buyerName  = req.body.buyer_name  || 'Cliente Teste';
+    const orderId    = 'sim_' + Date.now();
+
+    var payload;
+    if (platform === 'yampi') {
+      payload = {
+        event: 'order.paid',
+        resource: {
+          id:     orderId,
+          number: 'SIM001',
+          items:  { data: [{ product_id: productId, id: productId }] },
+          customer: { data: { first_name: buyerName.split(' ')[0], last_name: buyerName.split(' ')[1] || 'Teste', email: buyerEmail } }
+        }
+      };
+    } else {
+      payload = {
+        webhook_event_type: 'order_approved',
+        order_id:  orderId,
+        Product:   { product_id: productId },
+        Customer:  { full_name: buyerName, email: buyerEmail }
+      };
+    }
+
+    const result = await processWebhookEvent(req.tenantId, platform, payload);
+    res.json({ success: true, result, orderId, buyerEmail });
+  } catch(err) {
+    logger.error('Erro em /simulate: ' + err.message);
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+
 module.exports = router;

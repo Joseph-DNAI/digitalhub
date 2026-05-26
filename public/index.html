@@ -75,6 +75,9 @@ html, body {
 }
 .ob-check.ob-uncheck { background: var(--bg4); color: transparent; border: 2px solid var(--border2); }
 
+/* ── Toast ───────────────────────────────────────────── */
+@keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
 /* ── Var Pills (template) ────────────────────────────── */
 .var-pill {
   display: inline-flex; align-items: center;
@@ -878,11 +881,61 @@ tbody tr:hover td { background: rgba(255,255,255,0.02); }
           </div>
         </div>
 
+        <!-- Simulador de webhook -->
+        <div class="card" style="border-color:rgba(108,99,255,0.3);">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-test-pipe"></i> Simular envio (teste interno)</div>
+          </div>
+          <div class="card-body">
+            <p style="font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.6;">
+              Simule uma compra aprovada diretamente no painel — sem precisar da Kiwify ou Yampi.
+              O sistema vai processar como se fosse um webhook real e tentar entregar o produto por email.
+            </p>
+            <div class="form-grid" style="margin-bottom:14px;">
+              <div class="form-group">
+                <label class="form-label">Plataforma</label>
+                <select class="form-select" id="sim-platform">
+                  <option value="kiwify">Kiwify</option>
+                  <option value="yampi">Yampi</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Email do comprador (teste)</label>
+                <input type="email" class="form-input" id="sim-email" placeholder="seu@email.com" />
+                <div class="form-hint">O arquivo será enviado para este email</div>
+              </div>
+              <div class="form-group full">
+                <label class="form-label">ID do produto na plataforma</label>
+                <div style="display:flex;gap:8px;">
+                  <select class="form-select" id="sim-product-select" style="flex:1;" onchange="syncSimProductId()">
+                    <option value="">— digitar manualmente —</option>
+                  </select>
+                  <input type="text" class="form-input" id="sim-product-id" placeholder="ID do produto (kiwify_id ou yampi_id)" style="flex:1;" />
+                </div>
+                <div class="form-hint">Selecione um produto cadastrado ou cole o ID da plataforma manualmente</div>
+              </div>
+            </div>
+            <div id="sim-result" style="display:none;"></div>
+            <button class="btn btn-primary" onclick="runSimulate()" id="btn-simulate">
+              <i class="ti ti-player-play"></i> Simular compra aprovada
+            </button>
+          </div>
+        </div>
+
         <!-- Log de eventos -->
         <div class="card">
           <div class="card-header">
-            <div class="card-title"><i class="ti ti-terminal-2"></i> Log de eventos</div>
-            <button class="btn btn-ghost btn-xs" onclick="loadLogs()"><i class="ti ti-refresh"></i></button>
+            <div class="card-title">
+              <i class="ti ti-terminal-2"></i> Log de eventos
+              <span id="log-live-dot" style="display:inline-flex;align-items:center;gap:5px;margin-left:10px;font-size:11px;color:var(--emerald);font-weight:600;">
+                <span style="width:6px;height:6px;border-radius:50%;background:var(--emerald);animation:pulse 2s ease infinite;display:inline-block;"></span>
+                ao vivo
+              </span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span id="log-last-time" style="font-size:11px;color:var(--text3);"></span>
+              <button class="btn btn-ghost btn-xs" onclick="loadLogs()"><i class="ti ti-refresh"></i></button>
+            </div>
           </div>
           <div class="card-body">
             <div class="log-box" id="webhook-log">
@@ -1346,6 +1399,9 @@ function showApp() {
   document.getElementById('tb-username').textContent = firstName;
   document.getElementById('tb-plan').textContent     = currentUser ? (currentUser.plan_name || currentUser.plan_id || '') : '';
   document.getElementById('topbar-title').textContent = 'visão geral do sistema em tempo real';
+  // Preenche email do simulador com email do usuario logado
+  var simEmail = document.getElementById('sim-email');
+  if (simEmail && currentUser && currentUser.email) simEmail.value = currentUser.email;
   initApp();
 }
 
@@ -1454,7 +1510,8 @@ function switchTab(name, el) {
   if (name === 'dashboard') loadDashboard();
   if (name === 'produtos')  { loadProducts(); loadUnmatchedProducts(); }
   if (name === 'entregas')  loadDeliveries();
-  if (name === 'webhook')   { loadLogs(); loadWebhookConfig(); }
+  if (name === 'webhook')   { loadLogs(); loadWebhookConfig(); loadSimulatorProducts(); startLogPoller(); }
+  else                      stopLogPoller();
   if (name === 'email')     loadEmailTab();
   if (name === 'config')    {} // config nao precisa carregar dados dinamicos
 }
@@ -2028,34 +2085,170 @@ async function loadDeliveries() {
   }
 }
 
-// ── Webhook Logs ─────────────────────────────────────────────────
+// ── Toast ─────────────────────────────────────────────────────────
+function showToast(msg, type) {
+  type = type || 'info';
+  var colors = { info: 'var(--indigo)', success: 'var(--emerald)', error: 'var(--red)', warn: 'var(--yellow)' };
+  var icons  = { info: 'ti-info-circle', success: 'ti-circle-check-filled', error: 'ti-alert-circle', warn: 'ti-alert-triangle' };
+  var t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;background:var(--bg3);border:1px solid ' + colors[type] + ';border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text);box-shadow:0 8px 24px rgba(0,0,0,0.4);max-width:320px;animation:slideIn 0.3s ease;';
+  t.innerHTML = '<i class="ti ' + icons[type] + '" style="color:' + colors[type] + ';font-size:16px;flex-shrink:0;"></i><span>' + msg + '</span>';
+  document.body.appendChild(t);
+  setTimeout(function() { t.style.opacity = '0'; t.style.transition = 'opacity 0.4s'; setTimeout(function() { t.remove(); }, 400); }, 3500);
+}
+
+// ── Webhook Logs — com auto-refresh ──────────────────────────────
+var _logPoller = null;
+var _lastLogId = null;
+var _logPlanRestricted = false;
+
+function startLogPoller() {
+  if (_logPoller) return;
+  _logPoller = setInterval(pollLogs, 5000);
+}
+
+function stopLogPoller() {
+  if (_logPoller) { clearInterval(_logPoller); _logPoller = null; }
+}
+
+async function pollLogs() {
+  if (_logPlanRestricted) return;
+  try {
+    const res = await apiFetch('/api/deliveries/logs?limit=1');
+    if (!res.success || !res.data || !res.data.length) return;
+    var newest = res.data[0];
+    if (_lastLogId && newest.id !== _lastLogId) {
+      // Novo evento detectado
+      var platform = newest.platform || '?';
+      var status   = newest.status   || '?';
+      showToast('Novo evento ' + platform + ' recebido! [' + status.toUpperCase() + ']',
+        status === 'ok' ? 'success' : status === 'error' ? 'error' : 'warn');
+      loadLogs(); // recarrega lista completa
+    }
+    _lastLogId = newest.id;
+  } catch(e) {}
+}
+
 async function loadLogs() {
   const box = document.getElementById('webhook-log');
-  box.innerHTML = `<div style="color:var(--text3);">Carregando logs...</div>`;
+  if (!_logPlanRestricted) box.innerHTML = '<div style="color:var(--text3);">Carregando logs...</div>';
   try {
     const res = await apiFetch('/api/deliveries/logs');
     if (res.plan_restricted) {
+      _logPlanRestricted = true;
       box.innerHTML = upgradeBanner('Logs de atividade disponiveis no plano Basic', 'Acompanhe cada notificacao de compra em tempo real, com status e detalhes completos.');
+      var dot = document.getElementById('log-live-dot');
+      if (dot) dot.style.display = 'none';
       return;
     }
     if (!res.success) throw new Error(res.error);
+
     if (!res.data.length) {
-      box.innerHTML = `<div style="color:var(--text3);">Nenhum evento registrado ainda.</div>`;
+      box.innerHTML = '<div style="color:var(--text3);font-size:13px;"><i class="ti ti-antenna-bars-1" style="font-size:20px;display:block;margin-bottom:8px;color:var(--indigo);"></i>Aguardando o primeiro evento...<br><span style="font-size:11px;">Use o simulador abaixo ou configure o webhook na plataforma.</span></div>';
+      _lastLogId = null;
       return;
     }
-    box.innerHTML = res.data.map(l => {
-      const color = l.status === 'ok' ? 'var(--emerald)' : l.status === 'error' ? 'var(--red)' : 'var(--yellow)';
-      return `<div style="margin-bottom:6px;font-size:12px;line-height:1.6;">
-        <span style="color:var(--text3);margin-right:8px;">${fmtDate(l.created_at)}</span>
-        <span style="color:${color};margin-right:8px;">[${(l.status || '?').toUpperCase()}]</span>
-        <span style="color:var(--text2);">${l.platform || '?'} · ${l.event_type || '?'}</span>
-        ${l.ip ? `<span style="color:var(--text3);font-size:11px;"> · ${l.ip}</span>` : ''}
-      </div>`;
+
+    // Atualiza timestamp do ultimo evento
+    var last = res.data[0];
+    _lastLogId = last.id;
+    var lastEl = document.getElementById('log-last-time');
+    if (lastEl) lastEl.textContent = 'ultimo: ' + fmtDate(last.created_at);
+
+    box.innerHTML = res.data.map(function(l) {
+      var color = l.status === 'ok' ? 'var(--emerald)' : l.status === 'error' ? 'var(--red)' : 'var(--yellow)';
+      var icon  = l.status === 'ok' ? 'ti-circle-check' : l.status === 'error' ? 'ti-circle-x' : 'ti-alert-triangle';
+      return '<div style="margin-bottom:8px;font-size:12px;line-height:1.6;display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;background:rgba(255,255,255,0.02);">' +
+        '<i class="ti ' + icon + '" style="color:' + color + ';font-size:14px;flex-shrink:0;"></i>' +
+        '<span style="color:var(--text3);min-width:130px;">' + fmtDate(l.created_at) + '</span>' +
+        '<span style="color:' + color + ';font-weight:600;min-width:50px;">[' + (l.status || '?').toUpperCase() + ']</span>' +
+        '<span style="color:var(--text2);">' + (l.platform || '?') + ' · ' + (l.event_type || '?') + '</span>' +
+        (l.ip ? '<span style="color:var(--text3);font-size:10px;margin-left:auto;">' + l.ip + '</span>' : '') +
+        '</div>';
     }).join('');
   } catch(e) {
-    box.innerHTML = `<div style="color:var(--red);">Erro ao carregar logs: ${e.message}</div>`;
+    box.innerHTML = '<div style="color:var(--red);">Erro ao carregar logs: ' + e.message + '</div>';
   }
 }
+
+// ── Simulador de webhook ──────────────────────────────────────────
+async function loadSimulatorProducts() {
+  try {
+    var res = await apiFetch('/api/products');
+    if (!res.success || !res.data || !res.data.length) return;
+    var sel = document.getElementById('sim-product-select');
+    if (!sel) return;
+    var platform = (document.getElementById('sim-platform') || {}).value || 'kiwify';
+    sel.innerHTML = '<option value="">— digitar manualmente —</option>';
+    res.data.forEach(function(p) {
+      var pid = platform === 'yampi' ? (p.yampi_id || p.kiwify_id) : (p.kiwify_id || p.yampi_id);
+      if (pid) {
+        var opt = document.createElement('option');
+        opt.value = pid;
+        opt.textContent = p.name + ' (' + pid + ')';
+        sel.appendChild(opt);
+      }
+    });
+  } catch(e) {}
+}
+
+function syncSimProductId() {
+  var sel = document.getElementById('sim-product-select');
+  var inp = document.getElementById('sim-product-id');
+  if (sel && inp && sel.value) inp.value = sel.value;
+}
+
+async function runSimulate() {
+  var btn       = document.getElementById('btn-simulate');
+  var resultEl  = document.getElementById('sim-result');
+  var platform  = document.getElementById('sim-platform').value;
+  var email     = document.getElementById('sim-email').value.trim();
+  var productId = document.getElementById('sim-product-id').value.trim();
+
+  if (!email) { showToast('Informe o email do comprador para o teste.', 'warn'); return; }
+  if (!productId) { showToast('Informe o ID do produto para o teste.', 'warn'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i> Simulando...';
+  resultEl.style.display = 'none';
+
+  try {
+    var res = await apiFetch('/api/deliveries/simulate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platform, buyer_email: email, product_id: productId, buyer_name: 'Cliente Teste' })
+    });
+
+    var ok = res.success && res.result && !res.result.ignored;
+    var color = ok ? 'var(--emerald)' : 'var(--yellow)';
+    var icon  = ok ? 'ti-circle-check-filled' : 'ti-alert-triangle';
+    var msg   = ok
+      ? 'Entrega iniciada! Verifique a caixa de entrada de <strong>' + email + '</strong>.'
+      : res.result
+        ? ('Evento processado mas nao resultou em entrega: ' + (res.result.reason || res.error || JSON.stringify(res.result)))
+        : (res.error || 'Erro desconhecido');
+
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = '<div style="padding:12px 14px;border-radius:8px;background:rgba(0,0,0,0.2);border:1px solid ' + color + ';display:flex;align-items:flex-start;gap:10px;font-size:13px;margin-bottom:12px;">' +
+      '<i class="ti ' + icon + '" style="color:' + color + ';font-size:16px;flex-shrink:0;margin-top:1px;"></i>' +
+      '<div style="color:var(--text);">' + msg + '</div></div>';
+
+    showToast(ok ? 'Simulacao OK — email sendo processado' : 'Simulacao processada — verifique o resultado', ok ? 'success' : 'warn');
+    setTimeout(loadLogs, 1500); // recarrega logs para mostrar o evento
+  } catch(e) {
+    showToast('Erro na simulacao: ' + e.message, 'error');
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = '<div style="color:var(--red);font-size:13px;"><i class="ti ti-alert-circle"></i> ' + e.message + '</div>';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-player-play"></i> Simular compra aprovada';
+  }
+}
+
+// Ao mudar plataforma no simulador, recarrega produtos
+document.addEventListener('change', function(e) {
+  if (e.target && e.target.id === 'sim-platform') loadSimulatorProducts();
+});
 
 // ── Modal Produto ────────────────────────────────────────────────
 function openModal() {
