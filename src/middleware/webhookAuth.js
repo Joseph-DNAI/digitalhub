@@ -42,17 +42,14 @@ async function verifyWebhookSignature(req, res, next) {
   }
   if (!secret) secret = process.env.WEBHOOK_SECRET;
 
-  // Sem secret configurado: bloqueia em producao, libera apenas em dev
+  // Sem secret configurado: libera mas avisa (usuario ainda nao configurou o secret no painel)
+  // Seguranca real so e ativada apos o usuario cadastrar o secret em Configuracoes
   if (!secret) {
-    if (process.env.NODE_ENV === 'production') {
-      logger.warn('Webhook bloqueado: nenhum secret configurado — tenant: ' + tenantId);
-      return res.status(401).json({ error: 'Webhook nao autorizado' });
-    }
-    logger.warn('DEV: Webhook sem secret — validacao desativada');
+    logger.warn('Webhook sem secret — passando sem validacao — tenant: ' + tenantId + ' | Configure o Secret em Configuracoes para ativar a validacao HMAC');
     return next();
   }
 
-  // Sem assinatura no header/query: bloqueia sempre
+  // Secret configurado mas sem assinatura no header: bloqueia
   const signature =
     req.headers['x-kiwify-signature'] ||
     req.headers['x-yampi-hmac-sha256'] ||
@@ -60,7 +57,7 @@ async function verifyWebhookSignature(req, res, next) {
     '';
 
   if (!signature) {
-    logger.warn('Webhook bloqueado: sem assinatura — platform: ' + platform + ' tenant: ' + tenantId);
+    logger.warn('Webhook bloqueado: secret configurado mas sem assinatura — platform: ' + platform + ' tenant: ' + tenantId);
     return res.status(401).json({ error: 'Assinatura ausente' });
   }
 
