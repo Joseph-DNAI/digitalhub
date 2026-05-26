@@ -608,10 +608,8 @@ tbody tr:hover td { background: rgba(255,255,255,0.02); }
           <i class="ti ti-alert-triangle" style="font-size:13px;"></i>
           <span id="tb-unmatched-count">0</span> pendentes
         </div>
-        <!-- Novo produto (aba produtos) -->
-        <button class="btn btn-primary btn-sm" id="topbar-btn" style="display:none;" onclick="openModal()">
-          <i class="ti ti-plus"></i> Novo produto
-        </button>
+        <!-- reservado (removido botão duplicado de Novo produto) -->
+        <span id="topbar-btn" style="display:none;"></span>
         <!-- User + plano + logout -->
         <div style="display:flex;align-items:center;gap:8px;padding-left:8px;border-left:1px solid var(--border);">
           <div style="text-align:right;">
@@ -698,6 +696,9 @@ tbody tr:hover td { background: rgba(255,255,255,0.02); }
             <div class="page-sub">gerencie seus produtos digitais</div>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-ghost" id="btn-import-kiwify" onclick="importFromPlatform('kiwify')" title="Saiba como conectar a Kiwify">
+              <i class="ti ti-download"></i> Importar da Kiwify
+            </button>
             <button class="btn btn-ghost" id="btn-import-yampi" onclick="importFromPlatform('yampi')" title="Requer yampi_store_alias e yampi_api_token nas Configurações">
               <i class="ti ti-download"></i> Importar da Yampi
             </button>
