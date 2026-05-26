@@ -1,4 +1,4 @@
-# 🚀 Guia Completo para Iniciantes — DigitalHub Multi-Plataforma
+# 🚀 Guia Completo para Iniciantes — Vaultly
 
 > **Para quem nunca programou ou instalou nada.** Cada passo explica o que você está fazendo e por quê.
 
@@ -87,10 +87,10 @@ Deve aparecer algo como: `v20.11.0`
 
 ### 2.1 — Extraia o projeto
 
-1. Baixe o arquivo `digitalhub-multi.zip` (você já tem ele)
+1. Baixe o arquivo `vaultly.zip` (você já tem ele)
 2. Extraia em uma pasta de fácil acesso, por exemplo:
-   - Windows: `C:\projetos\digitalhub`
-   - Mac: `/Users/seunome/projetos/digitalhub`
+   - Windows: `C:\projetos\vaultly`
+   - Mac: `/Users/seunome/projetos/vaultly`
 
 ### 2.2 — Abrir o projeto no VS Code
 
@@ -138,30 +138,24 @@ PORT=3000
 NODE_ENV=development
 BASE_URL=http://localhost:3000
 
+ADMIN_EMAIL=seu@email.com
+ADMIN_PASSWORD=sua_senha_admin
+
 KIWIFY_WEBHOOK_SECRET=vai_preencher_depois
 YAMPI_WEBHOOK_SECRET=vai_preencher_depois
-WEBHOOK_SECRET=qualquer_texto_secreto_aqui
 
-DB_PATH=./data/digitalhub.db
 UPLOADS_PATH=./uploads
 MAX_FILE_SIZE_MB=50
 
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=seuemail@gmail.com
-SMTP_PASS=sua_app_password_aqui
+RESEND_API_KEY=re_xxxxxxxxxxxx
 EMAIL_FROM_NAME=Minha Loja
-EMAIL_FROM_ADDRESS=seuemail@gmail.com
+EMAIL_FROM_ADDRESS=seu@email.com
 ```
 
-**⚠️ SMTP_PASS — como gerar a senha de app do Gmail:**
-1. Acesse: https://myaccount.google.com/security
-2. Ative a **"Verificação em duas etapas"** (se não tiver ativa)
-3. Volte em Segurança e clique em **"Senhas de app"**
-4. Em "Selecionar app", escolha "Outro" e digite "DigitalHub"
-5. Clique em "Gerar" — vai aparecer uma senha de 16 letras
-6. Cole essa senha no `.env` em `SMTP_PASS` (sem espaços)
+**⚠️ RESEND_API_KEY — como gerar:**
+1. Acesse: https://resend.com e crie uma conta gratuita
+2. Vá em **API Keys → Create API Key**
+3. Cole a chave gerada no `.env` em `RESEND_API_KEY`
 
 ---
 
@@ -177,8 +171,8 @@ npm run dev
 
 **O que vai acontecer:** O servidor vai iniciar. Você vai ver mensagens como:
 ```
-🚀 DigitalHub rodando na porta 3000
-🔗 Webhook URL: http://localhost:3000/api/webhook
+Vaultly rodando na porta 3000
+Painel: http://localhost:3000
 ```
 
 **O servidor ficará rodando enquanto o terminal estiver aberto.** Não feche o terminal.
@@ -192,7 +186,7 @@ http://localhost:3000/health
 
 Deve aparecer um texto JSON como:
 ```json
-{ "status": "ok", "version": "1.0.0" }
+{ "status": "ok", "version": "2.0.0" }
 ```
 
 ✅ **Se aparecer isso, o servidor está funcionando!**
@@ -201,15 +195,30 @@ Deve aparecer um texto JSON como:
 
 ## 🗂️ PARTE 4 — Testando com o Insomnia
 
-### 4.1 — Cadastrar seu primeiro produto
+### 4.1 — Fazer login
 
 1. Abra o Insomnia
-2. Clique em **"New Request"**
-3. Configure assim:
+2. Crie uma nova requisição:
+   - **Method:** `POST`
+   - **URL:** `http://localhost:3000/api/auth/login`
+   - **Body:** JSON
+3. Cole:
+```json
+{
+  "email": "seu@email.com",
+  "password": "sua_senha_admin"
+}
+```
+4. Copie o `token` da resposta — você vai usar nas próximas requisições.
+
+### 4.2 — Cadastrar seu primeiro produto
+
+1. Crie uma nova requisição:
    - **Method:** `POST`
    - **URL:** `http://localhost:3000/api/products`
-   - **Body:** Clique em "Body" → "Form" → "Multipart Form"
-4. Adicione os campos:
+   - **Header:** `Authorization: Bearer SEU_TOKEN`
+   - **Body:** Multipart Form
+2. Adicione os campos:
    | Campo | Valor de exemplo |
    |-------|-----------------|
    | name | Meu Ebook de Marketing |
@@ -217,86 +226,36 @@ Deve aparecer um texto JSON como:
    | price | 97.00 |
    | kiwify_id | prod_abc123 |
    | yampi_id | 456 |
-5. Em "file", clique no tipo e mude para "File", depois selecione um PDF do seu computador
-6. Clique em **"Send"**
+3. Em "file", selecione um PDF do seu computador
+4. Clique em **"Send"**
 
-**Resposta esperada:**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid-gerado",
-    "name": "Meu Ebook de Marketing",
-    "kiwify_id": "prod_abc123",
-    "yampi_id": "456"
-  }
-}
-```
+### 4.3 — Simular um webhook do Kiwify
 
-### 4.2 — Simular um webhook do Kiwify
-
-1. No Insomnia, crie uma nova requisição:
+1. Crie uma nova requisição:
    - **Method:** `POST`
-   - **URL:** `http://localhost:3000/api/webhook/kiwify`
+   - **URL:** `http://localhost:3000/api/webhook/SEU_TENANT_ID/kiwify`
    - **Body:** JSON
-2. Cole este payload de teste:
+2. Cole este payload:
 
 ```json
 {
-  "event": "order_approved",
+  "webhook_event_type": "order_approved",
   "order_id": "pedido_teste_001",
-  "product": {
-    "id": "prod_abc123"
+  "Product": {
+    "product_id": "prod_abc123"
   },
-  "customer": {
-    "name": "João Silva",
+  "Customer": {
+    "full_name": "João Silva",
     "email": "seu_email_real@gmail.com"
-  },
-  "order_value": 97.00
+  }
 }
 ```
 
 3. Clique em **"Send"**
 
-**Resposta esperada:**
-```json
-{ "received": true, "platform": "kiwify" }
-```
-
-**O que vai acontecer em background:** O servidor vai processar, encontrar o produto pelo `kiwify_id: "prod_abc123"` e enviar o PDF para `seu_email_real@gmail.com`.
+**O que vai acontecer em background:** O servidor vai processar e enviar o PDF para `seu_email_real@gmail.com`.
 
 ✅ **Verifique sua caixa de email — o PDF deve chegar em segundos!**
-
-### 4.3 — Simular um webhook da Yampi
-
-Crie outra requisição:
-- **Method:** `POST`
-- **URL:** `http://localhost:3000/api/webhook/yampi`
-- **Body:** JSON
-
-```json
-{
-  "event": "order.paid",
-  "time": "2025-01-01 12:00:00",
-  "merchant": { "id": 123, "alias": "minhaloja" },
-  "resource": {
-    "id": 999001,
-    "value_total": 97.00,
-    "customer": {
-      "data": {
-        "first_name": "Maria",
-        "last_name": "Santos",
-        "email": "seu_email_real@gmail.com"
-      }
-    },
-    "items": {
-      "data": [
-        { "product_id": "456" }
-      ]
-    }
-  }
-}
-```
 
 ---
 
@@ -324,48 +283,33 @@ Forwarding   https://abc123.ngrok-free.app -> http://localhost:3000
 1. Entre no painel do Kiwify
 2. Vá em **Configurações → Integrações → Webhooks**
 3. Clique em **"Adicionar Webhook"**
-4. Cole a URL: `https://abc123.ngrok-free.app/api/webhook/kiwify`
+4. Cole a URL: `https://abc123.ngrok-free.app/api/webhook/SEU_TENANT_ID/kiwify`
 5. Evento: **Compra aprovada**
 6. Copie o **Token secreto** gerado pelo Kiwify
-7. Cole esse token no seu `.env` em `KIWIFY_WEBHOOK_SECRET=`
-8. Reinicie o servidor (`Ctrl+C` e `npm run dev` novamente)
-9. Clique em **"Testar"** no Kiwify
+7. Cole esse token no painel Vaultly → **Configurações → Webhook Secret Kiwify**
+8. Clique em **"Testar"** no Kiwify
 
 ### 5.3 — Configurar na Yampi
 
 1. Entre no painel da Yampi
 2. Vá em **Configurações → Webhooks**
 3. Clique em **"+ Novo webhook"**
-4. Cole a URL: `https://abc123.ngrok-free.app/api/webhook/yampi`
+4. Cole a URL: `https://abc123.ngrok-free.app/api/webhook/SEU_TENANT_ID/yampi`
 5. Selecione o evento: **order.paid** (Pedido pago)
 6. Copie a **Chave secreta** gerada pela Yampi
-7. Cole no `.env` em `YAMPI_WEBHOOK_SECRET=`
-8. Reinicie o servidor e salve na Yampi
+7. Cole no painel Vaultly → **Configurações → Webhook Secret Yampi**
 
 ---
 
 ## 🗂️ PARTE 6 — Verificando as entregas
 
-### Ver histórico de entregas
+Acesse o painel em `http://localhost:3000` e faça login. Lá você encontra:
 
-No Insomnia, crie:
-- **Method:** `GET`
-- **URL:** `http://localhost:3000/api/deliveries`
-
-### Ver estatísticas
-
-- **Method:** `GET`
-- **URL:** `http://localhost:3000/api/deliveries/stats`
-
-### Ver logs do webhook
-
-- **Method:** `GET`
-- **URL:** `http://localhost:3000/api/deliveries/logs`
-
-### Testar a conexão de email
-
-- **Method:** `POST`
-- **URL:** `http://localhost:3000/api/deliveries/test-smtp`
+- **Dashboard** — estatísticas de entregas
+- **Produtos** — cadastro e gerenciamento
+- **Entregas** — histórico completo
+- **Webhook** — URLs e logs de eventos
+- **Configurações** — email, secrets, integrações
 
 ---
 
@@ -380,7 +324,7 @@ O ngrok é só para testes — ele para quando você fecha o terminal. Para prod
 3. Clique em **"New Project → Deploy from GitHub repo"**
 4. Conecte seu repositório
 5. Vá em **"Variables"** e adicione todas as variáveis do seu `.env`
-6. O Railway vai gerar uma URL pública automática (ex: `https://digitalhub.up.railway.app`)
+6. O Railway vai gerar uma URL pública automática
 7. Use essa URL nos webhooks do Kiwify e Yampi (sem ngrok)
 
 ### Alternativas gratuitas similares:
@@ -395,9 +339,9 @@ O ngrok é só para testes — ele para quando você fecha o terminal. Para prod
 |---|---|
 | `command not found: node` | Node.js não foi instalado corretamente. Reinstale. |
 | `EADDRINUSE: port 3000` | Já tem algo rodando na porta 3000. Mude `PORT=3001` no `.env` |
-| Email não chega | Verifique SMTP_PASS (use App Password, não a senha normal do Gmail) |
-| Webhook retorna 401 | O secret no `.env` é diferente do cadastrado no Kiwify/Yampi |
-| Produto não encontrado | Verifique se o `kiwify_id`/`yampi_id` no banco bate com o ID da plataforma |
+| Email não chega | Verifique a `RESEND_API_KEY` no `.env` |
+| Webhook retorna 401 | O secret no painel Vaultly é diferente do cadastrado no Kiwify/Yampi |
+| Produto não encontrado | Verifique se o `kiwify_id`/`yampi_id` bate com o ID da plataforma |
 | ngrok para de funcionar | O plano gratuito expira após 2h. Reinicie com `ngrok http 3000` |
 
 ---

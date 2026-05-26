@@ -1,5 +1,5 @@
 {
-  "name": "digitalhub",
+  "name": "vaultly",
   "version": "1.0.0",
   "description": "Plataforma de entrega automática de produtos digitais integrada ao Kiwify e Yampi",
   "main": "src/server.js",

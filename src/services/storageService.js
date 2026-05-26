@@ -15,7 +15,7 @@ const s3 = new S3Client({
   }
 });
 
-const BUCKET = process.env.R2_BUCKET || 'digitalhub-files';
+const BUCKET = process.env.R2_BUCKET || 'vaultly-files';
 
 // ─── Upload de arquivo para o R2 ─────────────────────────────────────────────
 

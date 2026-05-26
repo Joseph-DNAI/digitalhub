@@ -1,24 +1,24 @@
-# DigitalHub — Plataforma de Entrega Automática de Produtos Digitais
+# Vaultly — Plataforma de Entrega Automática de Produtos Digitais
 
-Integração com Kiwify via Webhook: recebe notificação de compra → envia PDF/Ebook por email automaticamente.
+Integração com Kiwify e Yampi via Webhook: recebe notificação de compra → envia PDF/Ebook por email automaticamente.
 
 ---
 
 ## 🏗️ Arquitetura
 
 ```
-Kiwify (venda aprovada)
+Kiwify / Yampi (venda aprovada)
     │
-    ▼  POST /api/webhook/kiwify
+    ▼  POST /api/webhook/:tenantId/kiwify
 ┌─────────────┐
-│  DigitalHub │──► Valida assinatura HMAC
-│   (Node.js) │──► Busca produto pelo ID Kiwify
-│             │──► Envia PDF por email (SMTP)
+│   Vaultly   │──► Valida assinatura HMAC
+│   (Node.js) │──► Busca produto pelo ID da plataforma
+│             │──► Envia PDF por email (Resend)
 │             │──► Registra entrega no banco
 └─────────────┘
     │
     ▼
-SQLite (produtos, entregas, logs)
+PostgreSQL (produtos, entregas, logs, tenants)
 ```
 
 ---
@@ -29,7 +29,7 @@ SQLite (produtos, entregas, logs)
 
 ```bash
 git clone <seu-repo>
-cd digitalhub
+cd vaultly
 npm install
 ```
 
@@ -45,10 +45,10 @@ nano .env   # preencha todas as variáveis
 | Variável | Descrição |
 |---|---|
 | `BASE_URL` | URL pública do servidor (ex: `https://seudominio.com`) |
-| `WEBHOOK_SECRET` | Token secreto para validar requisições do Kiwify |
-| `SMTP_HOST` | Servidor de email (ex: `smtp.gmail.com`) |
-| `SMTP_USER` | Seu email |
-| `SMTP_PASS` | Senha de app do Gmail (ver abaixo) |
+| `ADMIN_EMAIL` | Email do administrador padrão |
+| `ADMIN_PASSWORD` | Senha do administrador padrão |
+| `DATABASE_URL` | String de conexão PostgreSQL |
+| `RESEND_API_KEY` | Chave da API do Resend para envio de emails |
 
 ### 3. Inicie o servidor
 
@@ -62,57 +62,53 @@ npm run dev
 
 ---
 
-## 📧 Configurando o Gmail (App Password)
+## 📧 Configurando o Email (Resend)
 
-1. Acesse [myaccount.google.com/security](https://myaccount.google.com/security)
-2. Ative a **Verificação em duas etapas**
-3. Em "Senhas de app", gere uma senha para "Email"
-4. Cole essa senha no `.env` em `SMTP_PASS`
+1. Acesse [resend.com](https://resend.com) e crie uma conta gratuita
+2. Gere uma API Key
+3. Cole no `.env` em `RESEND_API_KEY`
+4. Para produção, configure um domínio verificado no Resend
 
 ---
 
-## 🔗 Configurando o Webhook no Kiwify
+## 🔗 Configurando o Webhook
 
+### Kiwify
 1. No painel Kiwify: **Configurações → Integrações → Webhooks**
-2. Clique em **Adicionar Webhook**
-3. Cole a URL: `https://seudominio.com/api/webhook/kiwify`
-4. Selecione o evento: **Compra aprovada** (`order_approved`)
-5. Em "Token secreto", coloque o mesmo valor do seu `WEBHOOK_SECRET`
-6. Salve e clique em **Testar**
+2. Cole a URL: `https://seudominio.com/api/webhook/SEU_TENANT_ID/kiwify`
+3. Selecione o evento: **Compra aprovada** (`order_approved`)
+
+### Yampi
+1. No painel Yampi: **Configurações → Webhooks**
+2. Cole a URL: `https://seudominio.com/api/webhook/SEU_TENANT_ID/yampi`
+3. Selecione o evento: **order.paid**
+
+> O `SEU_TENANT_ID` aparece na aba **Webhook** do painel Vaultly.
 
 ---
 
 ## 📦 API de Produtos
 
-### Criar produto
-
 ```bash
+# Criar produto
 curl -X POST https://seudominio.com/api/products \
+  -H "Authorization: Bearer SEU_TOKEN" \
   -F "name=Meu Ebook" \
-  -F "description=Descrição do produto" \
-  -F "price=97.00" \
   -F "kiwify_id=prod_abc123" \
   -F "file=@/caminho/para/ebook.pdf"
-```
 
-### Listar produtos
+# Listar produtos
+curl https://seudominio.com/api/products \
+  -H "Authorization: Bearer SEU_TOKEN"
 
-```bash
-curl https://seudominio.com/api/products
-```
-
-### Atualizar produto
-
-```bash
+# Atualizar produto
 curl -X PUT https://seudominio.com/api/products/<ID> \
-  -F "name=Novo nome" \
-  -F "file=@/novo/arquivo.pdf"
-```
+  -H "Authorization: Bearer SEU_TOKEN" \
+  -F "name=Novo nome"
 
-### Deletar produto
-
-```bash
-curl -X DELETE https://seudominio.com/api/products/<ID>
+# Deletar produto
+curl -X DELETE https://seudominio.com/api/products/<ID> \
+  -H "Authorization: Bearer SEU_TOKEN"
 ```
 
 ---
@@ -121,107 +117,95 @@ curl -X DELETE https://seudominio.com/api/products/<ID>
 
 ```bash
 # Listar entregas
-curl https://seudominio.com/api/deliveries
+curl https://seudominio.com/api/deliveries -H "Authorization: Bearer SEU_TOKEN"
 
 # Estatísticas
-curl https://seudominio.com/api/deliveries/stats
+curl https://seudominio.com/api/deliveries/stats -H "Authorization: Bearer SEU_TOKEN"
 
 # Logs do webhook
-curl https://seudominio.com/api/deliveries/logs
-
-# Testar SMTP
-curl -X POST https://seudominio.com/api/deliveries/test-smtp
+curl https://seudominio.com/api/deliveries/logs -H "Authorization: Bearer SEU_TOKEN"
 
 # Forçar retry de falhas
-curl -X POST https://seudominio.com/api/deliveries/retry
+curl -X POST https://seudominio.com/api/deliveries/retry -H "Authorization: Bearer SEU_TOKEN"
 ```
 
 ---
 
 ## 🖥️ Deploy em produção
 
-### Opção 1 — VPS com PM2
+### Opção 1 — Railway (recomendado)
+
+1. Faça push do projeto para o GitHub
+2. Conecte ao Railway
+3. Configure as variáveis de ambiente no painel
+4. Deploy automático via git push
+
+### Opção 2 — VPS com PM2
 
 ```bash
 npm install -g pm2
-pm2 start src/server.js --name digitalhub
+pm2 start src/server.js --name vaultly
 pm2 save
 pm2 startup
 ```
 
-### Opção 2 — Railway / Render / Fly.io
-
-1. Faça push do projeto para o GitHub
-2. Conecte ao Railway/Render
-3. Configure as variáveis de ambiente no painel
-4. Deploy automático
-
 ### Opção 3 — Docker
 
 ```bash
-docker build -t digitalhub .
-docker run -d -p 3000:3000 --env-file .env digitalhub
-```
-
-### Nginx (proxy reverso)
-
-```nginx
-server {
-    listen 80;
-    server_name seudominio.com;
-
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-}
+docker build -t vaultly .
+docker run -d -p 3000:3000 --env-file .env vaultly
 ```
 
 ---
 
 ## 🔒 Segurança
 
-- Assinatura HMAC-SHA256 verificada em cada requisição do Kiwify
-- Rate limiting para proteção contra abuso
+- Assinatura HMAC-SHA256 verificada em cada requisição
+- Rate limiting para proteção contra brute force
 - Headers de segurança via Helmet
-- Arquivos de upload fora da pasta pública
-- Logs completos de todas as operações
+- Arquivos de upload no Cloudflare R2 (fora da pasta pública)
+- Isolamento multi-tenant completo
 
 ---
 
 ## 🔄 Retry automático
 
-Entregas com falha são reprocessadas automaticamente a cada **60 segundos** (configurável via `RETRY_DELAY_SECONDS`), com no máximo **3 tentativas** (configurável via `RETRY_ATTEMPTS`).
+Entregas com falha são reprocessadas automaticamente a cada **60 segundos** (configurável via `RETRY_DELAY_SECONDS`), com no máximo **3 tentativas**.
 
 ---
 
 ## 📁 Estrutura do projeto
 
 ```
-digitalhub/
+vaultly/
 ├── src/
-│   ├── server.js              # Servidor Express principal
+│   ├── server.js
 │   ├── config/
-│   │   └── logger.js          # Winston logger
+│   │   └── logger.js
 │   ├── models/
-│   │   └── database.js        # SQLite + helpers
+│   │   ├── database.js
+│   │   └── bcrypt.js
 │   ├── middleware/
-│   │   └── webhookAuth.js     # Verificação de assinatura Kiwify
+│   │   ├── auth.js
+│   │   └── webhookAuth.js
 │   ├── routes/
-│   │   ├── webhook.js         # POST /api/webhook/kiwify
-│   │   ├── products.js        # CRUD de produtos
-│   │   └── deliveries.js      # Histórico e stats
+│   │   ├── auth.js
+│   │   ├── webhook.js
+│   │   ├── products.js
+│   │   ├── deliveries.js
+│   │   ├── tenants.js
+│   │   └── admin.js
 │   └── services/
-│       ├── emailService.js    # Nodemailer + template HTML
-│       └── deliveryService.js # Orquestração + retry
-├── uploads/                   # PDFs armazenados (fora do git)
-├── logs/                      # Logs do servidor
-├── data/                      # Banco SQLite
+│       ├── deliveryService.js
+│       ├── emailService.js
+│       ├── storageService.js
+│       ├── platformAdapter.js
+│       └── platformApiService.js
+├── public/
+│   ├── index.html      # Painel do usuário
+│   ├── admin.html      # Painel administrador
+│   └── landing.html    # Página de conversão
 ├── .env.example
 ├── package.json
 └── README.md
 ```
-"# digitalhub" 

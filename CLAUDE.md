@@ -1,4 +1,4 @@
-# CLAUDE.md — Contexto do Projeto Vaultly / DigitalHub
+# CLAUDE.md — Contexto do Projeto Vaultly
 
 > Lido automaticamente pelo Claude Code CLI e pelo Cowork. Mantenha atualizado.
 
@@ -65,7 +65,7 @@ C:\Users\jojop\OneDrive\Documentos\Obsidian Vault\C04.Notas da IA\
 
 ## O que é este projeto
 
-**Vaultly** (anteriormente DigitalHub) é uma plataforma SaaS de entrega automática de produtos digitais (PDFs, ebooks, arquivos).
+**Vaultly** é uma plataforma SaaS de entrega automática de produtos digitais (PDFs, ebooks, arquivos).
 
 Fluxo principal:
 1. Cliente compra produto na **Kiwify** ou **Yampi**
