@@ -13,17 +13,11 @@ const { startRetryJob } = require('./services/deliveryService');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
+// CSP desabilitado intencionalmente — o frontend usa muitos scripts inline
+// Para habilitar corretamente no futuro, é necessário adicionar nonces em cada
+// bloco <script> e atributo onclick do index.html e admin.html
 app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc:  ["'self'", "'unsafe-inline'", "fonts.googleapis.com", "cdn.jsdelivr.net"],
-      styleSrc:   ["'self'", "'unsafe-inline'", "fonts.googleapis.com", "cdn.jsdelivr.net"],
-      fontSrc:    ["'self'", "fonts.gstatic.com", "cdn.jsdelivr.net"],
-      imgSrc:     ["'self'", "data:"],
-      connectSrc: ["'self'"]
-    }
-  },
+  contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false
 }));
 app.set('trust proxy', 1);
