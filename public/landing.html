@@ -1004,7 +1004,7 @@ footer {
     <li><a href="#precos">Preços</a></li>
   </ul>
   <div class="nav-actions">
-    <a href="/index.html" class="btn-ghost">Entrar</a>
+    <button class="btn-ghost" onclick="openLoginModal()">Entrar</button>
     <button class="btn-primary" onclick="openModal('pro')">
       <i class="ti ti-rocket"></i> Começar agora
     </button>
@@ -1511,11 +1511,46 @@ footer {
         <a href="#">Termos</a>
         <a href="#">Privacidade</a>
         <a href="#">Suporte</a>
-        <a href="/index.html">Entrar</a>
+        <a href="#" onclick="openLoginModal();return false;">Entrar</a>
       </div>
     </div>
   </div>
 </footer>
+
+<!-- ════════════════════════════════════════════
+     MODAL DE LOGIN
+════════════════════════════════════════════ -->
+<div class="modal-overlay" id="loginOverlay" style="z-index:10001;">
+  <div class="modal" id="loginModal" style="max-width:420px;">
+    <button class="modal-close" onclick="closeLoginModal()"><i class="ti ti-x"></i></button>
+    <div class="modal-header">
+      <div class="modal-logo"><div class="logo-mark" style="width:36px;height:36px;border-radius:9px;background:var(--grad);display:flex;align-items:center;justify-content:center;"><i class="ti ti-vault" style="color:#fff;font-size:18px;"></i></div></div>
+      <h2 style="margin:12px 0 4px;font-size:22px;">Entrar no painel</h2>
+      <p style="color:var(--text2);font-size:14px;margin:0;">Acesse sua conta Vaultly</p>
+    </div>
+    <div id="login-msg-error" style="display:none;background:rgba(244,63,94,0.12);border:1px solid rgba(244,63,94,0.3);color:#F43F5E;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;"></div>
+    <div class="form-field">
+      <label>E-mail</label>
+      <input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email" />
+    </div>
+    <div class="form-field">
+      <label>Senha</label>
+      <div class="input-icon-wrap">
+        <input type="password" id="loginPassword" placeholder="Sua senha" autocomplete="current-password" />
+        <span class="input-icon" onclick="var i=document.getElementById('loginPassword');i.type=i.type==='password'?'text':'password';">
+          <i class="ti ti-eye"></i>
+        </span>
+      </div>
+    </div>
+    <button class="btn-submit" id="loginBtn" onclick="handleLogin()">
+      Entrar
+    </button>
+    <div class="form-divider">ou</div>
+    <div class="form-login-link">
+      Nao tem conta? <a href="#" onclick="closeLoginModal();openModal('basic');return false;">Criar conta gratis</a>
+    </div>
+  </div>
+</div>
 
 <!-- ════════════════════════════════════════════
      MODAL DE CADASTRO
@@ -1569,7 +1604,7 @@ footer {
       <div class="form-divider">ou</div>
 
       <div class="form-login-link">
-        Já tem uma conta? <a href="/index.html">Fazer login</a>
+        Já tem uma conta? <a href="#" onclick="closeModal();openLoginModal();return false;">Fazer login</a>
       </div>
     </div>
   </div>
@@ -1727,11 +1762,11 @@ async function autoLogin(email, password) {
     successEl.style.display = 'block';
     successEl.innerHTML = '<i class="ti ti-circle-check-filled" style="font-size:28px;margin-bottom:8px;display:block;"></i><strong>Conta criada com sucesso!</strong><br>Redirecionando para o painel...';
 
-    setTimeout(() => { window.location.href = '/index.html'; }, 1800);
+    setTimeout(() => { window.location.href = '/app'; }, 1800);
 
   } catch(e) {
-    // Mesmo sem auto-login, conta foi criada — redireciona pro login
-    window.location.href = '/index.html';
+    // Mesmo sem auto-login, conta foi criada — redireciona pro painel
+    window.location.href = '/app';
   }
 }
 
@@ -1747,6 +1782,81 @@ const observer = new IntersectionObserver((entries) => {
 }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
 
 document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+/* ── Login Modal ───────────────────────────── */
+function openLoginModal() {
+  document.getElementById('loginOverlay').classList.add('open');
+  document.getElementById('login-msg-error').style.display = 'none';
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => document.getElementById('loginEmail').focus(), 300);
+}
+
+function closeLoginModal() {
+  document.getElementById('loginOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+document.getElementById('loginOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeLoginModal();
+});
+
+async function handleLogin() {
+  const email    = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl    = document.getElementById('login-msg-error');
+  const btn      = document.getElementById('loginBtn');
+
+  errEl.style.display = 'none';
+  if (!email || !password) { errEl.textContent = 'Preencha email e senha.'; errEl.style.display = 'block'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Entrando...';
+
+  try {
+    const res  = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      errEl.textContent = data.error || 'Credenciais invalidas.';
+      errEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
+      return;
+    }
+
+    localStorage.setItem('vaultly_token', data.token);
+    document.cookie = 'vaultly_token=' + data.token + '; path=/; max-age=604800';
+    window.location.href = '/app';
+  } catch(e) {
+    errEl.textContent = 'Erro de conexao. Tente novamente.';
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Entrar';
+  }
+}
+
+document.getElementById('loginPassword').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') handleLogin();
+});
+
+/* ── Verifica sessao existente ─────────────── */
+window.addEventListener('load', async () => {
+  const token = localStorage.getItem('vaultly_token');
+  if (!token) return;
+  try {
+    const res = await fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
+    const data = await res.json();
+    if (data.success) {
+      // Ja esta logado — atualiza navbar
+      const nav = document.querySelector('.nav-actions');
+      if (nav) nav.innerHTML = '<a href="/app" class="btn-primary" style="text-decoration:none;"><i class="ti ti-layout-dashboard"></i> Painel</a>';
+    }
+  } catch(e) {}
+});
 
 /* ── Navbar scroll ──────────────────────────── */
 window.addEventListener('scroll', () => {

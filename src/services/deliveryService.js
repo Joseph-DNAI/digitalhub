@@ -84,7 +84,7 @@ async function attemptDelivery(deliveryId, product, normalized, tenant, showBran
       productName:   product.name,
       filePath:      product.file_path,
       fileName:      product.file_name,
-      emailTemplate: product.email_template,
+      emailTemplate: product.email_template || (tenant && tenant.email_template) || null,
       orderId:       normalized.orderId,
       resendApiKey:  tenant?.resend_api_key  || process.env.RESEND_API_KEY || process.env.SMTP_PASS,
       fromName:      tenant?.email_from_name    || process.env.EMAIL_FROM_NAME    || 'Vaultly',

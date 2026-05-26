@@ -16,10 +16,12 @@
       "Bash(cd \"C:/Users/jojop/OneDrive/Documentos/Projetos/Webhook Yampi e Kiwify/digitalhub-multi\" && rm -f .git/index.lock .git/HEAD.lock && git add src/models/database.js && git commit -m \"fix: remove crash fatal em producao quando ADMIN_EMAIL/PASSWORD nao definidos\" && git push)",
       "Read(//c/Users/jojop/OneDrive/Documentos/Obsidian Vault/C04.Notas da IA/**)",
       "Read(//c/Users/jojop/OneDrive/Documentos/Obsidian Vault/B01.Projetos/Webhook Yampi e Kiwify/**)",
-      "Bash(cd \"C:/Users/jojop/OneDrive/Documentos/Projetos/Webhook Yampi e Kiwify/digitalhub-multi\" && rm -f .git/index.lock .git/HEAD.lock && git add -A && git commit -m \"refactor: renomeia marca DigitalHub -> Vaultly em todos os arquivos\" && git push)"
+      "Bash(cd \"C:/Users/jojop/OneDrive/Documentos/Projetos/Webhook Yampi e Kiwify/digitalhub-multi\" && rm -f .git/index.lock .git/HEAD.lock && git add -A && git commit -m \"refactor: renomeia marca DigitalHub -> Vaultly em todos os arquivos\" && git push)",
+      "Bash(cd \"c:/Users/jojop/OneDrive/Documentos/Projetos/Webhook Yampi e Kiwify/digitalhub-multi\" && rm -f .git/index.lock .git/HEAD.lock && git add -A && git status --short | head -20)"
     ],
     "additionalDirectories": [
-      "C:\\Users\\jojop\\OneDrive\\Documentos\\Projetos\\Webhook Yampi e Kiwify\\digitalhub-multi\\.git"
+      "C:\\Users\\jojop\\OneDrive\\Documentos\\Projetos\\Webhook Yampi e Kiwify\\digitalhub-multi\\.git",
+      "c:\\Users\\jojop\\OneDrive\\Documentos\\Projetos\\Webhook Yampi e Kiwify\\digitalhub-multi\\.git"
     ]
   }
 }

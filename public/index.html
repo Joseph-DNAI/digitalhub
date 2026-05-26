@@ -48,6 +48,42 @@ html, body {
 
 /* ── Scrollbar ───────────────────────────────────────── */
 ::-webkit-scrollbar { width: 4px; }
+
+/* ── Webhook Acordeão ────────────────────────────────── */
+.wh-accordion { margin-bottom: 12px; }
+.wh-acc-header { user-select: none; }
+.wh-chevron { font-size: 16px; color: var(--text3); transition: transform 0.25s; flex-shrink: 0; }
+.wh-accordion.open .wh-chevron { transform: rotate(180deg); }
+.wh-acc-body { display: none; border-top: 1px solid var(--border); }
+.wh-accordion.open .wh-acc-body { display: block; }
+.status-pill { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 99px; }
+.pill-active   { background: rgba(16,185,129,0.15); color: var(--emerald); border: 1px solid rgba(16,185,129,0.3); }
+.pill-inactive { background: rgba(61,79,110,0.3);  color: var(--text3);   border: 1px solid var(--border2); }
+
+/* ── Onboarding ──────────────────────────────────────── */
+.ob-platform-card {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--bg3); border: 2px solid var(--border2);
+  border-radius: 12px; padding: 14px 16px; cursor: pointer;
+  transition: all 0.2s;
+}
+.ob-platform-card.ob-selected { border-color: var(--indigo); background: rgba(108,99,255,0.07); }
+.ob-check {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--indigo); display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; color: #fff; font-size: 13px;
+}
+.ob-check.ob-uncheck { background: var(--bg4); color: transparent; border: 2px solid var(--border2); }
+
+/* ── Var Pills (template) ────────────────────────────── */
+.var-pill {
+  display: inline-flex; align-items: center;
+  background: rgba(108,99,255,0.12); color: var(--indigo);
+  border: 1px solid rgba(108,99,255,0.25); border-radius: 6px;
+  padding: 3px 10px; font-size: 12px; font-family: 'JetBrains Mono', monospace;
+  cursor: pointer; transition: all 0.15s; user-select: none;
+}
+.var-pill:hover { background: rgba(108,99,255,0.22); }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 99px; }
 
@@ -572,6 +608,9 @@ tbody tr:hover td { background: rgba(255,255,255,0.02); }
       <button class="nav-item" onclick="switchTab('webhook',this)">
         <i class="ti ti-webhook"></i> Webhook
       </button>
+      <button class="nav-item" onclick="switchTab('email',this)">
+        <i class="ti ti-mail"></i> Email
+      </button>
       <button class="nav-item" onclick="switchTab('config',this)">
         <i class="ti ti-settings"></i> Configurações
       </button>
@@ -753,29 +792,93 @@ tbody tr:hover td { background: rgba(255,255,255,0.02); }
         <div class="page-header">
           <div>
             <div class="page-title">Webhook</div>
-            <div class="page-sub">integração com Kiwify e Yampi</div>
+            <div class="page-sub">integração e configuração de plataformas</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveWebhookConfig()" id="btn-save-webhook">
+            <i class="ti ti-device-floppy"></i> Salvar
+          </button>
+        </div>
+
+        <!-- Kiwify Acordeão -->
+        <div class="card wh-accordion" id="wh-kiwify">
+          <div class="card-header wh-acc-header" onclick="toggleAccordion('kiwify')" style="cursor:pointer;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:18px;">🟢</span>
+              <div class="card-title">Kiwify</div>
+              <span id="kiwify-status-pill" class="status-pill pill-inactive">Não configurado</span>
+            </div>
+            <i class="ti ti-chevron-down wh-chevron" id="kiwify-chevron"></i>
+          </div>
+          <div class="wh-acc-body" id="kiwify-body">
+            <div class="card-body">
+              <p style="font-size:12px;color:var(--text2);margin-bottom:16px;">Cole a URL abaixo no painel Kiwify em <strong>Configurações → Webhooks</strong> e selecione o evento <strong>Compra aprovada</strong>.</p>
+              <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:8px;">URL do Webhook</div>
+              <div class="url-box" style="margin-bottom:16px;">
+                <code id="url-kiwify">—</code>
+                <button class="btn btn-ghost btn-xs" onclick="copyText('url-kiwify',this)"><i class="ti ti-copy"></i></button>
+              </div>
+              <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:8px;">Segurança</div>
+              <div class="form-group" style="max-width:480px;">
+                <label class="form-label">Secret Kiwify</label>
+                <div style="display:flex;gap:8px;">
+                  <input type="password" class="form-input" id="cfg-kiwify-secret" placeholder="Token gerado pela Kiwify" style="flex:1;" />
+                  <button class="btn btn-ghost btn-sm" onclick="this.previousElementSibling.type=this.previousElementSibling.type==='password'?'text':'password'" title="Mostrar/ocultar"><i class="ti ti-eye"></i></button>
+                </div>
+                <div class="form-hint">Kiwify → Configurações → Webhooks → seu webhook → <em>Chave secreta</em>. Deixe em branco para não validar.</div>
+              </div>
+              <div style="background:var(--bg4);border-radius:var(--radius);padding:12px 14px;margin-top:16px;border-left:3px solid var(--yellow);">
+                <div style="font-size:12px;font-weight:600;color:var(--yellow);margin-bottom:4px;"><i class="ti ti-info-circle"></i> Sobre importar produtos da Kiwify</div>
+                <div style="font-size:12px;color:var(--text2);line-height:1.6;">A Kiwify nao tem API publica de produtos. Seus produtos aparecem automaticamente em <strong style="color:var(--text);">Produtos Pendentes</strong> apos a primeira compra aprovada.</div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><i class="ti ti-link"></i> URLs do Webhook</div>
-          </div>
-          <div class="card-body">
-            <p style="font-size:12px;color:var(--text2);margin-bottom:16px;">Cole estas URLs nos painéis das plataformas e selecione o evento de <strong>compra aprovada</strong>.</p>
-            <div class="url-platform">🟢 Kiwify</div>
-            <div class="url-box">
-              <code id="url-kiwify">—</code>
-              <button class="btn btn-ghost btn-xs" onclick="copyText('url-kiwify',this)"><i class="ti ti-copy"></i></button>
+        <!-- Yampi Acordeão -->
+        <div class="card wh-accordion" id="wh-yampi">
+          <div class="card-header wh-acc-header" onclick="toggleAccordion('yampi')" style="cursor:pointer;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:18px;">🔵</span>
+              <div class="card-title">Yampi</div>
+              <span id="yampi-status-pill" class="status-pill pill-inactive">Não configurado</span>
             </div>
-            <div class="url-platform" style="margin-top:14px;">🔵 Yampi</div>
-            <div class="url-box">
-              <code id="url-yampi">—</code>
-              <button class="btn btn-ghost btn-xs" onclick="copyText('url-yampi',this)"><i class="ti ti-copy"></i></button>
+            <i class="ti ti-chevron-down wh-chevron" id="yampi-chevron"></i>
+          </div>
+          <div class="wh-acc-body" id="yampi-body">
+            <div class="card-body">
+              <p style="font-size:12px;color:var(--text2);margin-bottom:16px;">Cole a URL abaixo no painel Yampi em <strong>Configurações → Webhooks</strong> e selecione o evento <strong>order.paid</strong>.</p>
+              <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:8px;">URL do Webhook</div>
+              <div class="url-box" style="margin-bottom:16px;">
+                <code id="url-yampi">—</code>
+                <button class="btn btn-ghost btn-xs" onclick="copyText('url-yampi',this)"><i class="ti ti-copy"></i></button>
+              </div>
+              <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:8px;">Segurança</div>
+              <div class="form-group" style="max-width:480px;margin-bottom:16px;">
+                <label class="form-label">Secret Yampi</label>
+                <div style="display:flex;gap:8px;">
+                  <input type="password" class="form-input" id="cfg-yampi-secret" placeholder="Token gerado pela Yampi" style="flex:1;" />
+                  <button class="btn btn-ghost btn-sm" onclick="this.previousElementSibling.type=this.previousElementSibling.type==='password'?'text':'password'" title="Mostrar/ocultar"><i class="ti ti-eye"></i></button>
+                </div>
+                <div class="form-hint">Yampi → Configurações → Webhooks → token. Deixe em branco para nao validar.</div>
+              </div>
+              <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:8px;">API — Importar Produtos</div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Alias da loja</label>
+                  <input type="text" class="form-input" id="cfg-yampi-alias" placeholder="minha-loja" />
+                  <div class="form-hint">URL: yampi.com.br/<strong>alias</strong></div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Token API Yampi</label>
+                  <input type="password" class="form-input" id="cfg-yampi-token" placeholder="live_xxxxxxxxx" />
+                  <div class="form-hint">Yampi → Configurações → Integracoes → API</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
+        <!-- Log de eventos -->
         <div class="card">
           <div class="card-header">
             <div class="card-title"><i class="ti ti-terminal-2"></i> Log de eventos</div>
@@ -789,16 +892,24 @@ tbody tr:hover td { background: rgba(255,255,255,0.02); }
         </div>
       </div>
 
-      <!-- ── CONFIG ── -->
-      <div id="tab-config" class="section">
+      <!-- ── EMAIL ── -->
+      <div id="tab-email" class="section">
         <div class="page-header">
           <div>
-            <div class="page-title">Configurações</div>
-            <div class="page-sub">ajustes do sistema Vaultly</div>
+            <div class="page-title">Email</div>
+            <div class="page-sub">remetente e template de entrega</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-ghost btn-sm" onclick="testEmail()">
+              <i class="ti ti-send"></i> Testar envio
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="saveEmailTab()" id="btn-save-email">
+              <i class="ti ti-device-floppy"></i> Salvar
+            </button>
           </div>
         </div>
 
-        <!-- Status do remetente efetivo -->
+        <!-- Status do remetente -->
         <div id="email-status-card" class="card" style="border-color:var(--indigo);margin-bottom:8px;">
           <div class="card-body" style="padding:14px 20px;">
             <div style="display:flex;align-items:center;gap:10px;">
@@ -807,127 +918,100 @@ tbody tr:hover td { background: rgba(255,255,255,0.02); }
                 <div style="font-size:12px;color:var(--text2);">Enviando como</div>
                 <div id="email-status-label" style="font-size:14px;font-weight:600;color:var(--text);">Carregando...</div>
               </div>
-              <div style="margin-left:auto;">
-                <button class="btn btn-ghost btn-sm" onclick="testEmail()">
-                  <i class="ti ti-send"></i> Testar envio
-                </button>
-              </div>
             </div>
           </div>
         </div>
 
+        <!-- Remetente -->
         <div class="card">
           <div class="card-header">
-            <div class="card-title"><i class="ti ti-mail"></i> Configurações de Email</div>
+            <div class="card-title"><i class="ti ti-user"></i> Identidade do Remetente</div>
           </div>
           <div class="card-body">
-
-            <!-- Bloco: identidade do remetente -->
-            <div style="margin-bottom:20px;">
-              <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:12px;">Identidade do Remetente</div>
-              <div class="form-grid">
-                <div class="form-group">
-                  <label class="form-label">Nome do remetente</label>
-                  <input type="text" class="form-input" id="cfg-from-name" placeholder="Minha Loja Digital" />
-                  <div class="form-hint">Aparece no "De:" do email do comprador</div>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Email remetente <span style="color:var(--text3);font-weight:400;">(opcional)</span></label>
-                  <input type="email" class="form-input" id="cfg-from-address" placeholder="entregas@sualojadigital.com.br" />
-                  <div class="form-hint">Deixe em branco para usar o domínio da plataforma</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Divisor com explicação do modelo híbrido -->
-            <div style="background:var(--bg4);border-radius:var(--radius);padding:14px 16px;margin-bottom:20px;border-left:3px solid var(--indigo);">
-              <div style="font-size:12px;font-weight:600;color:var(--cyan);margin-bottom:6px;">
-                <i class="ti ti-info-circle"></i> Como funciona o envio
-              </div>
-              <div style="font-size:12px;color:var(--text2);line-height:1.7;">
-                Por padrão, seus emails são enviados pela <strong style="color:var(--text);">infraestrutura Vaultly</strong> — sem nenhuma configuração necessária.
-                Se quiser usar <strong style="color:var(--text);">sua própria conta Resend</strong> (para ter reputação separada, limites próprios ou remetente customizado),
-                preencha a API Key abaixo.
-              </div>
-            </div>
-
-            <!-- Bloco: Resend próprio (opcional) -->
-            <div>
-              <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:12px;">
-                Conta Resend Própria <span style="color:var(--indigo);font-size:10px;font-weight:600;background:rgba(108,99,255,0.12);padding:2px 7px;border-radius:99px;margin-left:4px;">OPCIONAL</span>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Nome do remetente</label>
+                <input type="text" class="form-input" id="cfg-from-name" placeholder="Minha Loja Digital" />
+                <div class="form-hint">Aparece no "De:" do email do comprador</div>
               </div>
               <div class="form-group">
-                <label class="form-label">API Key Resend</label>
-                <div style="display:flex;gap:8px;">
-                  <input type="password" class="form-input" id="cfg-resend-key" placeholder="re_xxxxxxxxxxxxxxxxxxxx" style="flex:1;" />
-                  <button class="btn btn-ghost btn-sm" onclick="toggleResendKey()" id="btn-toggle-key" title="Mostrar/ocultar">
-                    <i class="ti ti-eye"></i>
-                  </button>
-                </div>
-                <div class="form-hint">Crie em <a href="https://resend.com/api-keys" target="_blank" style="color:var(--indigo);">resend.com/api-keys</a> · Deixe em branco para usar a infraestrutura da plataforma</div>
+                <label class="form-label">Email remetente <span style="color:var(--text3);font-weight:400;">(opcional)</span></label>
+                <input type="email" class="form-input" id="cfg-from-address" placeholder="entregas@sualojadigital.com.br" />
+                <div class="form-hint">Deixe em branco para usar o domínio da plataforma</div>
               </div>
             </div>
+          </div>
+        </div>
 
-            <!-- Bloco: integração Yampi API -->
-            <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border);">
-              <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:12px;">Integração Yampi <span style="color:var(--text3);font-size:10px;font-weight:400;">(para importar produtos)</span></div>
-              <div class="form-grid">
-                <div class="form-group">
-                  <label class="form-label">Alias da loja</label>
-                  <input type="text" class="form-input" id="cfg-yampi-alias" placeholder="minha-loja" />
-                  <div class="form-hint">URL da sua loja Yampi: yampi.com.br/<strong>alias</strong></div>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Token API Yampi</label>
-                  <input type="password" class="form-input" id="cfg-yampi-token" placeholder="live_xxxxxxxxx" />
-                  <div class="form-hint">Yampi → Configurações → API</div>
-                </div>
+        <!-- Infraestrutura de envio -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-server"></i> Infraestrutura de Envio</div>
+          </div>
+          <div class="card-body">
+            <div style="background:var(--bg4);border-radius:var(--radius);padding:14px 16px;margin-bottom:20px;border-left:3px solid var(--indigo);">
+              <div style="font-size:12px;font-weight:600;color:var(--cyan);margin-bottom:6px;"><i class="ti ti-info-circle"></i> Como funciona</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.7;">
+                Por padrão, seus emails são enviados pela <strong style="color:var(--text);">infraestrutura Vaultly</strong> sem nenhuma configuração.
+                Para usar <strong style="color:var(--text);">sua própria conta Resend</strong> (reputação separada, limites próprios, remetente customizado), preencha a API Key abaixo.
               </div>
             </div>
+            <div class="form-group" style="max-width:480px;">
+              <label class="form-label">API Key Resend <span style="color:var(--indigo);font-size:10px;font-weight:600;background:rgba(108,99,255,0.12);padding:2px 7px;border-radius:99px;margin-left:4px;">OPCIONAL</span></label>
+              <div style="display:flex;gap:8px;">
+                <input type="password" class="form-input" id="cfg-resend-key" placeholder="re_xxxxxxxxxxxxxxxxxxxx" style="flex:1;" />
+                <button class="btn btn-ghost btn-sm" onclick="toggleResendKey()" id="btn-toggle-key" title="Mostrar/ocultar"><i class="ti ti-eye"></i></button>
+              </div>
+              <div class="form-hint">Crie em <a href="https://resend.com/api-keys" target="_blank" style="color:var(--indigo);">resend.com/api-keys</a></div>
+            </div>
+          </div>
+        </div>
 
-            <!-- Bloco: secrets de webhook -->
-            <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border);">
-              <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:6px;">Segurança dos Webhooks</div>
-              <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:14px;background:var(--bg4);padding:12px 14px;border-radius:var(--radius);border-left:3px solid var(--indigo);">
-                <i class="ti ti-info-circle" style="color:var(--cyan);"></i>
-                Cada plataforma gera um <strong style="color:var(--text);">Secret</strong> ao configurar o webhook. Cole aqui para validar a autenticidade de cada requisição recebida.<br>
-                <span style="color:var(--text3);font-size:11px;">Kiwify → Webhooks → seu webhook → <em>Chave secreta</em> &nbsp;|&nbsp; Yampi → Configurações → Webhooks → <em>token</em></span>
-              </div>
-              <div class="form-grid">
-                <div class="form-group">
-                  <label class="form-label">Secret Kiwify</label>
-                  <div style="display:flex;gap:8px;">
-                    <input type="password" class="form-input" id="cfg-kiwify-secret" placeholder="••••••••••••••••" style="flex:1;" />
-                    <button class="btn btn-ghost btn-sm" onclick="this.previousElementSibling.type=this.previousElementSibling.type==='password'?'text':'password'" title="Mostrar/ocultar">
-                      <i class="ti ti-eye"></i>
-                    </button>
-                  </div>
-                  <div class="form-hint">Deixe em branco para não validar assinatura da Kiwify</div>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Secret Yampi</label>
-                  <div style="display:flex;gap:8px;">
-                    <input type="password" class="form-input" id="cfg-yampi-secret" placeholder="••••••••••••••••" style="flex:1;" />
-                    <button class="btn btn-ghost btn-sm" onclick="this.previousElementSibling.type=this.previousElementSibling.type==='password'?'text':'password'" title="Mostrar/ocultar">
-                      <i class="ti ti-eye"></i>
-                    </button>
-                  </div>
-                  <div class="form-hint">Deixe em branco para não validar assinatura da Yampi</div>
-                </div>
-              </div>
+        <!-- Template Global — bloqueado no Free -->
+        <div class="card" style="position:relative;overflow:hidden;">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-file-text"></i> Template Global de Email</div>
+            <span id="email-template-plan-badge" style="display:none;font-size:10px;font-weight:700;background:rgba(245,158,11,0.15);color:var(--yellow);border:1px solid rgba(245,158,11,0.3);padding:2px 8px;border-radius:99px;">PLANO PAGO</span>
+          </div>
+          <div class="card-body" id="email-template-body">
+            <div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.6;">
+              Este template é enviado em <strong style="color:var(--text);">todas as entregas</strong>. Use as variáveis abaixo para personalizar.
+              Deixe em branco para usar o padrão Vaultly.
             </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
+              <span class="var-pill" onclick="insertVar('{{nome}}')">{{nome}}</span>
+              <span class="var-pill" onclick="insertVar('{{produto}}')">{{produto}}</span>
+              <span class="var-pill" onclick="insertVar('{{arquivo}}')">{{arquivo}}</span>
+              <span class="var-pill" onclick="insertVar('{{email}}')">{{email}}</span>
+              <span class="var-pill" onclick="insertVar('{{pedido}}')">{{pedido}}</span>
+            </div>
+            <textarea class="form-textarea" id="cfg-email-template" rows="10"
+              placeholder="Olá {{nome}}! Aqui está seu produto {{produto}}.&#10;&#10;O arquivo {{arquivo}} está em anexo neste email.&#10;&#10;Pedido: {{pedido}}&#10;&#10;Obrigado pela compra!"></textarea>
+          </div>
+          <!-- Overlay Free -->
+          <div id="email-template-lock" style="display:none;position:absolute;inset:0;background:rgba(11,16,32,0.85);backdrop-filter:blur(4px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;border-radius:inherit;">
+            <i class="ti ti-lock" style="font-size:32px;color:var(--yellow);"></i>
+            <div style="text-align:center;">
+              <div style="font-weight:700;font-size:15px;margin-bottom:4px;">Recurso exclusivo do plano pago</div>
+              <div style="font-size:12px;color:var(--text2);">No plano Free, os emails são enviados com o template padrão e propaganda Vaultly.</div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="showUpgradeModal()"><i class="ti ti-rocket"></i> Fazer upgrade</button>
+          </div>
+        </div>
+      </div>
 
-            <div style="display:flex;justify-content:flex-end;margin-top:20px;">
-              <button class="btn btn-primary" onclick="saveEmailConfig()" id="btn-save-config">
-                <i class="ti ti-device-floppy"></i> Salvar configurações
-              </button>
-            </div>
+      <!-- ── CONFIG ── -->
+      <div id="tab-config" class="section">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Configurações</div>
+            <div class="page-sub">segurança e conta</div>
           </div>
         </div>
 
         <div class="card">
           <div class="card-header">
-            <div class="card-title"><i class="ti ti-shield-check"></i> Segurança</div>
+            <div class="card-title"><i class="ti ti-shield-check"></i> Comportamento do sistema</div>
           </div>
           <div class="card-body">
             <div class="toggle-row">
@@ -976,6 +1060,99 @@ tbody tr:hover td { background: rgba(255,255,255,0.02); }
         </div>
       </div>
 
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL ONBOARDING ── -->
+<div id="onboarding-modal" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:20px;max-width:540px;width:100%;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,0.6);">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#6C63FF,#38BDF8);padding:28px 28px 22px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.7);text-transform:uppercase;margin-bottom:6px;">Bem-vindo ao Vaultly</div>
+      <h2 style="color:#fff;margin:0;font-size:22px;font-weight:700;" id="ob-step-title">Vamos configurar sua conta</h2>
+      <p style="color:rgba(255,255,255,0.8);margin:6px 0 0;font-size:13px;" id="ob-step-sub">Responda rapidamente para personalizar sua experiência</p>
+      <!-- Progress -->
+      <div style="display:flex;gap:6px;margin-top:18px;">
+        <div id="ob-prog-1" style="height:3px;flex:1;border-radius:99px;background:rgba(255,255,255,0.9);"></div>
+        <div id="ob-prog-2" style="height:3px;flex:1;border-radius:99px;background:rgba(255,255,255,0.3);"></div>
+        <div id="ob-prog-3" style="height:3px;flex:1;border-radius:99px;background:rgba(255,255,255,0.3);"></div>
+        <div id="ob-prog-4" style="height:3px;flex:1;border-radius:99px;background:rgba(255,255,255,0.3);"></div>
+      </div>
+    </div>
+    <!-- Body -->
+    <div style="padding:28px;">
+
+      <!-- Step 1: Nome da loja -->
+      <div id="ob-step-1">
+        <div class="form-group">
+          <label class="form-label">Qual o nome da sua loja?</label>
+          <input type="text" class="form-input" id="ob-store-name" placeholder="Ex: Minha Loja Digital" style="font-size:16px;padding:14px 16px;" />
+          <div class="form-hint">Usado no campo "De:" dos emails enviados aos clientes</div>
+        </div>
+      </div>
+
+      <!-- Step 2: Plataformas -->
+      <div id="ob-step-2" style="display:none;">
+        <div class="form-label" style="margin-bottom:14px;">Quais plataformas você vai usar?</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <label id="ob-kiwify-card" class="ob-platform-card ob-selected" onclick="togglePlatform('kiwify')">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span style="font-size:24px;">🟢</span>
+              <div><div style="font-weight:600;">Kiwify</div><div style="font-size:12px;color:var(--text2);">Webhook de compra aprovada</div></div>
+            </div>
+            <div class="ob-check" id="ob-check-kiwify"><i class="ti ti-check"></i></div>
+          </label>
+          <label id="ob-yampi-card" class="ob-platform-card ob-selected" onclick="togglePlatform('yampi')">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span style="font-size:24px;">🔵</span>
+              <div><div style="font-weight:600;">Yampi</div><div style="font-size:12px;color:var(--text2);">Evento order.paid + importação de produtos</div></div>
+            </div>
+            <div class="ob-check" id="ob-check-yampi"><i class="ti ti-check"></i></div>
+          </label>
+        </div>
+        <div style="font-size:12px;color:var(--text3);margin-top:10px;">Você pode alterar isso depois em Webhook.</div>
+      </div>
+
+      <!-- Step 3: Email -->
+      <div id="ob-step-3" style="display:none;">
+        <div class="form-label" style="margin-bottom:14px;">Como deseja enviar os emails?</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <label id="ob-email-vaultly" class="ob-platform-card ob-selected" onclick="selectEmailMode('vaultly')">
+            <div><div style="font-weight:600;">Infraestrutura Vaultly <span style="color:var(--emerald);font-size:11px;font-weight:700;margin-left:6px;">RECOMENDADO</span></div><div style="font-size:12px;color:var(--text2);">Pronto para usar, sem configuração</div></div>
+            <div class="ob-check" id="ob-check-vaultly"><i class="ti ti-check"></i></div>
+          </label>
+          <label id="ob-email-resend" class="ob-platform-card" onclick="selectEmailMode('resend')">
+            <div><div style="font-weight:600;">Conta Resend própria</div><div style="font-size:12px;color:var(--text2);">Reputação separada, domínio próprio, limites próprios</div></div>
+            <div class="ob-check ob-uncheck" id="ob-check-resend"><i class="ti ti-check"></i></div>
+          </label>
+        </div>
+        <div id="ob-resend-key-wrap" style="display:none;margin-top:14px;">
+          <div class="form-group">
+            <label class="form-label">API Key Resend</label>
+            <input type="password" class="form-input" id="ob-resend-key" placeholder="re_xxxxxxxxxxxxxxxxxxxx" />
+            <div class="form-hint">Crie em <a href="https://resend.com/api-keys" target="_blank" style="color:var(--indigo);">resend.com/api-keys</a></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4: Resumo -->
+      <div id="ob-step-4" style="display:none;">
+        <div style="text-align:center;margin-bottom:20px;">
+          <i class="ti ti-circle-check-filled" style="font-size:48px;color:var(--emerald);display:block;margin-bottom:8px;"></i>
+          <div style="font-size:18px;font-weight:700;margin-bottom:4px;">Tudo pronto!</div>
+          <div style="font-size:13px;color:var(--text2);">Sua conta foi configurada. Agora adicione seu primeiro produto e conecte o webhook à plataforma.</div>
+        </div>
+        <div style="background:var(--bg3);border-radius:12px;padding:16px 18px;" id="ob-summary"></div>
+      </div>
+
+      <!-- Footer botões -->
+      <div style="display:flex;justify-content:space-between;margin-top:24px;align-items:center;">
+        <button id="ob-btn-back" style="display:none;" class="btn btn-ghost btn-sm" onclick="obPrev()"><i class="ti ti-arrow-left"></i> Voltar</button>
+        <div style="flex:1;"></div>
+        <button id="ob-btn-skip" class="btn btn-ghost btn-sm" style="margin-right:10px;color:var(--text3);" onclick="skipOnboarding()">Pular</button>
+        <button id="ob-btn-next" class="btn btn-primary btn-sm" onclick="obNext()">Continuar <i class="ti ti-arrow-right"></i></button>
+      </div>
     </div>
   </div>
 </div>
@@ -1038,7 +1215,7 @@ tbody tr:hover td { background: rgba(255,255,255,0.02); }
         </div>
       </div>
       <!-- CTAs -->
-      <a href="/landing.html#pricing" style="display:block;background:linear-gradient(135deg,#6C63FF,#38BDF8);color:#fff;text-align:center;padding:14px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;margin-bottom:10px;">
+      <a href="/#precos" style="display:block;background:linear-gradient(135deg,#6C63FF,#38BDF8);color:#fff;text-align:center;padding:14px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;margin-bottom:10px;">
         Ver planos e assinar agora
       </a>
       <button onclick="hideUpgradeModal()" style="display:block;width:100%;background:transparent;border:1px solid var(--border2);color:var(--text2);padding:10px;border-radius:10px;cursor:pointer;font-size:13px;">
@@ -1093,11 +1270,6 @@ tbody tr:hover td { background: rgba(255,255,255,0.02); }
           <div class="upload-sub" id="upload-sub">PDF, EPUB até 50MB · armazenado no Cloudflare R2</div>
         </div>
         <input type="file" id="m-file" accept=".pdf,.epub,.zip" style="display:none" onchange="handleFileSelect(this)" />
-      </div>
-      <div class="form-group full">
-        <label class="form-label">Template de email (opcional)</label>
-        <textarea class="form-textarea" id="m-template" placeholder="Olá {{nome}}! Seu produto {{produto}} está em anexo. Pedido: {{pedido}}"></textarea>
-        <div class="form-hint">Variáveis disponíveis: {{nome}} {{produto}} {{arquivo}} {{email}} {{pedido}}</div>
       </div>
     </div>
     <input type="hidden" id="m-editing-id" value="" />
@@ -1185,80 +1357,14 @@ async function doLogout() {
   document.getElementById('app').style.display = 'none';
 }
 
-// ── Config: carregar e salvar ─────────────────────────────────────
+// ── loadConfig (aba Config — agora so seguranca/senha) ───────────
 async function loadConfig() {
-  try {
-    const res = await apiFetch('/api/tenants/me');
-    if (!res.success) return;
-    const d = res.data;
-
-    // Preenche campos
-    document.getElementById('cfg-from-name').value      = d.email_from_name    || '';
-    document.getElementById('cfg-from-address').value   = d.email_from_address || '';
-    document.getElementById('cfg-resend-key').value     = d.has_resend_key ? '••••••••••••••••' : '';
-    document.getElementById('cfg-yampi-alias').value    = d.yampi_store_alias  || '';
-    document.getElementById('cfg-yampi-token').value    = d.has_yampi_token    ? '••••••••••••••••' : '';
-    document.getElementById('cfg-kiwify-secret').value  = d.kiwify_webhook_secret ? '••••••••••••••••' : '';
-    document.getElementById('cfg-yampi-secret').value   = d.yampi_webhook_secret  ? '••••••••••••••••' : '';
-
-    // Atualiza card de status
-    const label = document.getElementById('email-status-label');
-    const dot   = document.getElementById('email-status-dot');
-    if (d.using_platform_email) {
-      label.innerHTML = d.effective_from_name + ' &lt;' + d.effective_from_address + '&gt; &nbsp;<span style="font-size:11px;color:var(--text3);font-weight:400;">via infraestrutura Vaultly</span>';
-      dot.style.background = 'var(--cyan)';
-    } else {
-      label.innerHTML = d.effective_from_name + ' &lt;' + d.effective_from_address + '&gt; &nbsp;<span style="font-size:11px;color:var(--text3);font-weight:400;">conta Resend própria</span>';
-      dot.style.background = 'var(--emerald)';
-    }
-  } catch(e) {
-    console.error('loadConfig:', e);
-  }
+  // A aba Config agora so tem toggles e alteracao de senha
+  // Dados de email estao em loadEmailTab(), webhook em loadWebhookConfig()
 }
 
-async function saveEmailConfig() {
-  const btn = document.getElementById('btn-save-config');
-  btn.disabled = true;
-  btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i> Salvando...';
-
-  try {
-    const body = {};
-    const fromName      = document.getElementById('cfg-from-name').value.trim();
-    const fromAddress   = document.getElementById('cfg-from-address').value.trim();
-    const resendKey     = document.getElementById('cfg-resend-key').value.trim();
-    const yampiAlias    = document.getElementById('cfg-yampi-alias').value.trim();
-    const yampiToken    = document.getElementById('cfg-yampi-token').value.trim();
-    const kiwifySecret  = document.getElementById('cfg-kiwify-secret').value.trim();
-    const yampiSecret   = document.getElementById('cfg-yampi-secret').value.trim();
-
-    if (fromName)    body.email_from_name    = fromName;
-    if (fromAddress) body.email_from_address = fromAddress;
-    // Nao sobrescreve chave existente se usuario deixou os pontos (placeholder)
-    if (resendKey && !resendKey.startsWith('•'))       body.resend_api_key          = resendKey;
-    if (yampiAlias)                                    body.yampi_store_alias        = yampiAlias;
-    if (yampiToken  && !yampiToken.startsWith('•'))    body.yampi_api_token          = yampiToken;
-    if (kiwifySecret && !kiwifySecret.startsWith('•')) body.kiwify_webhook_secret    = kiwifySecret;
-    if (yampiSecret  && !yampiSecret.startsWith('•'))  body.yampi_webhook_secret     = yampiSecret;
-
-    const res = await apiFetch('/api/tenants/me', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    if (!res.success) throw new Error(res.error);
-    _tenantConfigCache = null; // força recarga na próxima importação
-    await loadConfig(); // atualiza card de status
-    btn.innerHTML = '<i class="ti ti-check"></i> Salvo!';
-    setTimeout(function() {
-      btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar configurações';
-    }, 2000);
-  } catch(e) {
-    alert('Erro ao salvar: ' + e.message);
-    btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar configurações';
-  } finally {
-    btn.disabled = false;
-  }
-}
+// saveEmailConfig mantida para compatibilidade — delega para saveEmailTab
+async function saveEmailConfig() { return saveEmailTab(); }
 
 function toggleResendKey() {
   const input = document.getElementById('cfg-resend-key');
@@ -1301,12 +1407,16 @@ window.addEventListener('load', async () => {
 
 // ── Init ─────────────────────────────────────────────────────────
 async function initApp() {
-  // Busca URLs do webhook do tenant
   try {
     const res = await apiFetch('/api/tenants/me');
     if (res.success) {
       document.getElementById('url-kiwify').textContent = res.data.webhook_kiwify;
       document.getElementById('url-yampi').textContent  = res.data.webhook_yampi;
+
+      // Mostra onboarding se nao foi concluido
+      if (!res.data.onboarding_completed) {
+        setTimeout(showOnboardingModal, 800);
+      }
     }
   } catch(e) {
     const base = getApiUrl();
@@ -1314,7 +1424,7 @@ async function initApp() {
     document.getElementById('url-yampi').textContent  = base + '/api/webhook/SEU_TENANT_ID/yampi';
   }
   loadDashboard();
-  loadUnmatchedProducts(); // popula pill de pendentes no topbar
+  loadUnmatchedProducts();
 }
 
 // spin keyframe
@@ -1327,8 +1437,9 @@ const TAB_META = {
   dashboard: { title: 'Dashboard',     sub: 'visão geral do sistema em tempo real' },
   produtos:  { title: 'Produtos',      sub: 'gerencie seus produtos digitais' },
   entregas:  { title: 'Entregas',      sub: 'histórico completo de envios automáticos' },
-  webhook:   { title: 'Webhook',       sub: 'integração com Kiwify e Yampi' },
-  config:    { title: 'Configurações', sub: 'ajustes do sistema Vaultly' },
+  webhook:   { title: 'Webhook',       sub: 'integração e configuração de plataformas' },
+  email:     { title: 'Email',         sub: 'remetente e template de entrega' },
+  config:    { title: 'Configurações', sub: 'segurança e conta' },
 };
 
 function switchTab(name, el) {
@@ -1343,8 +1454,307 @@ function switchTab(name, el) {
   if (name === 'dashboard') loadDashboard();
   if (name === 'produtos')  { loadProducts(); loadUnmatchedProducts(); }
   if (name === 'entregas')  loadDeliveries();
-  if (name === 'webhook')   loadLogs();
-  if (name === 'config')    loadConfig();
+  if (name === 'webhook')   { loadLogs(); loadWebhookConfig(); }
+  if (name === 'email')     loadEmailTab();
+  if (name === 'config')    {} // config nao precisa carregar dados dinamicos
+}
+
+// ── Webhook Config ────────────────────────────────────────────────
+async function loadWebhookConfig() {
+  try {
+    const res = await apiFetch('/api/tenants/me');
+    if (!res.success) return;
+    const d = res.data;
+
+    // URLs (ja carregadas no initApp mas atualiza aqui tb)
+    if (d.webhook_kiwify) document.getElementById('url-kiwify').textContent = d.webhook_kiwify;
+    if (d.webhook_yampi)  document.getElementById('url-yampi').textContent  = d.webhook_yampi;
+
+    // Secrets
+    if (document.getElementById('cfg-kiwify-secret'))
+      document.getElementById('cfg-kiwify-secret').value = d.kiwify_webhook_secret ? '••••••••••••••••' : '';
+    if (document.getElementById('cfg-yampi-secret'))
+      document.getElementById('cfg-yampi-secret').value = d.yampi_webhook_secret ? '••••••••••••••••' : '';
+    if (document.getElementById('cfg-yampi-alias'))
+      document.getElementById('cfg-yampi-alias').value = d.yampi_store_alias || '';
+    if (document.getElementById('cfg-yampi-token'))
+      document.getElementById('cfg-yampi-token').value = d.has_yampi_token ? '••••••••••••••••' : '';
+
+    // Atualiza pills de status
+    var platforms = (d.platforms_enabled || '').split(',');
+    updatePlatformPill('kiwify', d.kiwify_webhook_secret);
+    updatePlatformPill('yampi',  d.yampi_webhook_secret || d.yampi_store_alias);
+
+    // Abre acordeões das plataformas ativas
+    platforms.forEach(function(p) {
+      p = p.trim();
+      if (p && document.getElementById('wh-' + p)) {
+        document.getElementById('wh-' + p).classList.add('open');
+      }
+    });
+  } catch(e) { console.error('loadWebhookConfig:', e); }
+}
+
+function updatePlatformPill(platform, hasConfig) {
+  var pill = document.getElementById(platform + '-status-pill');
+  if (!pill) return;
+  if (hasConfig) {
+    pill.textContent = 'Configurado';
+    pill.className = 'status-pill pill-active';
+  } else {
+    pill.textContent = 'Nao configurado';
+    pill.className = 'status-pill pill-inactive';
+  }
+}
+
+function toggleAccordion(platform) {
+  var el = document.getElementById('wh-' + platform);
+  if (el) el.classList.toggle('open');
+}
+
+async function saveWebhookConfig() {
+  var btn = document.getElementById('btn-save-webhook');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i>';
+  try {
+    var body = {};
+    var kiwifySecret = document.getElementById('cfg-kiwify-secret').value.trim();
+    var yampiSecret  = document.getElementById('cfg-yampi-secret').value.trim();
+    var yampiAlias   = document.getElementById('cfg-yampi-alias').value.trim();
+    var yampiToken   = document.getElementById('cfg-yampi-token').value.trim();
+
+    if (kiwifySecret && !kiwifySecret.startsWith('•')) body.kiwify_webhook_secret = kiwifySecret;
+    if (yampiSecret  && !yampiSecret.startsWith('•'))  body.yampi_webhook_secret  = yampiSecret;
+    if (yampiAlias)                                    body.yampi_store_alias      = yampiAlias;
+    if (yampiToken   && !yampiToken.startsWith('•'))   body.yampi_api_token        = yampiToken;
+
+    if (Object.keys(body).length === 0) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar';
+      return;
+    }
+    const res = await apiFetch('/api/tenants/me', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    });
+    if (!res.success) throw new Error(res.error);
+    _tenantConfigCache = null;
+    loadWebhookConfig();
+    btn.innerHTML = '<i class="ti ti-check"></i> Salvo!';
+    setTimeout(() => { btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar'; }, 2000);
+  } catch(e) {
+    alert('Erro ao salvar: ' + e.message);
+    btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Email Tab ─────────────────────────────────────────────────────
+async function loadEmailTab() {
+  try {
+    const res = await apiFetch('/api/tenants/me');
+    if (!res.success) return;
+    const d = res.data;
+    const isFree = currentUser && (currentUser.plan_id === 'free' || !currentUser.plan_id);
+
+    document.getElementById('cfg-from-name').value    = d.email_from_name    || '';
+    document.getElementById('cfg-from-address').value = d.email_from_address || '';
+    document.getElementById('cfg-resend-key').value   = d.has_resend_key ? '••••••••••••••••' : '';
+
+    // Template global
+    var templateEl = document.getElementById('cfg-email-template');
+    if (templateEl) templateEl.value = d.email_template || '';
+
+    // Bloquear template para Free
+    var lockEl  = document.getElementById('email-template-lock');
+    var badgeEl = document.getElementById('email-template-plan-badge');
+    if (lockEl)  lockEl.style.display  = isFree ? 'flex'   : 'none';
+    if (badgeEl) badgeEl.style.display = isFree ? 'inline' : 'none';
+
+    // Status card
+    var label = document.getElementById('email-status-label');
+    var dot   = document.getElementById('email-status-dot');
+    if (label && dot) {
+      if (d.using_platform_email) {
+        label.innerHTML = d.effective_from_name + ' &lt;' + d.effective_from_address + '&gt; &nbsp;<span style="font-size:11px;color:var(--text3);">via Vaultly</span>';
+        dot.style.background = 'var(--cyan)';
+      } else {
+        label.innerHTML = d.effective_from_name + ' &lt;' + d.effective_from_address + '&gt; &nbsp;<span style="font-size:11px;color:var(--text3);">conta Resend propria</span>';
+        dot.style.background = 'var(--emerald)';
+      }
+    }
+  } catch(e) { console.error('loadEmailTab:', e); }
+}
+
+async function saveEmailTab() {
+  var btn = document.getElementById('btn-save-email');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i>';
+  try {
+    var body = {};
+    var fromName    = document.getElementById('cfg-from-name').value.trim();
+    var fromAddress = document.getElementById('cfg-from-address').value.trim();
+    var resendKey   = document.getElementById('cfg-resend-key').value.trim();
+    var tmpl        = document.getElementById('cfg-email-template');
+
+    if (fromName)    body.email_from_name    = fromName;
+    if (fromAddress) body.email_from_address = fromAddress;
+    if (resendKey && !resendKey.startsWith('•')) body.resend_api_key = resendKey;
+    // Salva template so se usuario nao e free (lock escondido = pode editar)
+    var lockEl = document.getElementById('email-template-lock');
+    if (tmpl && lockEl && lockEl.style.display === 'none') {
+      body.email_template = tmpl.value;
+    }
+
+    if (Object.keys(body).length === 0) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar';
+      return;
+    }
+    const res = await apiFetch('/api/tenants/me', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    });
+    if (!res.success) throw new Error(res.error);
+    loadEmailTab();
+    btn.innerHTML = '<i class="ti ti-check"></i> Salvo!';
+    setTimeout(() => { btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar'; }, 2000);
+  } catch(e) {
+    alert('Erro ao salvar: ' + e.message);
+    btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function insertVar(v) {
+  var ta = document.getElementById('cfg-email-template');
+  if (!ta) return;
+  var start = ta.selectionStart, end = ta.selectionEnd;
+  ta.value = ta.value.substring(0, start) + v + ta.value.substring(end);
+  ta.selectionStart = ta.selectionEnd = start + v.length;
+  ta.focus();
+}
+
+// ── Onboarding ────────────────────────────────────────────────────
+var obStep = 1;
+var obPlatforms = { kiwify: true, yampi: true };
+var obEmailMode = 'vaultly';
+
+function showOnboardingModal() {
+  obStep = 1;
+  obPlatforms = { kiwify: true, yampi: true };
+  obEmailMode = 'vaultly';
+  renderObStep(1);
+  var m = document.getElementById('onboarding-modal');
+  m.style.display = 'flex';
+}
+
+function hideOnboardingModal() {
+  document.getElementById('onboarding-modal').style.display = 'none';
+}
+
+function renderObStep(step) {
+  [1,2,3,4].forEach(function(i) {
+    document.getElementById('ob-step-' + i).style.display = i === step ? 'block' : 'none';
+    document.getElementById('ob-prog-' + i).style.background =
+      i <= step ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.3)';
+  });
+  document.getElementById('ob-btn-back').style.display = step > 1 ? 'inline-flex' : 'none';
+  document.getElementById('ob-btn-skip').style.display = step < 4 ? 'inline-flex' : 'none';
+  document.getElementById('ob-btn-next').innerHTML =
+    step === 4 ? '<i class="ti ti-rocket"></i> Comecar' : 'Continuar <i class="ti ti-arrow-right"></i>';
+
+  var titles = ['Vamos configurar sua conta','Quais plataformas voce usa?','Como enviar os emails?','Tudo pronto!'];
+  var subs   = ['Isso ajuda a personalizar sua experiencia','Voce pode alterar depois','Sem configuracao se preferir Vaultly','Explore o painel e cadastre seu primeiro produto'];
+  document.getElementById('ob-step-title').textContent = titles[step-1];
+  document.getElementById('ob-step-sub').textContent   = subs[step-1];
+
+  if (step === 4) buildObSummary();
+}
+
+function obNext() {
+  if (obStep === 1) {
+    var name = document.getElementById('ob-store-name').value.trim();
+    if (!name) { document.getElementById('ob-store-name').focus(); return; }
+  }
+  if (obStep < 4) { obStep++; renderObStep(obStep); }
+  else finishOnboarding();
+}
+
+function obPrev() { if (obStep > 1) { obStep--; renderObStep(obStep); } }
+
+function togglePlatform(p) {
+  obPlatforms[p] = !obPlatforms[p];
+  var card = document.getElementById('ob-' + p + '-card');
+  var check = document.getElementById('ob-check-' + p);
+  if (obPlatforms[p]) {
+    card.classList.add('ob-selected');
+    check.classList.remove('ob-uncheck');
+  } else {
+    card.classList.remove('ob-selected');
+    check.classList.add('ob-uncheck');
+  }
+}
+
+function selectEmailMode(mode) {
+  obEmailMode = mode;
+  ['vaultly','resend'].forEach(function(m) {
+    var c = document.getElementById('ob-' + m + '-card');
+    var k = document.getElementById('ob-check-' + m);
+    if (m === mode) { c.classList.add('ob-selected'); k.classList.remove('ob-uncheck'); }
+    else            { c.classList.remove('ob-selected'); k.classList.add('ob-uncheck'); }
+  });
+  document.getElementById('ob-resend-key-wrap').style.display = mode === 'resend' ? 'block' : 'none';
+}
+
+function buildObSummary() {
+  var name = document.getElementById('ob-store-name').value.trim();
+  var plats = Object.keys(obPlatforms).filter(function(k){ return obPlatforms[k]; }).join(' + ') || 'Nenhuma';
+  var email = obEmailMode === 'vaultly' ? 'Infraestrutura Vaultly' : 'Conta Resend propria';
+  document.getElementById('ob-summary').innerHTML =
+    '<div style="display:flex;flex-direction:column;gap:10px;">' +
+    '<div style="display:flex;align-items:center;gap:10px;"><i class="ti ti-store" style="color:var(--indigo);"></i><span style="color:var(--text2);font-size:13px;">Loja:</span><strong>' + name + '</strong></div>' +
+    '<div style="display:flex;align-items:center;gap:10px;"><i class="ti ti-webhook" style="color:var(--cyan);"></i><span style="color:var(--text2);font-size:13px;">Plataformas:</span><strong>' + plats.charAt(0).toUpperCase() + plats.slice(1) + '</strong></div>' +
+    '<div style="display:flex;align-items:center;gap:10px;"><i class="ti ti-mail" style="color:var(--emerald);"></i><span style="color:var(--text2);font-size:13px;">Email:</span><strong>' + email + '</strong></div>' +
+    '</div>';
+}
+
+async function finishOnboarding() {
+  var name = document.getElementById('ob-store-name').value.trim();
+  var plats = Object.keys(obPlatforms).filter(function(k){ return obPlatforms[k]; }).join(',');
+  var body = {
+    email_from_name:    name,
+    platforms_enabled:  plats,
+    onboarding_completed: true
+  };
+  if (obEmailMode === 'resend') {
+    var key = document.getElementById('ob-resend-key').value.trim();
+    if (key) body.resend_api_key = key;
+  }
+  try {
+    await apiFetch('/api/tenants/me', {
+      method: 'PUT', headers: { 'Content-Type':'application/json' }, body: JSON.stringify(body)
+    });
+  } catch(e) {}
+
+  // Colapsa plataformas nao selecionadas no webhook
+  ['kiwify','yampi'].forEach(function(p) {
+    var el = document.getElementById('wh-' + p);
+    if (el) {
+      if (obPlatforms[p]) el.classList.add('open');
+      else el.classList.remove('open');
+    }
+  });
+
+  hideOnboardingModal();
+}
+
+function skipOnboarding() {
+  apiFetch('/api/tenants/me', {
+    method: 'PUT', headers: { 'Content-Type':'application/json' },
+    body: JSON.stringify({ onboarding_completed: true })
+  }).catch(function(){});
+  hideOnboardingModal();
 }
 
 function switchTabById(name) {
@@ -1655,7 +2065,6 @@ function openModal() {
   document.getElementById('m-status').value           = 'active';
   document.getElementById('m-kiwify').value           = '';
   document.getElementById('m-yampi').value            = '';
-  document.getElementById('m-template').value         = '';
   document.getElementById('m-editing-id').value       = '';
   document.getElementById('m-file').value             = '';
   document.getElementById('upload-title').textContent = 'Clique para selecionar arquivo';
@@ -1679,7 +2088,7 @@ function editProduct(id) {
   document.getElementById('m-status').value       = p.status         || 'active';
   document.getElementById('m-kiwify').value       = p.kiwify_id      || '';
   document.getElementById('m-yampi').value        = p.yampi_id       || '';
-  document.getElementById('m-template').value     = p.email_template || '';
+  // email_template agora e global — gerenciado na aba Email
   document.getElementById('m-editing-id').value   = id;
   if (p.file_name) {
     document.getElementById('upload-title').textContent = p.file_name;
@@ -1715,7 +2124,7 @@ async function saveProduct() {
     form.append('description',    document.getElementById('m-desc').value);
     form.append('price',          document.getElementById('m-price').value || '0');
     form.append('status',         document.getElementById('m-status').value);
-    form.append('email_template', document.getElementById('m-template').value);
+    // email_template agora e global por tenant (aba Email) — nao enviado por produto
     if (kiwify_id) form.append('kiwify_id', kiwify_id);
     if (yampi_id)  form.append('yampi_id',  yampi_id);
     const file = document.getElementById('m-file').files[0];

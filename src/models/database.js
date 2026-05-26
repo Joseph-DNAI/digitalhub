@@ -158,9 +158,12 @@ async function initDatabase() {
 
     // Migracoes incrementais — adiciona colunas novas se nao existirem
     await client.query(`
-      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS kiwify_api_key    TEXT;
-      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS yampi_api_token    TEXT;
-      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS yampi_store_alias  TEXT;
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS kiwify_api_key         TEXT;
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS yampi_api_token         TEXT;
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS yampi_store_alias       TEXT;
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS onboarding_completed    BOOLEAN DEFAULT FALSE;
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS email_template          TEXT;
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS platforms_enabled       TEXT DEFAULT 'kiwify,yampi';
     `);
 
     // Planos padrão

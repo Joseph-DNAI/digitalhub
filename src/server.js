@@ -89,11 +89,22 @@ app.use('/api/tenants',    require('./routes/tenants'));
 
 app.get('/health', (req, res) => res.json({ status: 'ok', version: '2.0.0', uptime: process.uptime(), timestamp: new Date().toISOString() }));
 
+// Landing page como homepage publica
 app.get('/', (req, res) => {
-  const idx = path.join(publicPath, 'index.html');
-  if (fs.existsSync(idx)) return res.sendFile(idx);
+  const landing = path.join(publicPath, 'landing.html');
+  if (fs.existsSync(landing)) return res.sendFile(landing);
   res.json({ name: 'Vaultly API', version: '2.0.0' });
 });
+
+// Painel do usuario (requer login)
+app.get('/app', (req, res) => {
+  const idx = path.join(publicPath, 'index.html');
+  if (fs.existsSync(idx)) return res.sendFile(idx);
+  res.redirect('/');
+});
+
+// Login standalone — redireciona para /app (que tem overlay de login)
+app.get('/login', (req, res) => res.redirect('/app'));
 
 app.use((err, req, res, next) => {
   logger.error('Erro global: ' + err.message);

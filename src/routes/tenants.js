@@ -27,7 +27,11 @@ router.get('/me', async (req, res) => {
         yampi_store_alias:      tenant ? tenant.yampi_store_alias     : null,
         effective_from_name:    (tenant && tenant.email_from_name)    || process.env.EMAIL_FROM_NAME    || 'Vaultly',
         effective_from_address: (tenant && tenant.email_from_address) || process.env.EMAIL_FROM_ADDRESS || 'onboarding@resend.dev',
-        using_platform_email:   !(tenant && (tenant.resend_api_key || tenant.email_from_address))
+        using_platform_email:   !(tenant && (tenant.resend_api_key || tenant.email_from_address)),
+        onboarding_completed:   !!(tenant && tenant.onboarding_completed),
+        platforms_enabled:      (tenant && tenant.platforms_enabled) || 'kiwify,yampi',
+        has_email_template:     !!(tenant && tenant.email_template),
+        email_template:         tenant ? (tenant.email_template || '') : ''
       }
     });
   } catch(err) {
@@ -41,7 +45,8 @@ router.put('/me', async (req, res) => {
       'kiwify_webhook_secret', 'yampi_webhook_secret',
       'email_from_name', 'email_from_address', 'resend_api_key',
       'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass',
-      'kiwify_api_key', 'yampi_api_token', 'yampi_store_alias'
+      'kiwify_api_key', 'yampi_api_token', 'yampi_store_alias',
+      'onboarding_completed', 'platforms_enabled', 'email_template'
     ];
     var updateData = {};
     allowed.forEach(function(f) {
