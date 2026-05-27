@@ -75,7 +75,7 @@ app.use(morgan('combined', { stream: { write: msg => logger.info(msg.trim()) } }
 // Painel frontend
 const publicPath = path.join(__dirname, '..', 'public');
 if (fs.existsSync(publicPath)) {
-  app.use(express.static(publicPath));
+  app.use(express.static(publicPath, { index: false }));
   logger.info('Painel em: ' + publicPath);
 }
 
