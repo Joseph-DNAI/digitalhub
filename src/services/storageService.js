@@ -15,7 +15,32 @@ const s3 = new S3Client({
   }
 });
 
-const BUCKET = process.env.R2_BUCKET || 'vaultly-files';
+// IMPORTANTE: definir R2_BUCKET no Railway Variables com o nome real do bucket
+const BUCKET = process.env.R2_BUCKET || 'digitalhub-files';
+
+const MIME_MAP = {
+  '.pdf':  'application/pdf',
+  '.zip':  'application/zip',
+  '.epub': 'application/epub+zip',
+  '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  '.doc':  'application/msword',
+  '.txt':  'text/plain',
+  '.jpg':  'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png':  'image/png',
+  '.gif':  'image/gif',
+  '.mp3':  'audio/mpeg',
+  '.m4a':  'audio/mp4',
+  '.mp4':  'video/mp4',
+  '.webm': 'video/webm'
+};
+
+function getContentType(fileName) {
+  var ext = path.extname(fileName).toLowerCase();
+  return MIME_MAP[ext] || 'application/octet-stream';
+}
 
 // ─── Upload de arquivo para o R2 ─────────────────────────────────────────────
 
@@ -27,7 +52,7 @@ async function uploadFile(localPath, fileName) {
     Bucket:      BUCKET,
     Key:         key,
     Body:        fileBuffer,
-    ContentType: 'application/pdf'
+    ContentType: getContentType(fileName)
   }));
 
   logger.info(`✅ Arquivo enviado para R2: ${key}`);
