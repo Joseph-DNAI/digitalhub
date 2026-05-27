@@ -2331,8 +2331,16 @@ async function saveProduct() {
     const data = await raw.json();
     if (!data.success) throw new Error(data.error);
 
+    // Se veio de "Vincular" em Produtos Pendentes, apaga o registro da fila
+    const unmatchedId = btn.dataset.unmatchedId;
+    if (unmatchedId) {
+      try { await apiFetch('/api/products/unmatched/' + unmatchedId, { method: 'DELETE' }); } catch(e) {}
+      delete btn.dataset.unmatchedId;
+    }
+
     closeModal();
     loadProducts();
+    loadUnmatchedProducts(); // sempre atualiza a notificacao de pendentes
     if (document.getElementById('tab-dashboard').classList.contains('active')) loadDashboard();
   } catch(e) {
     alert('Erro ao salvar produto: ' + e.message);
@@ -2385,11 +2393,17 @@ async function loadUnmatchedProducts() {
   try {
     const res = await apiFetch('/api/products/unmatched/list');
     if (!res.success || !res.data.length) {
-      box.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:16px 0;">Nenhum produto pendente — tudo mapeado!</div>';
+      box.innerHTML = '<div style="color:var(--emerald);font-size:13px;padding:8px 0;display:flex;align-items:center;gap:8px;"><i class="ti ti-circle-check" style="font-size:16px;"></i> Nenhum produto pendente — tudo mapeado!</div>';
       document.getElementById('unmatched-badge').style.display = 'none';
-    document.getElementById('tb-unmatched').style.display = 'none';
+      document.getElementById('tb-unmatched').style.display = 'none';
+      // Esconde a secao inteira se nao ha pendentes
+      var sec = document.getElementById('unmatched-section');
+      if (sec) sec.style.display = 'none';
       return;
     }
+    // Mostra a secao quando ha pendentes
+    var sec = document.getElementById('unmatched-section');
+    if (sec) sec.style.display = 'block';
     document.getElementById('unmatched-badge').textContent = res.data.length;
     document.getElementById('unmatched-badge').style.display = 'inline-block';
     // Topbar pill: produtos pendentes
@@ -2483,13 +2497,30 @@ async function importFromPlatform(platform) {
 
   if (platform === 'kiwify') {
     if (listEl) listEl.innerHTML =
-      '<div style="background:var(--bg4);border:1px solid var(--border2);border-radius:var(--radius);padding:16px 18px;margin-top:4px;">' +
-        '<div style="font-size:13px;font-weight:600;color:var(--cyan);margin-bottom:8px;"><i class="ti ti-info-circle"></i> Kiwify — captura automática</div>' +
-        '<div style="font-size:12px;color:var(--text2);line-height:1.7;">' +
-          'A Kiwify não tem API pública de listagem de produtos. Mas não precisa! <br>' +
-          'Configure o webhook da Kiwify apontando para a sua URL Vaultly — na aba <strong style="color:var(--text);">Webhook</strong> — e os produtos aparecerão automaticamente aqui em <strong style="color:var(--yellow);">Produtos Pendentes</strong> quando chegarem os primeiros pedidos.' +
+      '<div style="background:var(--bg4);border:1px solid var(--border2);border-radius:var(--radius);padding:18px 20px;margin-top:4px;">' +
+        '<div style="font-size:13px;font-weight:700;color:var(--cyan);margin-bottom:12px;"><i class="ti ti-brand-google"></i> Pré-cadastrar produto Kiwify pelo ID</div>' +
+        '<div style="font-size:12px;color:var(--text2);line-height:1.8;margin-bottom:16px;">' +
+          'A Kiwify <strong style="color:var(--text);">não tem API pública</strong>, então não é possível listar produtos automaticamente. ' +
+          'Mas você pode pré-cadastrar colando a <strong style="color:var(--text);">URL do produto</strong> abaixo — o sistema extrai o ID automaticamente.' +
+          '<br><br>' +
+          '<span style="color:var(--text3);">Onde encontrar: Kiwify → Seus produtos → clique no produto → copie a URL do navegador.</span>' +
+          '<br><span style="font-size:11px;color:var(--text3);">Exemplo: <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;">kiwify.com.br/products/<strong>xxxxxxxx-xxxx-xxxx</strong>/edit</code></span>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;margin-bottom:12px;">' +
+          '<input type="text" class="form-input" id="kiwify-url-input" placeholder="Cole a URL do produto ou só o ID..." style="flex:1;font-size:13px;" />' +
+          '<button class="btn btn-primary btn-sm" onclick="preRegisterKiwify()">' +
+            '<i class="ti ti-arrow-right"></i> Pré-cadastrar' +
+          '</button>' +
+        '</div>' +
+        '<div style="font-size:11px;color:var(--text3);border-top:1px solid var(--border);padding-top:10px;">' +
+          '<i class="ti ti-info-circle" style="color:var(--indigo);"></i> Após pré-cadastrar, adicione o arquivo PDF e o produto estará pronto para receber pedidos.' +
         '</div>' +
       '</div>';
+    // Foca no campo após renderizar
+    setTimeout(function() {
+      var el = document.getElementById('kiwify-url-input');
+      if (el) el.focus();
+    }, 100);
     return;
   }
 
@@ -2547,6 +2578,32 @@ function openModalFromPlatform(platform, platformProductId, name) {
     document.getElementById('m-yampi').value = platformProductId;
   }
   document.getElementById('modal-title').textContent = 'Adicionar produto da ' + (platform === 'kiwify' ? 'Kiwify' : 'Yampi');
+}
+
+function preRegisterKiwify() {
+  var raw = (document.getElementById('kiwify-url-input') || {}).value || '';
+  raw = raw.trim();
+  if (!raw) { showToast('Cole a URL ou o ID do produto Kiwify.', 'warn'); return; }
+
+  // Tenta extrair UUID da URL: patterns como /products/UUID/edit ou /UUID
+  var uuidMatch = raw.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+  // Ou hash sem hifens (32 chars hex)
+  var hashMatch = !uuidMatch && raw.match(/\b([0-9a-f]{32})\b/i);
+  // Ou qualquer segmento de path que pareça ser o ID (sem /)
+  var pathMatch = !uuidMatch && !hashMatch && raw.match(/\/([^\/\?]+)\/?(?:\?|$|\/edit)/);
+
+  var kiwifyId = uuidMatch ? uuidMatch[1]
+               : hashMatch ? hashMatch[1]
+               : pathMatch ? pathMatch[1]
+               : raw; // se nao encontrou padrao, usa o valor bruto como ID
+
+  // Abre modal pre-preenchido
+  openModal();
+  document.getElementById('m-kiwify').value = kiwifyId;
+  document.getElementById('modal-title').textContent = 'Pré-cadastrar produto Kiwify';
+  document.getElementById('m-name').placeholder = 'Nome do produto (ex: Ebook Marketing Digital)';
+  setTimeout(function() { document.getElementById('m-name').focus(); }, 300);
+  showToast('ID extraido: ' + kiwifyId + ' — preencha o nome e o arquivo.', 'info');
 }
 </script>
 </body>

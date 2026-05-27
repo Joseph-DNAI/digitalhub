@@ -97,6 +97,10 @@ router.post('/', requirePlanLimit('product'), uploadMw, async (req, res) => {
       file_path: r2Key, file_name: fileName
     });
 
+    // Limpa produtos pendentes que correspondem ao mesmo ID de plataforma
+    if (kiwify_id) await unmatchedProducts.deleteByPlatformId(req.tenantId, 'kiwify', kiwify_id);
+    if (yampi_id)  await unmatchedProducts.deleteByPlatformId(req.tenantId, 'yampi',  yampi_id);
+
     const { file_path, ...safe } = created;
     res.status(201).json({ success: true, data: safe });
   } catch (err) {
@@ -124,6 +128,11 @@ router.put('/:id', uploadMw, async (req, res) => {
     if (updateData.price !== undefined) updateData.price = parseFloat(updateData.price);
 
     const updated = await products.update(req.tenantId, req.params.id, updateData);
+
+    // Limpa produtos pendentes que correspondem ao mesmo ID de plataforma
+    if (updateData.kiwify_id) await unmatchedProducts.deleteByPlatformId(req.tenantId, 'kiwify', updateData.kiwify_id);
+    if (updateData.yampi_id)  await unmatchedProducts.deleteByPlatformId(req.tenantId, 'yampi',  updateData.yampi_id);
+
     const { file_path, ...safe } = updated;
     res.json({ success: true, data: safe });
   } catch (err) {

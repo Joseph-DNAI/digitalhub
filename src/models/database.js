@@ -501,6 +501,15 @@ const unmatchedProducts = {
     await query('DELETE FROM unmatched_products WHERE id=$1 AND tenant_id=$2', [id, tenantId]);
   },
 
+  // Limpa automaticamente ao cadastrar produto com o mesmo platform_product_id
+  async deleteByPlatformId(tenantId, platform, platformProductId) {
+    if (!platformProductId) return;
+    await query(
+      'DELETE FROM unmatched_products WHERE tenant_id=$1 AND platform=$2 AND platform_product_id=$3',
+      [tenantId, platform, platformProductId]
+    );
+  },
+
   async count(tenantId) {
     const r = await queryOne('SELECT COUNT(*) as n FROM unmatched_products WHERE tenant_id=$1', [tenantId]);
     return parseInt(r.n);
