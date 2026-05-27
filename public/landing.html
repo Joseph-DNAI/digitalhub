@@ -855,15 +855,17 @@ footer {
 .modal h2 { font-family: 'Satoshi', sans-serif; font-size: 24px; font-weight: 800; margin-bottom: 8px; }
 .modal .modal-sub { font-size: 14px; color: var(--text2); margin-bottom: 32px; line-height: 1.5; }
 
-.modal-plan-pill {
-  display: flex; align-items: center; gap: 8px;
-  background: rgba(108,99,255,0.1); border: 1px solid rgba(108,99,255,0.25);
-  border-radius: 8px; padding: 10px 14px;
-  font-size: 13px; margin-bottom: 24px;
+.auth-tabs {
+  display: flex; border-bottom: 1px solid var(--border2); margin-bottom: 28px;
 }
-.modal-plan-pill i { color: var(--indigo3); font-size: 16px; }
-.modal-plan-name { font-weight: 700; color: var(--text); }
-.modal-plan-price { color: var(--text2); margin-left: auto; font-weight: 600; }
+.auth-tab {
+  flex: 1; padding: 10px; background: none; border: none;
+  color: var(--text2); font-size: 14px; font-weight: 600;
+  cursor: pointer; border-bottom: 2px solid transparent;
+  margin-bottom: -1px; transition: all 0.2s;
+}
+.auth-tab:hover { color: var(--text); }
+.auth-tab.active { color: var(--indigo3); border-bottom-color: var(--indigo3); }
 
 .form-group { margin-bottom: 16px; }
 .form-group label {
@@ -1518,95 +1520,78 @@ footer {
 </footer>
 
 <!-- ════════════════════════════════════════════
-     MODAL DE LOGIN
+     MODAL UNIFICADO (CADASTRO + LOGIN)
 ════════════════════════════════════════════ -->
-<div class="modal-overlay" id="loginOverlay" style="z-index:10001;">
-  <div class="modal" id="loginModal" style="max-width:420px;">
-    <button class="modal-close" onclick="closeLoginModal()"><i class="ti ti-x"></i></button>
-    <div class="modal-header">
-      <div class="modal-logo"><div class="logo-mark" style="width:36px;height:36px;border-radius:9px;background:var(--grad);display:flex;align-items:center;justify-content:center;"><i class="ti ti-vault" style="color:#fff;font-size:18px;"></i></div></div>
-      <h2 style="margin:12px 0 4px;font-size:22px;">Entrar no painel</h2>
-      <p style="color:var(--text2);font-size:14px;margin:0;">Acesse sua conta Vaultly</p>
-    </div>
-    <div id="login-msg-error" style="display:none;background:rgba(244,63,94,0.12);border:1px solid rgba(244,63,94,0.3);color:#F43F5E;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;"></div>
-    <div class="form-field">
-      <label>E-mail</label>
-      <input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email" />
-    </div>
-    <div class="form-field">
-      <label>Senha</label>
-      <div class="input-icon-wrap">
-        <input type="password" id="loginPassword" placeholder="Sua senha" autocomplete="current-password" />
-        <span class="input-icon" onclick="var i=document.getElementById('loginPassword');i.type=i.type==='password'?'text':'password';">
-          <i class="ti ti-eye"></i>
-        </span>
-      </div>
-    </div>
-    <button class="btn-submit" id="loginBtn" onclick="handleLogin()">
-      Entrar
-    </button>
-    <div class="form-divider">ou</div>
-    <div class="form-login-link">
-      Nao tem conta? <a href="#" onclick="closeLoginModal();openModal('basic');return false;">Criar conta gratis</a>
-    </div>
-  </div>
-</div>
-
-<!-- ════════════════════════════════════════════
-     MODAL DE CADASTRO
-════════════════════════════════════════════ -->
-<div class="modal-overlay" id="modalOverlay">
-  <div class="modal" id="modal">
-    <button class="modal-close" onclick="closeModal()"><i class="ti ti-x"></i></button>
+<div class="modal-overlay" id="authOverlay">
+  <div class="modal" id="authModal">
+    <button class="modal-close" onclick="closeAuthModal()"><i class="ti ti-x"></i></button>
 
     <div class="modal-logo">
       <div class="logo-mark"><i class="ti ti-vault"></i></div>
       <span class="logo-name" style="font-family:'Satoshi',sans-serif;font-weight:800;">Vaultly</span>
     </div>
 
-    <h2>Crie sua conta</h2>
-    <p class="modal-sub">Comece a entregar seus produtos digitais no automático em minutos.</p>
-
-    <div class="modal-plan-pill" id="modalPlanPill">
-      <i class="ti ti-sparkles"></i>
-      <span class="modal-plan-name" id="modalPlanName">Plano Basic</span>
-      <span class="modal-plan-price" id="modalPlanPrice">R$47/mês</span>
+    <!-- Tabs -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-reg" onclick="switchAuthTab('register')">Criar conta</button>
+      <button class="auth-tab" id="tab-log" onclick="switchAuthTab('login')">Já tenho conta</button>
     </div>
 
-    <div class="msg-error" id="msgError"></div>
-    <div class="msg-success" id="msgSuccess"></div>
+    <!-- ── Cadastro ── -->
+    <div id="auth-register">
+      <p class="modal-sub" style="margin-top:-8px;">Comece grátis. Escolha seu plano depois, dentro do painel.</p>
 
-    <div id="formArea">
-      <div class="form-group">
-        <label>Seu nome</label>
-        <input type="text" id="regName" placeholder="Ex: João Silva" autocomplete="name"/>
+      <div class="msg-error" id="msgError"></div>
+      <div class="msg-success" id="msgSuccess"></div>
+
+      <div id="formArea">
+        <div class="form-group">
+          <label>Seu nome</label>
+          <input type="text" id="regName" placeholder="Ex: João Silva" autocomplete="name"/>
+        </div>
+        <div class="form-group">
+          <label>E-mail</label>
+          <input type="email" id="regEmail" placeholder="seu@email.com" autocomplete="email"/>
+        </div>
+        <div class="form-group">
+          <label>Senha</label>
+          <div class="input-icon-wrap">
+            <input type="password" id="regPassword" placeholder="Mínimo 8 caracteres" autocomplete="new-password"/>
+            <span class="input-icon" id="togglePass" onclick="togglePassword()">
+              <i class="ti ti-eye" id="eyeIcon"></i>
+            </span>
+          </div>
+        </div>
+
+        <button class="btn-submit" id="btnSubmit" onclick="handleRegister()">
+          <span id="btnText">Criar minha conta</span>
+          <div class="spinner" id="btnSpinner"></div>
+          <i class="ti ti-arrow-right" id="btnArrow"></i>
+        </button>
       </div>
+    </div>
+
+    <!-- ── Login ── -->
+    <div id="auth-login" style="display:none;">
+      <p class="modal-sub" style="margin-top:-8px;">Acesse sua conta Vaultly.</p>
+
+      <div id="login-msg-error" style="display:none;background:rgba(244,63,94,0.12);border:1px solid rgba(244,63,94,0.3);color:#F43F5E;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;"></div>
+
       <div class="form-group">
         <label>E-mail</label>
-        <input type="email" id="regEmail" placeholder="seu@email.com" autocomplete="email"/>
+        <input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email"/>
       </div>
       <div class="form-group">
         <label>Senha</label>
         <div class="input-icon-wrap">
-          <input type="password" id="regPassword" placeholder="Mínimo 8 caracteres" autocomplete="new-password"/>
-          <span class="input-icon" id="togglePass" onclick="togglePassword()">
-            <i class="ti ti-eye" id="eyeIcon"></i>
-          </span>
+          <input type="password" id="loginPassword" placeholder="Sua senha" autocomplete="current-password"/>
+          <span class="input-icon" onclick="var i=document.getElementById('loginPassword');i.type=i.type==='password'?'text':'password';"><i class="ti ti-eye"></i></span>
         </div>
       </div>
 
-      <button class="btn-submit" id="btnSubmit" onclick="handleRegister()">
-        <span id="btnText">Criar minha conta</span>
-        <div class="spinner" id="btnSpinner"></div>
-        <i class="ti ti-arrow-right" id="btnArrow"></i>
-      </button>
-
-      <div class="form-divider">ou</div>
-
-      <div class="form-login-link">
-        Já tem uma conta? <a href="#" onclick="closeModal();openLoginModal();return false;">Fazer login</a>
-      </div>
+      <button class="btn-submit" id="loginBtn" onclick="handleLogin()">Entrar</button>
     </div>
+
   </div>
 </div>
 
@@ -1646,43 +1631,43 @@ function setBilling(type) {
   }
 }
 
-/* ── Modal ─────────────────────────────────── */
-let selectedPlan = 'basic';
-const planLabels = {
-  free:  { name:'Plano Free',  price:'Grátis' },
-  basic: { name:'Plano Basic', price: '' },
-  pro:   { name:'Plano Pro',   price: '' }
-};
-
-function getPlanPrice(plan) {
-  if (plan === 'free') return 'Grátis';
-  const p = prices[billing][plan];
-  const suffix = billing === 'annual' ? '/mês (anual)' : '/mês';
-  return 'R$' + p + suffix;
-}
-
-function openModal(plan) {
-  selectedPlan = plan || 'basic';
-  document.getElementById('modalPlanName').textContent  = planLabels[selectedPlan].name;
-  document.getElementById('modalPlanPrice').textContent = getPlanPrice(selectedPlan);
-  document.getElementById('modalOverlay').classList.add('open');
-  document.getElementById('msgError').style.display    = 'none';
-  document.getElementById('msgSuccess').style.display  = 'none';
-  document.getElementById('formArea').style.display    = 'block';
+/* ── Modal unificado ───────────────────────── */
+function openAuthModal() {
+  document.getElementById('authOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
-  setTimeout(() => document.getElementById('regName').focus(), 300);
 }
 
-function closeModal() {
-  document.getElementById('modalOverlay').classList.remove('open');
+function closeAuthModal() {
+  document.getElementById('authOverlay').classList.remove('open');
   document.body.style.overflow = '';
 }
 
-document.getElementById('modalOverlay').addEventListener('click', function(e) {
-  if (e.target === this) closeModal();
+// Aliases para compatibilidade com botões existentes
+function closeModal() { closeAuthModal(); }
+function closeLoginModal() { closeAuthModal(); }
+
+function switchAuthTab(tab) {
+  document.getElementById('tab-reg').classList.toggle('active', tab === 'register');
+  document.getElementById('tab-log').classList.toggle('active', tab === 'login');
+  document.getElementById('auth-register').style.display = tab === 'register' ? 'block' : 'none';
+  document.getElementById('auth-login').style.display    = tab === 'login'    ? 'block' : 'none';
+  document.getElementById('msgError').style.display = 'none';
+  document.getElementById('login-msg-error').style.display = 'none';
+}
+
+function openModal(plan) {
+  switchAuthTab('register');
+  document.getElementById('msgSuccess').style.display = 'none';
+  document.getElementById('formArea').style.display   = 'block';
+  openAuthModal();
+  setTimeout(() => document.getElementById('regName').focus(), 300);
+}
+
+document.getElementById('authOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeAuthModal();
 });
 
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAuthModal(); });
 
 /* ── Password Toggle ───────────────────────── */
 function togglePassword() {
@@ -1724,7 +1709,7 @@ async function handleRegister() {
     const res = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password, plan_id: selectedPlan })
+      body: JSON.stringify({ name, email, password, plan_id: 'free' })
     });
     const data = await res.json();
 
@@ -1785,20 +1770,10 @@ document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
 /* ── Login Modal ───────────────────────────── */
 function openLoginModal() {
-  document.getElementById('loginOverlay').classList.add('open');
-  document.getElementById('login-msg-error').style.display = 'none';
-  document.body.style.overflow = 'hidden';
+  switchAuthTab('login');
+  openAuthModal();
   setTimeout(() => document.getElementById('loginEmail').focus(), 300);
 }
-
-function closeLoginModal() {
-  document.getElementById('loginOverlay').classList.remove('open');
-  document.body.style.overflow = '';
-}
-
-document.getElementById('loginOverlay').addEventListener('click', function(e) {
-  if (e.target === this) closeLoginModal();
-});
 
 async function handleLogin() {
   const email    = document.getElementById('loginEmail').value.trim();
