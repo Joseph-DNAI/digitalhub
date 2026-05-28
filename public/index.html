@@ -566,8 +566,8 @@ tbody tr:hover td { background: rgba(255,255,255,0.02); }
     </div>
     <div class="login-error" id="login-error">Credenciais inválidas. Tente novamente.</div>
     <div class="form-group" style="margin-bottom:14px;">
-      <label class="form-label">Usuário</label>
-      <input type="text" class="form-input" id="login-user" placeholder="admin" autocomplete="username" />
+      <label class="form-label">Email</label>
+      <input type="email" class="form-input" id="login-user" placeholder="seu@email.com" autocomplete="email" onkeydown="if(event.key==='Enter')doLogin()" />
     </div>
     <div class="form-group" style="margin-bottom:24px;">
       <label class="form-label">Senha</label>
