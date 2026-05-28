@@ -21,19 +21,20 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Stats — Free vê apenas total e hoje (sem taxa de sucesso, sem detalhes)
+// Stats — Free vê apenas total e hoje (sem taxa de sucesso); delivery_month e max exposto para todos (banner de aviso)
 router.get('/stats', async (req, res) => {
   try {
     const stats  = await deliveries.stats(req.tenantId);
     const isFree = req.user.plan_id === 'free';
+    const maxDeliveries = req.user.max_deliveries_month || null;
     if (isFree) {
       return res.json({
         success: true,
-        data: { total: stats.total, today: stats.today },
+        data: { total: stats.total, today: stats.today, delivery_month: stats.delivery_month, max_deliveries_month: maxDeliveries },
         plan_restricted: true
       });
     }
-    res.json({ success: true, data: stats });
+    res.json({ success: true, data: { ...stats, max_deliveries_month: maxDeliveries } });
   } catch (err) {
     logger.error('Erro em /stats: ' + err.message);
     res.status(500).json({ success: false, error: 'Erro interno.' });

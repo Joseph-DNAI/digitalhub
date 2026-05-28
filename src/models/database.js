@@ -164,6 +164,8 @@ async function initDatabase() {
       ALTER TABLE tenants ADD COLUMN IF NOT EXISTS onboarding_completed    BOOLEAN DEFAULT FALSE;
       ALTER TABLE tenants ADD COLUMN IF NOT EXISTS email_template          TEXT;
       ALTER TABLE tenants ADD COLUMN IF NOT EXISTS platforms_enabled       TEXT DEFAULT 'kiwify,yampi';
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS notif_80_sent_month     TEXT;
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS notif_95_sent_month     TEXT;
     `);
 
     // Planos padrão
@@ -432,15 +434,17 @@ const deliveries = {
   },
 
   async stats(tenantId) {
-    const [total, delivered, failed, today] = await Promise.all([
+    const [total, delivered, failed, today, month] = await Promise.all([
       queryOne("SELECT COUNT(*) as n FROM deliveries WHERE tenant_id=$1", [tenantId]),
       queryOne("SELECT COUNT(*) as n FROM deliveries WHERE tenant_id=$1 AND status='delivered'", [tenantId]),
       queryOne("SELECT COUNT(*) as n FROM deliveries WHERE tenant_id=$1 AND status='failed'", [tenantId]),
-      queryOne("SELECT COUNT(*) as n FROM deliveries WHERE tenant_id=$1 AND created_at::date=CURRENT_DATE", [tenantId])
+      queryOne("SELECT COUNT(*) as n FROM deliveries WHERE tenant_id=$1 AND created_at::date=CURRENT_DATE", [tenantId]),
+      queryOne("SELECT COUNT(*) as n FROM deliveries WHERE tenant_id=$1 AND created_at >= date_trunc('month', NOW())", [tenantId])
     ]);
     return {
       total: parseInt(total.n), delivered: parseInt(delivered.n),
-      failed: parseInt(failed.n), today: parseInt(today.n)
+      failed: parseInt(failed.n), today: parseInt(today.n),
+      delivery_month: parseInt(month.n)
     };
   }
 };

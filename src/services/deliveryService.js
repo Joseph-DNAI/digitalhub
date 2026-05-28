@@ -1,6 +1,6 @@
 // src/services/deliveryService.js — multi-tenant
-const { products, deliveries, tenants, unmatchedProducts, users } = require('../models/database');
-const { sendProductEmail } = require('./emailService');
+const { products, deliveries, tenants, unmatchedProducts, users, queryOne } = require('../models/database');
+const { sendProductEmail, sendLimitWarningEmail } = require('./emailService');
 const { normalizePayload, isApprovedEvent } = require('./platformAdapter');
 const logger = require('../config/logger');
 
@@ -65,18 +65,18 @@ async function processWebhookEvent(tenantId, platform, rawPayload) {
   if (isFree) {
     logger.info('Free: entrega agendada com atraso de 5min — delivery: ' + deliveryId);
     setTimeout(() => {
-      attemptDelivery(deliveryId, product, normalized, tenant, true)
+      attemptDelivery(deliveryId, product, normalized, tenant, true, user)
         .catch(e => logger.error('Falha na entrega agendada (free): ' + e.message));
     }, FREE_DELAY_MS);
     return { deliveryId, productName: product.name, buyerEmail: normalized.buyerEmail, queued: true };
   }
 
   // Planos pagos: entrega imediata
-  await attemptDelivery(deliveryId, product, normalized, tenant, false);
+  await attemptDelivery(deliveryId, product, normalized, tenant, false, user);
   return { deliveryId, productName: product.name, buyerEmail: normalized.buyerEmail };
 }
 
-async function attemptDelivery(deliveryId, product, normalized, tenant, showBranding) {
+async function attemptDelivery(deliveryId, product, normalized, tenant, showBranding, user) {
   try {
     await sendProductEmail({
       buyerEmail:    normalized.buyerEmail,
@@ -89,14 +89,57 @@ async function attemptDelivery(deliveryId, product, normalized, tenant, showBran
       resendApiKey:  tenant?.resend_api_key  || process.env.RESEND_API_KEY || process.env.SMTP_PASS,
       fromName:      tenant?.email_from_name    || process.env.EMAIL_FROM_NAME    || 'Vaultly',
       fromAddress:   tenant?.email_from_address || process.env.EMAIL_FROM_ADDRESS || 'onboarding@resend.dev',
-      showBranding:  showBranding || false   // true apenas no plano Free
+      showBranding:  showBranding || false
     });
     await deliveries.updateStatus(deliveryId, 'delivered');
     logger.info('Email entregue — delivery: ' + deliveryId);
+    if (tenant && user) {
+      setImmediate(() => checkLimitWarning(tenant, user).catch(e => logger.warn('checkLimitWarning: ' + e.message)));
+    }
   } catch (err) {
     logger.error('Falha — delivery: ' + deliveryId + ' — ' + err.message);
     await deliveries.updateStatus(deliveryId, 'failed', err.message);
     throw err;
+  }
+}
+
+async function checkLimitWarning(tenant, user) {
+  var limit = user.max_deliveries_month;
+  if (!limit || limit <= 0) return; // Pro: ilimitado
+
+  var monthKey = new Date().toISOString().slice(0, 7); // ex: "2026-05"
+
+  var row = await queryOne(
+    "SELECT COUNT(*) as n FROM deliveries WHERE tenant_id=$1 AND created_at >= date_trunc('month', NOW())",
+    [tenant.id]
+  );
+  var used = parseInt(row ? row.n : 0);
+  var pct  = Math.round((used / limit) * 100);
+
+  if (pct < 80) return;
+
+  var tenantFresh = await tenants.findById(tenant.id);
+  var upgradeUrl  = process.env.BASE_URL || 'https://vaultly.digital';
+
+  // 95% critical threshold
+  if (pct >= 95 && tenantFresh.notif_95_sent_month !== monthKey) {
+    await sendLimitWarningEmail({
+      userEmail: user.email, userName: user.name,
+      planName: user.plan_name || user.plan_id,
+      used: used, limit: limit, pct: pct, upgradeUrl: upgradeUrl
+    });
+    await tenants.update(tenant.id, { notif_95_sent_month: monthKey });
+    return;
+  }
+
+  // 80% warning threshold (only if not already at critical)
+  if (pct >= 80 && pct < 95 && tenantFresh.notif_80_sent_month !== monthKey) {
+    await sendLimitWarningEmail({
+      userEmail: user.email, userName: user.name,
+      planName: user.plan_name || user.plan_id,
+      used: used, limit: limit, pct: pct, upgradeUrl: upgradeUrl
+    });
+    await tenants.update(tenant.id, { notif_80_sent_month: monthKey });
   }
 }
 
@@ -120,7 +163,7 @@ async function retryFailedDeliveries(tenantId) {
         buyerName:  delivery.buyer_name,
         orderId:    delivery.platform_order_id,
         platform:   delivery.platform
-      }, tenant, isFree);
+      }, tenant, isFree, user);
     } catch (e) {
       logger.warn('Retry falhou — ' + delivery.id + ': ' + e.message);
     }

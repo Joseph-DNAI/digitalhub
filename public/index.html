@@ -716,6 +716,8 @@ tbody tr:hover td { background: rgba(255,255,255,0.02); }
           </div>
         </div>
 
+        <div id="limit-warning-banner" style="display:none;"></div>
+
         <div class="card">
           <div class="card-header">
             <div class="card-title"><i class="ti ti-activity"></i> Últimas entregas</div>
@@ -1865,6 +1867,29 @@ function upgradeBanner(title, desc) {
   </div>`;
 }
 
+function limitWarningBanner(used, max, pct, isCrit) {
+  var color = isCrit ? '#DC2626' : '#D97706';
+  var bg    = isCrit ? 'rgba(220,38,38,0.08)' : 'rgba(217,119,6,0.08)';
+  var bdr   = isCrit ? 'rgba(220,38,38,0.25)' : 'rgba(217,119,6,0.25)';
+  var icon  = isCrit ? 'ti-alert-octagon' : 'ti-alert-triangle';
+  var title = isCrit
+    ? 'Limite critico: ' + pct + '% das entregas deste mes foram utilizadas'
+    : 'Aviso: ' + pct + '% do limite de entregas deste mes';
+  var desc = isCrit
+    ? 'Quando o limite for atingido, novas entregas serao pausadas ate o proximo ciclo. Faca upgrade para nao perder vendas.'
+    : 'Voce usou ' + used + ' de ' + max + ' entregas este mes. Faca upgrade para ampliar sua capacidade.';
+  return '<div style="margin:0 0 16px;padding:18px 22px;background:' + bg + ';border:1px solid ' + bdr + ';border-radius:12px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">' +
+    '<i class="ti ' + icon + '" style="font-size:24px;color:' + color + ';flex-shrink:0;"></i>' +
+    '<div style="flex:1;min-width:200px;">' +
+    '<div style="font-size:14px;font-weight:700;margin-bottom:4px;color:' + color + ';">' + title + '</div>' +
+    '<div style="font-size:13px;color:var(--text2);">' + desc + '</div>' +
+    '</div>' +
+    '<button class="btn btn-sm" style="background:' + color + ';color:#fff;flex-shrink:0;" onclick="showUpgradeModal()">' +
+    '<i class="ti ti-rocket"></i> Fazer upgrade' +
+    '</button>' +
+    '</div>';
+}
+
 function showUpgradeModal() {
   const el = document.getElementById('upgrade-modal');
   if (el) { el.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
@@ -1971,6 +1996,24 @@ async function loadDashboard() {
       var tbToday = document.getElementById('tb-deliveries-today');
       document.getElementById('tb-today-count').textContent = todayCount;
       tbToday.style.display = 'flex';
+
+      // Limit warning banner
+      var limitBanner = document.getElementById('limit-warning-banner');
+      if (limitBanner) {
+        var dMonth = statsRes.data.delivery_month;
+        var dMax   = statsRes.data.max_deliveries_month;
+        if (dMax > 0 && dMonth !== undefined) {
+          var pct = Math.round((dMonth / dMax) * 100);
+          if (pct >= 80) {
+            limitBanner.innerHTML = limitWarningBanner(dMonth, dMax, pct, pct >= 95);
+            limitBanner.style.display = 'block';
+          } else {
+            limitBanner.style.display = 'none';
+          }
+        } else {
+          limitBanner.style.display = 'none';
+        }
+      }
     }
     if (prodRes.success) {
       var productCount = prodRes.data.length;
