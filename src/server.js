@@ -52,8 +52,8 @@ app.use((req, res, next) => {
   next();
 });
 
-// Body parser para webhook (raw)
-app.use('/api/webhook', (req, res, next) => {
+// Body parser raw — preserva rawBody para validacao HMAC (webhook Kiwify/Yampi e Stripe)
+function rawBodyParser(req, res, next) {
   let data = '';
   req.on('data', chunk => { data += chunk; });
   req.on('end', () => {
@@ -61,7 +61,10 @@ app.use('/api/webhook', (req, res, next) => {
     try { req.body = data ? JSON.parse(data) : {}; } catch { req.body = {}; }
     next();
   });
-});
+}
+
+app.use('/api/webhook',         rawBodyParser);
+app.use('/api/billing/webhook', rawBodyParser);
 
 // Body parser normal
 app.use('/api/products',   express.json());
@@ -69,6 +72,7 @@ app.use('/api/deliveries', express.json());
 app.use('/api/auth',       express.json());
 app.use('/api/admin',      express.json());
 app.use('/api/tenants',    express.json());
+app.use('/api/billing',    express.json());
 
 app.use(morgan('combined', { stream: { write: msg => logger.info(msg.trim()) } }));
 
@@ -86,6 +90,7 @@ app.use('/api/admin',      require('./routes/admin'));
 app.use('/api/products',   require('./routes/products'));
 app.use('/api/deliveries', require('./routes/deliveries'));
 app.use('/api/tenants',    require('./routes/tenants'));
+app.use('/api/billing',    require('./routes/billing'));
 
 app.get('/health', (req, res) => res.json({ status: 'ok', version: '2.0.0', uptime: process.uptime(), timestamp: new Date().toISOString() }));
 

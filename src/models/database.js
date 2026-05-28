@@ -166,6 +166,10 @@ async function initDatabase() {
       ALTER TABLE tenants ADD COLUMN IF NOT EXISTS platforms_enabled       TEXT DEFAULT 'kiwify,yampi';
       ALTER TABLE tenants ADD COLUMN IF NOT EXISTS notif_80_sent_month     TEXT;
       ALTER TABLE tenants ADD COLUMN IF NOT EXISTS notif_95_sent_month     TEXT;
+      ALTER TABLE users   ADD COLUMN IF NOT EXISTS stripe_customer_id      TEXT;
+      ALTER TABLE users   ADD COLUMN IF NOT EXISTS subscription_id         TEXT;
+      ALTER TABLE users   ADD COLUMN IF NOT EXISTS subscription_status     TEXT DEFAULT 'none';
+      ALTER TABLE users   ADD COLUMN IF NOT EXISTS current_period_end      TIMESTAMP;
     `);
 
     // Planos padrão
