@@ -987,9 +987,11 @@ tbody tr:hover td { background: rgba(255,255,255,0.02); }
         </div>
 
         <!-- Infraestrutura de envio -->
-        <div class="card">
+        <!-- Infraestrutura de Envio — disponível a partir do Basic -->
+        <div class="card" style="position:relative;overflow:hidden;">
           <div class="card-header">
             <div class="card-title"><i class="ti ti-server"></i> Infraestrutura de Envio</div>
+            <span id="resend-infra-badge" style="display:none;font-size:10px;font-weight:700;background:rgba(108,99,255,0.15);color:var(--indigo);border:1px solid rgba(108,99,255,0.3);padding:2px 8px;border-radius:99px;">BASIC+</span>
           </div>
           <div class="card-body">
             <div style="background:var(--bg4);border-radius:var(--radius);padding:14px 16px;margin-bottom:20px;border-left:3px solid var(--indigo);">
@@ -1007,6 +1009,15 @@ tbody tr:hover td { background: rgba(255,255,255,0.02); }
               </div>
               <div class="form-hint">Crie em <a href="https://resend.com/api-keys" target="_blank" style="color:var(--indigo);">resend.com/api-keys</a></div>
             </div>
+          </div>
+          <!-- Lock overlay — Free e Starter -->
+          <div id="resend-infra-lock" style="display:none;position:absolute;inset:0;background:rgba(11,16,32,0.85);backdrop-filter:blur(4px);flex-direction:column;align-items:center;justify-content:center;gap:12px;border-radius:inherit;">
+            <i class="ti ti-lock" style="font-size:32px;color:var(--indigo);"></i>
+            <div style="text-align:center;">
+              <div style="font-weight:700;font-size:15px;margin-bottom:4px;">Disponível a partir do plano Basic</div>
+              <div style="font-size:12px;color:var(--text2);max-width:280px;">Use sua própria conta Resend com domínio verificado e reputação separada.</div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="showUpgradeModal()"><i class="ti ti-rocket"></i> Fazer upgrade</button>
           </div>
         </div>
 
@@ -1651,6 +1662,14 @@ async function loadEmailTab() {
     if (lockEl)  lockEl.style.display  = isFree ? 'flex'   : 'none';
     if (badgeEl) badgeEl.style.display = isFree ? 'inline' : 'none';
 
+    // Bloquear Infraestrutura de Envio para Free e Starter
+    var byokPlans    = ['basic', 'pro', 'business'];
+    var isBasicPlus  = !!(currentUser && byokPlans.includes(currentUser.plan_id));
+    var resendLock   = document.getElementById('resend-infra-lock');
+    var resendBadge  = document.getElementById('resend-infra-badge');
+    if (resendLock)  resendLock.style.display  = isBasicPlus ? 'none'   : 'flex';
+    if (resendBadge) resendBadge.style.display = isBasicPlus ? 'none'   : 'inline';
+
     // Status card
     var label = document.getElementById('email-status-label');
     var dot   = document.getElementById('email-status-dot');
@@ -1679,7 +1698,8 @@ async function saveEmailTab() {
 
     if (fromName)    body.email_from_name    = fromName;
     if (fromAddress) body.email_from_address = fromAddress;
-    if (resendKey && !resendKey.startsWith('•')) body.resend_api_key = resendKey;
+    var byokOk = currentUser && ['basic', 'pro', 'business'].includes(currentUser.plan_id);
+    if (resendKey && !resendKey.startsWith('•') && byokOk) body.resend_api_key = resendKey;
     // Salva template so se usuario nao e free (lock escondido = pode editar)
     var lockEl = document.getElementById('email-template-lock');
     if (tmpl && lockEl && lockEl.style.display === 'none') {

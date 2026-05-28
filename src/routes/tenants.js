@@ -41,6 +41,11 @@ router.get('/me', async (req, res) => {
 
 router.put('/me', async (req, res) => {
   try {
+    var byokPlans = ['basic', 'pro', 'business'];
+    if (req.body.resend_api_key !== undefined && !byokPlans.includes(req.user.plan_id)) {
+      return res.status(403).json({ success: false, error: 'Infraestrutura de envio personalizada disponivel a partir do plano Basic' });
+    }
+
     var allowed = [
       'kiwify_webhook_secret', 'yampi_webhook_secret',
       'email_from_name', 'email_from_address', 'resend_api_key',
