@@ -120,6 +120,43 @@ router.delete('/users/:id', async (req, res) => {
   }
 });
 
+// GET /api/admin/resend-stats — uso global do Resend este mes
+router.get('/resend-stats', async (req, res) => {
+  try {
+    const planLimit = parseInt(process.env.RESEND_PLAN_LIMIT) || 3000;
+    const planName  = process.env.RESEND_PLAN_NAME  || 'Free';
+    const dailyLimit = parseInt(process.env.RESEND_DAILY_LIMIT) || 100;
+
+    const rows = await query(`
+      SELECT
+        COUNT(*) FILTER (WHERE status='delivered' AND created_at >= date_trunc('month', NOW()))::int AS sent_month,
+        COUNT(*) FILTER (WHERE status='delivered' AND created_at::date = CURRENT_DATE)::int         AS sent_today
+      FROM deliveries
+    `);
+
+    const sentMonth = rows[0].sent_month || 0;
+    const sentToday = rows[0].sent_today || 0;
+    const pctMonth  = planLimit > 0 ? Math.min(100, Math.round((sentMonth / planLimit) * 100)) : 0;
+    const pctDay    = dailyLimit > 0 ? Math.min(100, Math.round((sentToday / dailyLimit) * 100)) : 0;
+
+    res.json({
+      success: true,
+      data: {
+        sent_month:   sentMonth,
+        sent_today:   sentToday,
+        plan_limit:   planLimit,
+        daily_limit:  dailyLimit,
+        plan_name:    planName,
+        pct_month:    pctMonth,
+        pct_day:      pctDay
+      }
+    });
+  } catch (err) {
+    logger.error('Erro em /resend-stats: ' + err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // GET /api/admin/plans
 router.get('/plans', async (req, res) => {
   try {

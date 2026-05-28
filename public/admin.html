@@ -111,6 +111,27 @@ tbody tr:hover td{background:rgba(255,255,255,0.02)}
 .usage-crit .usage-fill{background:var(--red)}
 .usage-label{font-size:10px;color:var(--text2);font-family:'JetBrains Mono',monospace}
 
+/* resend usage card */
+.resend-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px 24px;margin-bottom:20px;display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+.resend-icon{width:44px;height:44px;border-radius:10px;background:rgba(108,99,255,.12);border:1px solid rgba(108,99,255,.25);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.resend-icon i{font-size:22px;color:var(--indigo)}
+.resend-info{flex:1;min-width:200px}
+.resend-title{font-size:13px;font-weight:700;margin-bottom:2px}
+.resend-sub{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace}
+.resend-bars{display:flex;gap:20px;flex-wrap:wrap}
+.resend-bar-wrap{display:flex;flex-direction:column;gap:5px;min-width:140px}
+.resend-bar-label{display:flex;justify-content:space-between;align-items:center}
+.resend-bar-text{font-size:11px;color:var(--text2);font-family:'JetBrains Mono',monospace}
+.resend-bar-pct{font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace}
+.resend-bar-bg{height:7px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden}
+.resend-bar-fill{height:100%;border-radius:99px;transition:width .5s}
+.rbar-ok{background:var(--emerald)}
+.rbar-warn{background:var(--yellow)}
+.rbar-crit{background:var(--red)}
+.resend-alert{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;font-size:12px;font-family:'JetBrains Mono',monospace;margin-top:6px}
+.resend-alert-warn{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);color:var(--yellow)}
+.resend-alert-crit{background:rgba(244,63,94,.08);border:1px solid rgba(244,63,94,.25);color:var(--red)}
+
 /* integration dots */
 .integrations{display:flex;gap:4px}
 .int-dot{width:20px;height:20px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace}
@@ -174,6 +195,34 @@ tbody tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="stat"><div class="stat-label">Pro</div><div class="stat-val" id="s-pro">—</div></div>
       <div class="stat"><div class="stat-label">Próx. do limite</div><div class="stat-val" style="color:var(--yellow)" id="s-warn">—</div></div>
       <div class="stat"><div class="stat-label">Inativos</div><div class="stat-val" style="color:var(--text3)" id="s-inactive">—</div></div>
+    </div>
+
+    <!-- Resend usage -->
+    <div class="resend-card" id="resend-card">
+      <div class="resend-icon"><i class="ti ti-mail-fast"></i></div>
+      <div class="resend-info">
+        <div class="resend-title">Cota Resend</div>
+        <div class="resend-sub" id="resend-plan-label">carregando…</div>
+      </div>
+      <div class="resend-bars">
+        <div class="resend-bar-wrap">
+          <div class="resend-bar-label">
+            <span class="resend-bar-text">Este mês</span>
+            <span class="resend-bar-pct" id="r-month-pct">—</span>
+          </div>
+          <div class="resend-bar-bg"><div class="resend-bar-fill" id="r-month-fill" style="width:0%"></div></div>
+          <span class="resend-bar-text" id="r-month-val">— / —</span>
+        </div>
+        <div class="resend-bar-wrap">
+          <div class="resend-bar-label">
+            <span class="resend-bar-text">Hoje</span>
+            <span class="resend-bar-pct" id="r-day-pct">—</span>
+          </div>
+          <div class="resend-bar-bg"><div class="resend-bar-fill" id="r-day-fill" style="width:0%"></div></div>
+          <span class="resend-bar-text" id="r-day-val">— / —</span>
+        </div>
+      </div>
+      <div id="resend-alert" style="display:none"></div>
     </div>
 
     <div class="card">
@@ -307,6 +356,7 @@ async function doLogin() {
     document.getElementById('app').style.display = 'block';
     document.getElementById('admin-name').textContent = currentAdmin.name || currentAdmin.email;
     loadUsers();
+    loadResendStats();
   } catch(e) {
     err.textContent = 'Erro de conexão'; err.style.display = 'block';
   }
@@ -330,6 +380,7 @@ window.addEventListener('load', async () => {
         document.getElementById('app').style.display = 'block';
         document.getElementById('admin-name').textContent = currentAdmin.name || currentAdmin.email;
         loadUsers();
+        loadResendStats();
         return;
       }
     } catch(e){}
@@ -339,6 +390,47 @@ window.addEventListener('load', async () => {
 });
 
 let allUsers = [];
+
+async function loadResendStats() {
+  try {
+    var res = await apiFetch('/api/admin/resend-stats');
+    if (!res.success) return;
+    var d = res.data;
+
+    document.getElementById('resend-plan-label').textContent = 'Plano ' + d.plan_name + ' · ' + d.plan_limit.toLocaleString('pt-BR') + ' emails/mês · ' + d.daily_limit + '/dia';
+    document.getElementById('r-month-val').textContent = d.sent_month.toLocaleString('pt-BR') + ' / ' + d.plan_limit.toLocaleString('pt-BR');
+    document.getElementById('r-day-val').textContent   = d.sent_today + ' / ' + d.daily_limit;
+    document.getElementById('r-month-pct').textContent = d.pct_month + '%';
+    document.getElementById('r-day-pct').textContent   = d.pct_day   + '%';
+
+    var mFill = document.getElementById('r-month-fill');
+    var dFill = document.getElementById('r-day-fill');
+    mFill.style.width = d.pct_month + '%';
+    dFill.style.width = d.pct_day   + '%';
+
+    var cls = function(pct) { return pct >= 90 ? 'rbar-crit' : pct >= 70 ? 'rbar-warn' : 'rbar-ok'; };
+    mFill.className = 'resend-bar-fill ' + cls(d.pct_month);
+    dFill.className = 'resend-bar-fill ' + cls(d.pct_day);
+
+    var alertEl = document.getElementById('resend-alert');
+    var maxPct  = Math.max(d.pct_month, d.pct_day);
+    if (maxPct >= 90) {
+      var isMon = d.pct_month >= 90;
+      alertEl.className  = 'resend-alert resend-alert-crit';
+      alertEl.innerHTML  = '<i class="ti ti-alert-octagon"></i> CRITICO: ' + (isMon ? 'cota mensal em ' + d.pct_month + '%' : 'cota diaria em ' + d.pct_day + '%') + ' — novas entregas podem falhar. Faca upgrade do plano Resend.';
+      alertEl.style.display = 'flex';
+    } else if (maxPct >= 70) {
+      var isMon2 = d.pct_month >= 70;
+      alertEl.className  = 'resend-alert resend-alert-warn';
+      alertEl.innerHTML  = '<i class="ti ti-alert-triangle"></i> Atencao: ' + (isMon2 ? 'cota mensal em ' + d.pct_month + '%' : 'cota diaria em ' + d.pct_day + '%') + ' — considere upgrade do plano Resend.';
+      alertEl.style.display = 'flex';
+    } else {
+      alertEl.style.display = 'none';
+    }
+  } catch(e) {
+    console.warn('loadResendStats:', e);
+  }
+}
 
 async function loadUsers() {
   const tbody = document.getElementById('users-table');
