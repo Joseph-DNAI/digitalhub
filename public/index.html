@@ -161,8 +161,10 @@ body::before {
 .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.04); }
 .nav-item.active {
   color: #fff;
-  background: rgba(108,99,255,0.15);
-  border: 1px solid rgba(108,99,255,0.25);
+  background: rgba(108,99,255,0.13);
+  border: 1px solid rgba(108,99,255,0.2);
+  border-left: 3px solid var(--indigo);
+  padding-left: 10px;
 }
 .nav-item.active i { color: var(--indigo); }
 .nav-item i { font-size: 17px; flex-shrink: 0; }
@@ -237,6 +239,19 @@ body::before {
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Skeleton loading ────────────────────────────────── */
+@keyframes skeleton-shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+.stat-val.loading {
+  background: linear-gradient(90deg, var(--bg3) 25%, var(--bg4) 50%, var(--bg3) 75%);
+  background-size: 400px 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  border-radius: 6px; color: transparent !important;
+  min-width: 44px; min-height: 34px; display: inline-block;
 }
 
 /* ── Page header ─────────────────────────────────────── */
@@ -671,19 +686,19 @@ tbody tr:hover td { background: rgba(255,255,255,0.02); }
           <div class="stat-card">
             <div class="stat-icon cyan"><i class="ti ti-calendar-stats"></i></div>
             <div class="stat-label">Vendas hoje</div>
-            <div class="stat-val" id="s-today">—</div>
+            <div class="stat-val loading" id="s-today"> </div>
             <div class="stat-sub">entregas disparadas</div>
           </div>
           <div class="stat-card">
             <div class="stat-icon emerald"><i class="ti ti-circle-check"></i></div>
             <div class="stat-label">Entregues</div>
-            <div class="stat-val" id="s-delivered">—</div>
+            <div class="stat-val loading" id="s-delivered"> </div>
             <div class="stat-sub">emails enviados com sucesso</div>
           </div>
-          <div class="stat-card">
+          <div class="stat-card" id="stat-failed-card">
             <div class="stat-icon red"><i class="ti ti-alert-triangle"></i></div>
             <div class="stat-label">Falhas</div>
-            <div class="stat-val" id="s-failed" style="color:var(--red);">—</div>
+            <div class="stat-val loading" id="s-failed" style="color:var(--red);"> </div>
             <div class="stat-sub">necessitam atenção</div>
           </div>
           <div class="stat-card" id="stat-products-card">
@@ -691,7 +706,7 @@ tbody tr:hover td { background: rgba(255,255,255,0.02); }
               <div>
                 <div class="stat-icon indigo" id="products-icon"><i class="ti ti-packages"></i></div>
                 <div class="stat-label">Produtos</div>
-                <div class="stat-val" id="s-products">—</div>
+                <div class="stat-val loading" id="s-products"> </div>
                 <div class="stat-sub" id="products-sub">cadastrados na plataforma</div>
               </div>
               <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;padding-top:2px;flex-shrink:0;">
@@ -2055,6 +2070,23 @@ function renderSparkline(deliveries, productCount) {
   }
 }
 
+// ── Count-up animation ───────────────────────────────────────────
+function countUp(id, target, duration) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('loading');
+  if (target === 0) { el.textContent = '0'; return; }
+  var startTime = null;
+  function step(ts) {
+    if (!startTime) startTime = ts;
+    var progress = Math.min((ts - startTime) / duration, 1);
+    var ease = 1 - Math.pow(1 - progress, 3);
+    el.textContent = Math.round(ease * target);
+    if (progress < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
 // ── Dashboard ────────────────────────────────────────────────────
 async function loadDashboard() {
   try {
@@ -2064,14 +2096,20 @@ async function loadDashboard() {
       apiFetch('/api/products'),
     ]);
     if (statsRes.success) {
-      document.getElementById('s-today').textContent = statsRes.data.today || '0';
+      countUp('s-today', statsRes.data.today || 0, 600);
       if (statsRes.plan_restricted) {
         const lockHtml = '<span onclick="showUpgradeModal()" style="cursor:pointer;opacity:0.45;font-size:13px;" title="Disponivel no plano Basic"><i class="ti ti-lock"></i> Basic</span>';
-        document.getElementById('s-delivered').innerHTML = lockHtml;
-        document.getElementById('s-failed').innerHTML    = lockHtml;
+        var elD = document.getElementById('s-delivered'); elD.classList.remove('loading'); elD.innerHTML = lockHtml;
+        var elF = document.getElementById('s-failed');    elF.classList.remove('loading'); elF.innerHTML = lockHtml;
       } else {
-        document.getElementById('s-delivered').textContent = statsRes.data.delivered || '0';
-        document.getElementById('s-failed').textContent    = statsRes.data.failed    || '0';
+        countUp('s-delivered', statsRes.data.delivered || 0, 800);
+        var failedCount = statsRes.data.failed || 0;
+        countUp('s-failed', failedCount, 600);
+        var failCard = document.getElementById('stat-failed-card');
+        if (failCard) {
+          failCard.style.borderColor = failedCount > 0 ? 'rgba(244,63,94,0.35)' : '';
+          failCard.style.boxShadow   = failedCount > 0 ? '0 0 24px rgba(244,63,94,0.12)' : '';
+        }
       }
       var todayCount = statsRes.data.today || 0;
       var tbToday = document.getElementById('tb-deliveries-today');
@@ -2098,7 +2136,7 @@ async function loadDashboard() {
     }
     if (prodRes.success) {
       var productCount = prodRes.data.length;
-      document.getElementById('s-products').textContent = productCount;
+      countUp('s-products', productCount, 600);
       renderSparkline(delivRes.success ? delivRes.data : [], productCount);
     }
     const tbody = document.getElementById('recent-deliveries');

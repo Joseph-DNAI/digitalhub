@@ -376,6 +376,26 @@ nav {
 }
 
 /* ════════════════════════════════════════════════════════
+   SCROLL REVEAL
+════════════════════════════════════════════════════════ */
+.reveal {
+  opacity: 0;
+  transform: translateY(32px);
+  transition: opacity 0.55s ease, transform 0.55s ease;
+}
+.reveal.visible { opacity: 1; transform: translateY(0); }
+.reveal-d1 { transition-delay: 0.08s; }
+.reveal-d2 { transition-delay: 0.16s; }
+.reveal-d3 { transition-delay: 0.24s; }
+
+/* Badge shimmer */
+@keyframes badge-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(108,99,255,0); }
+  50%       { box-shadow: 0 0 18px 2px rgba(108,99,255,0.28); }
+}
+.hero-badge { animation: fadeInUp 0.6s ease both, badge-glow 3.5s ease-in-out 1.2s infinite; }
+
+/* ════════════════════════════════════════════════════════
    LOGOS / SOCIAL PROOF
 ════════════════════════════════════════════════════════ */
 .logos-strip {
@@ -1847,6 +1867,37 @@ window.addEventListener('scroll', () => {
       ? 'rgba(8,12,24,0.95)'
       : 'rgba(8,12,24,0.7)';
 });
+
+/* ── Scroll reveal ──────────────────────────── */
+(function() {
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) {
+      if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); }
+    });
+  }, { threshold: 0.07, rootMargin: '0px 0px -48px 0px' });
+
+  document.querySelectorAll('.feat-card').forEach(function(el, i) {
+    el.classList.add('reveal');
+    if (i % 3 === 1) el.classList.add('reveal-d1');
+    if (i % 3 === 2) el.classList.add('reveal-d2');
+    observer.observe(el);
+  });
+  document.querySelectorAll('.testi-card').forEach(function(el, i) {
+    el.classList.add('reveal');
+    if (i === 1) el.classList.add('reveal-d1');
+    if (i === 2) el.classList.add('reveal-d2');
+    observer.observe(el);
+  });
+  document.querySelectorAll('.plan-card').forEach(function(el, i) {
+    el.classList.add('reveal');
+    if (i === 1) el.classList.add('reveal-d1');
+    if (i === 2) el.classList.add('reveal-d2');
+    if (i === 3) el.classList.add('reveal-d3');
+    observer.observe(el);
+  });
+  var comp = document.querySelector('.comp-table');
+  if (comp) { comp.classList.add('reveal'); observer.observe(comp); }
+})();
 </script>
 </body>
 </html>
