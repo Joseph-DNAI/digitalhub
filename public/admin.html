@@ -37,7 +37,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Satosh
 .page-title{font-size:24px;font-weight:800;letter-spacing:-.5px}
 .page-sub{font-size:12px;color:var(--text2);margin-top:3px;font-family:'JetBrains Mono',monospace}
 
-.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.stats-row{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:24px}
 .stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px 20px;position:relative;overflow:hidden}
 .stat::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:var(--grad);opacity:.5}
 .stat-label{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.08em;font-family:'JetBrains Mono',monospace;margin-bottom:6px}
@@ -93,6 +93,29 @@ tbody tr:hover td{background:rgba(255,255,255,0.02)}
 .plan-badge{font-family:'JetBrains Mono',monospace;font-size:11px}
 .mono{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2)}
 .flex{display:flex;align-items:center;gap:8px}
+
+/* filtros */
+.filter-bar{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.filter-bar input{background:rgba(255,255,255,.04);border:1px solid var(--border2);border-radius:8px;padding:7px 12px;color:var(--text);font-size:12px;font-family:'Satoshi',sans-serif;width:220px}
+.filter-bar input:focus{outline:none;border-color:var(--indigo)}
+.filter-bar select{background:rgba(255,255,255,.04);border:1px solid var(--border2);border-radius:8px;padding:7px 12px;color:var(--text);font-size:12px;font-family:'Satoshi',sans-serif;cursor:pointer}
+.filter-bar select:focus{outline:none;border-color:var(--indigo)}
+.filter-count{margin-left:auto;font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace}
+
+/* progress bar */
+.usage-wrap{display:flex;flex-direction:column;gap:3px;min-width:110px}
+.usage-bar{height:5px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+.usage-fill{height:100%;border-radius:99px;transition:width .3s}
+.usage-ok   .usage-fill{background:var(--emerald)}
+.usage-warn .usage-fill{background:var(--yellow)}
+.usage-crit .usage-fill{background:var(--red)}
+.usage-label{font-size:10px;color:var(--text2);font-family:'JetBrains Mono',monospace}
+
+/* integration dots */
+.integrations{display:flex;gap:4px}
+.int-dot{width:20px;height:20px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace}
+.int-on {background:rgba(16,185,129,.15);color:var(--emerald);border:1px solid rgba(16,185,129,.3)}
+.int-off{background:rgba(255,255,255,.04);color:var(--text3);border:1px solid var(--border)}
 </style>
 </head>
 <body>
@@ -124,8 +147,7 @@ tbody tr:hover td{background:rgba(255,255,255,0.02)}
 <div id="app" style="display:none">
   <div class="topbar">
     <div class="topbar-brand">
-      <div class="logo-mark"><i class="ti ti-bolt"></i></div>
-      <span class="brand-name">Vaultly</span>
+      <img src="/img/logo-horizontal.png" alt="Vaultly" style="height:32px;width:auto;">
       <span class="brand-tag">ADMIN</span>
     </div>
     <div class="flex">
@@ -147,27 +169,57 @@ tbody tr:hover td{background:rgba(255,255,255,0.02)}
 
     <div class="stats-row">
       <div class="stat"><div class="stat-label">Total clientes</div><div class="stat-val" id="s-total">—</div></div>
-      <div class="stat"><div class="stat-label">Plano Free</div><div class="stat-val" id="s-free">—</div></div>
-      <div class="stat"><div class="stat-label">Plano Basic</div><div class="stat-val" id="s-basic">—</div></div>
-      <div class="stat"><div class="stat-label">Plano Pro</div><div class="stat-val" id="s-pro">—</div></div>
+      <div class="stat"><div class="stat-label">Free</div><div class="stat-val" id="s-free">—</div></div>
+      <div class="stat"><div class="stat-label">Basic</div><div class="stat-val" id="s-basic">—</div></div>
+      <div class="stat"><div class="stat-label">Pro</div><div class="stat-val" id="s-pro">—</div></div>
+      <div class="stat"><div class="stat-label">Próx. do limite</div><div class="stat-val" style="color:var(--yellow)" id="s-warn">—</div></div>
+      <div class="stat"><div class="stat-label">Inativos</div><div class="stat-val" style="color:var(--text3)" id="s-inactive">—</div></div>
     </div>
 
     <div class="card">
       <div class="card-header">
-        <div class="card-title"><i class="ti ti-users"></i> Clientes cadastrados</div>
+        <div class="card-title"><i class="ti ti-users"></i> Monitoramento de clientes</div>
         <button class="btn btn-ghost btn-sm" onclick="loadUsers()"><i class="ti ti-refresh"></i> Atualizar</button>
       </div>
+
+      <div class="filter-bar">
+        <input type="text" id="f-search" placeholder="Buscar por nome ou email…" oninput="applyFilters()">
+        <select id="f-plan" onchange="applyFilters()">
+          <option value="">Todos os planos</option>
+          <option value="free">Free</option>
+          <option value="basic">Basic</option>
+          <option value="pro">Pro</option>
+        </select>
+        <select id="f-status" onchange="applyFilters()">
+          <option value="">Todos os status</option>
+          <option value="active">Ativo</option>
+          <option value="inactive">Inativo</option>
+        </select>
+        <select id="f-alert" onchange="applyFilters()">
+          <option value="">Sem filtro de limite</option>
+          <option value="warn">Próximo do limite (>70%)</option>
+          <option value="crit">Crítico (>90%)</option>
+        </select>
+        <span class="filter-count" id="filter-count"></span>
+      </div>
+
       <div style="overflow-x:auto">
         <table>
           <thead>
             <tr>
-              <th>Cliente</th><th>Email</th><th>Plano</th>
-              <th>Produtos</th><th>Entregas</th>
-              <th>Status</th><th>Desde</th><th>Ações</th>
+              <th>Cliente</th>
+              <th>Plano</th>
+              <th>Entregas este mês</th>
+              <th>Produtos</th>
+              <th>Integrações</th>
+              <th>Status</th>
+              <th>Última entrega</th>
+              <th>Cadastro</th>
+              <th>Ações</th>
             </tr>
           </thead>
           <tbody id="users-table">
-            <tr><td colspan="8" style="text-align:center;color:var(--text3);padding:32px">Carregando...</td></tr>
+            <tr><td colspan="9" style="text-align:center;color:var(--text3);padding:32px">Carregando...</td></tr>
           </tbody>
         </table>
       </div>
@@ -286,46 +338,125 @@ window.addEventListener('load', async () => {
   }
 });
 
+let allUsers = [];
+
 async function loadUsers() {
   const tbody = document.getElementById('users-table');
-  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:32px">Carregando...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:32px">Carregando...</td></tr>';
   try {
-    const res = await apiFetch('/api/admin/users');
-    const users = res.data || [];
-
-    // Stats
-    document.getElementById('s-total').textContent = users.length;
-    document.getElementById('s-free').textContent  = users.filter(u=>u.plan_id==='free').length;
-    document.getElementById('s-basic').textContent = users.filter(u=>u.plan_id==='basic').length;
-    document.getElementById('s-pro').textContent   = users.filter(u=>u.plan_id==='pro').length;
-
-    if (!users.length) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:32px">Nenhum cliente cadastrado</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = users.map(u => `
-      <tr>
-        <td><strong>${u.name}</strong>${u.role==='admin'?'<span class="badge badge-red" style="margin-left:6px">admin</span>':''}</td>
-        <td class="mono">${u.email}</td>
-        <td>${planBadge(u.plan_id)}</td>
-        <td class="mono">${u.product_count||0}</td>
-        <td class="mono">${u.delivery_count||0}</td>
-        <td>${u.is_active
-          ? '<span class="badge badge-green">Ativo</span>'
-          : '<span class="badge badge-red">Inativo</span>'}</td>
-        <td class="mono">${formatDate(u.created_at)}</td>
-        <td>
-          <div class="flex">
-            <button class="btn btn-ghost btn-xs" onclick='editUser(${JSON.stringify(u).replace(/'/g,"\\'")})'><i class="ti ti-edit"></i></button>
-            ${u.role!=='admin'?`<button class="btn btn-danger btn-xs" onclick="deleteUser('${u.id}','${u.name}')"><i class="ti ti-trash"></i></button>`:''}
-          </div>
-        </td>
-      </tr>
-    `).join('');
+    const res = await apiFetch('/api/admin/users/overview');
+    allUsers = res.data || [];
+    updateStats(allUsers);
+    applyFilters();
   } catch(e) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--red);padding:32px">Erro: ${e.message}</td></tr>`;
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--red);padding:32px">Erro: ' + e.message + '</td></tr>';
   }
+}
+
+function updateStats(users) {
+  document.getElementById('s-total').textContent    = users.length;
+  document.getElementById('s-free').textContent     = users.filter(u=>u.plan_id==='free').length;
+  document.getElementById('s-basic').textContent    = users.filter(u=>u.plan_id==='basic').length;
+  document.getElementById('s-pro').textContent      = users.filter(u=>u.plan_id==='pro').length;
+  document.getElementById('s-inactive').textContent = users.filter(u=>!u.is_active).length;
+  document.getElementById('s-warn').textContent     = users.filter(u=>deliveryPct(u)>=70).length;
+}
+
+function deliveryPct(u) {
+  var lim = parseInt(u.max_deliveries_month);
+  if (!lim || lim < 0) return 0;
+  return Math.min(100, Math.round(((u.delivery_month||0) / lim) * 100));
+}
+
+function usageClass(pct) {
+  if (pct >= 90) return 'usage-crit';
+  if (pct >= 70) return 'usage-warn';
+  return 'usage-ok';
+}
+
+function applyFilters() {
+  var search   = document.getElementById('f-search').value.toLowerCase();
+  var plan     = document.getElementById('f-plan').value;
+  var status   = document.getElementById('f-status').value;
+  var alert    = document.getElementById('f-alert').value;
+
+  var filtered = allUsers.filter(function(u) {
+    if (search && !u.name.toLowerCase().includes(search) && !u.email.toLowerCase().includes(search)) return false;
+    if (plan   && u.plan_id !== plan) return false;
+    if (status === 'active'   && !u.is_active) return false;
+    if (status === 'inactive' && u.is_active)  return false;
+    var pct = deliveryPct(u);
+    if (alert === 'warn' && pct < 70)  return false;
+    if (alert === 'crit' && pct < 90)  return false;
+    return true;
+  });
+
+  document.getElementById('filter-count').textContent = filtered.length + ' de ' + allUsers.length + ' clientes';
+  renderTable(filtered);
+}
+
+function renderTable(users) {
+  var tbody = document.getElementById('users-table');
+  if (!users.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:32px">Nenhum cliente encontrado</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = users.map(function(u) {
+    var pctD = deliveryPct(u);
+    var limD = parseInt(u.max_deliveries_month);
+    var labelD = limD < 0 ? 'Ilimitado' : (u.delivery_month||0) + ' / ' + limD;
+
+    var limP = parseInt(u.max_products);
+    var pctP = limP < 0 ? 0 : Math.min(100, Math.round(((u.product_count||0) / limP) * 100));
+    var labelP = limP < 0 ? 'Ilimitado' : (u.product_count||0) + ' / ' + limP;
+
+    var clsD = usageClass(pctD);
+    var clsP = usageClass(limP < 0 ? 0 : pctP);
+
+    var intHtml =
+      '<div class="integrations">' +
+      '<span class="int-dot ' + (u.has_kiwify ? 'int-on' : 'int-off') + '" title="Kiwify">K</span>' +
+      '<span class="int-dot ' + (u.has_yampi  ? 'int-on' : 'int-off') + '" title="Yampi">Y</span>' +
+      '<span class="int-dot ' + (u.has_resend ? 'int-on' : 'int-off') + '" title="Resend">R</span>' +
+      '</div>';
+
+    var roleBadge = u.role === 'admin'
+      ? '<span class="badge badge-red" style="margin-left:6px;font-size:9px">ADMIN</span>' : '';
+
+    return '<tr>' +
+      '<td><div><strong>' + esc(u.name) + '</strong>' + roleBadge + '</div>' +
+      '<div class="mono" style="margin-top:2px">' + esc(u.email) + '</div></td>' +
+      '<td>' + planBadge(u.plan_id) + '</td>' +
+      '<td>' +
+        '<div class="usage-wrap ' + clsD + '">' +
+          '<div class="usage-bar"><div class="usage-fill" style="width:' + pctD + '%"></div></div>' +
+          '<div class="usage-label">' + labelD + (limD > 0 ? ' (' + pctD + '%)' : '') + '</div>' +
+        '</div>' +
+      '</td>' +
+      '<td>' +
+        '<div class="usage-wrap ' + clsP + '">' +
+          (limP < 0 ? '<div class="usage-label">Ilimitado</div>' :
+            '<div class="usage-bar"><div class="usage-fill" style="width:' + pctP + '%"></div></div>' +
+            '<div class="usage-label">' + labelP + '</div>') +
+        '</div>' +
+      '</td>' +
+      '<td>' + intHtml + '</td>' +
+      '<td>' + (u.is_active
+        ? '<span class="badge badge-green">Ativo</span>'
+        : '<span class="badge badge-red">Inativo</span>') + '</td>' +
+      '<td class="mono">' + formatDate(u.last_delivery) + '</td>' +
+      '<td class="mono">' + formatDate(u.created_at) + '</td>' +
+      '<td><div class="flex">' +
+        '<button class="btn btn-ghost btn-xs" onclick=\'editUser(' + JSON.stringify(u).replace(/'/g,"\\'") + ')\'><i class="ti ti-edit"></i></button>' +
+        (u.role !== 'admin' ? '<button class="btn btn-danger btn-xs" onclick="deleteUser(\'' + u.id + '\',\'' + esc(u.name) + '\')"><i class="ti ti-trash"></i></button>' : '') +
+      '</div></td>' +
+    '</tr>';
+  }).join('');
+}
+
+function esc(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 function openNewUser() {
