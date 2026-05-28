@@ -172,14 +172,20 @@ async function initDatabase() {
       ALTER TABLE users   ADD COLUMN IF NOT EXISTS current_period_end      TIMESTAMP;
     `);
 
-    // Planos padrão
+    // Planos — DO UPDATE garante que mudancas de preco/limite sejam aplicadas no restart
     await client.query(`
       INSERT INTO plans (id, name, max_products, max_deliveries_month, price_brl)
       VALUES
-        ('free',  'Free',  1,  50,  0),
-        ('basic', 'Basic', 5,  500, 47),
-        ('pro',   'Pro',   -1, -1,  97)
-      ON CONFLICT (id) DO NOTHING;
+        ('free',     'Free',     1,  50,    0  ),
+        ('starter',  'Starter',  2,  200,   37 ),
+        ('basic',    'Basic',    5,  1000,  77 ),
+        ('pro',      'Pro',      -1, 5000,  147),
+        ('business', 'Business', -1, -1,    297)
+      ON CONFLICT (id) DO UPDATE SET
+        name                 = EXCLUDED.name,
+        max_products         = EXCLUDED.max_products,
+        max_deliveries_month = EXCLUDED.max_deliveries_month,
+        price_brl            = EXCLUDED.price_brl;
     `);
 
     // Admin padrão — usa env vars se disponíveis, senão fallback seguro

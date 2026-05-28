@@ -1231,64 +1231,61 @@ tbody tr:hover td { background: rgba(255,255,255,0.02); }
       <p style="color:rgba(255,255,255,0.85);margin:8px 0 0;font-size:14px;">Prioridade na fila, sem marcas d'agua e acesso a todos os relatórios.</p>
     </div>
     <!-- Comparação de planos -->
-    <div style="padding:24px 28px;">
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:24px;">
-        <!-- Free -->
+    <div style="padding:20px 24px;">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
+        <!-- Starter -->
         <div style="border:1px solid var(--border);border-radius:10px;padding:14px 12px;text-align:center;">
-          <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;">Free</div>
-          <div style="font-size:20px;font-weight:700;color:var(--text);">R$0</div>
-          <hr style="border:none;border-top:1px solid var(--border);margin:10px 0;"/>
-          <ul style="list-style:none;padding:0;margin:0;text-align:left;font-size:11px;color:var(--text2);line-height:2;">
-            <li><span style="color:var(--emerald);">&#10003;</span> 1 plataforma</li>
-            <li><span style="color:var(--emerald);">&#10003;</span> 10 entregas visíveis</li>
-            <li><span style="color:var(--red);">&#10005;</span> Fila prioritária</li>
-            <li><span style="color:var(--red);">&#10005;</span> Sem marca Vaultly</li>
-            <li><span style="color:var(--red);">&#10005;</span> Logs de webhook</li>
-            <li><span style="color:var(--red);">&#10005;</span> Relatórios completos</li>
+          <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;">Starter</div>
+          <div style="font-size:20px;font-weight:700;color:var(--text);">R$37<span style="font-size:10px;font-weight:400;color:var(--text3);">/mês</span></div>
+          <hr style="border:none;border-top:1px solid var(--border);margin:8px 0;"/>
+          <ul style="list-style:none;padding:0;margin:0;text-align:left;font-size:11px;color:var(--text2);line-height:1.9;">
+            <li><span style="color:var(--emerald);">&#10003;</span> 2 produtos</li>
+            <li><span style="color:var(--emerald);">&#10003;</span> 200 entregas/mês</li>
+            <li><span style="color:var(--emerald);">&#10003;</span> Retry automático</li>
+            <li><span style="color:var(--emerald);">&#10003;</span> Email com sua marca</li>
           </ul>
         </div>
         <!-- Basic -->
         <div style="border:2px solid #6C63FF;border-radius:10px;padding:14px 12px;text-align:center;position:relative;">
           <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#6C63FF;color:#fff;font-size:10px;font-weight:700;padding:2px 10px;border-radius:20px;white-space:nowrap;">POPULAR</div>
-          <div style="font-size:12px;font-weight:600;color:#6C63FF;margin-bottom:8px;">Basic</div>
-          <div style="font-size:20px;font-weight:700;color:var(--text);">R$47<span style="font-size:11px;font-weight:400;color:var(--text3);">/mês</span></div>
-          <hr style="border:none;border-top:1px solid var(--border);margin:10px 0;"/>
-          <ul style="list-style:none;padding:0;margin:0;text-align:left;font-size:11px;color:var(--text2);line-height:2;">
-            <li><span style="color:var(--emerald);">&#10003;</span> 2 plataformas</li>
-            <li><span style="color:var(--emerald);">&#10003;</span> 500 entregas/mês</li>
-            <li><span style="color:var(--emerald);">&#10003;</span> Fila prioritária</li>
-            <li><span style="color:var(--emerald);">&#10003;</span> Sem marca Vaultly</li>
-            <li><span style="color:var(--emerald);">&#10003;</span> Logs de webhook</li>
-            <li><span style="color:var(--red);">&#10005;</span> Relatórios avançados</li>
+          <div style="font-size:12px;font-weight:600;color:#6C63FF;margin-bottom:6px;">Basic</div>
+          <div style="font-size:20px;font-weight:700;color:var(--text);">R$77<span style="font-size:10px;font-weight:400;color:var(--text3);">/mês</span></div>
+          <hr style="border:none;border-top:1px solid var(--border);margin:8px 0;"/>
+          <ul style="list-style:none;padding:0;margin:0;text-align:left;font-size:11px;color:var(--text2);line-height:1.9;">
+            <li><span style="color:var(--emerald);">&#10003;</span> 5 produtos</li>
+            <li><span style="color:var(--emerald);">&#10003;</span> 1.000 entregas/mês</li>
+            <li><span style="color:var(--emerald);">&#10003;</span> Retry automático</li>
+            <li><span style="color:var(--emerald);">&#10003;</span> Logs completos</li>
           </ul>
         </div>
         <!-- Pro -->
         <div style="border:1px solid var(--border);border-radius:10px;padding:14px 12px;text-align:center;">
-          <div style="font-size:12px;font-weight:600;color:var(--cyan);margin-bottom:8px;">Pro</div>
-          <div style="font-size:20px;font-weight:700;color:var(--text);">R$97<span style="font-size:11px;font-weight:400;color:var(--text3);">/mês</span></div>
-          <hr style="border:none;border-top:1px solid var(--border);margin:10px 0;"/>
-          <ul style="list-style:none;padding:0;margin:0;text-align:left;font-size:11px;color:var(--text2);line-height:2;">
-            <li><span style="color:var(--emerald);">&#10003;</span> Plataformas ilimitadas</li>
-            <li><span style="color:var(--emerald);">&#10003;</span> Entregas ilimitadas</li>
-            <li><span style="color:var(--emerald);">&#10003;</span> Fila prioritária</li>
-            <li><span style="color:var(--emerald);">&#10003;</span> Sem marca Vaultly</li>
-            <li><span style="color:var(--emerald);">&#10003;</span> Logs de webhook</li>
-            <li><span style="color:var(--emerald);">&#10003;</span> Relatórios avançados</li>
+          <div style="font-size:12px;font-weight:600;color:var(--cyan);margin-bottom:6px;">Pro</div>
+          <div style="font-size:20px;font-weight:700;color:var(--text);">R$147<span style="font-size:10px;font-weight:400;color:var(--text3);">/mês</span></div>
+          <hr style="border:none;border-top:1px solid var(--border);margin:8px 0;"/>
+          <ul style="list-style:none;padding:0;margin:0;text-align:left;font-size:11px;color:var(--text2);line-height:1.9;">
+            <li><span style="color:var(--emerald);">&#10003;</span> Produtos ilimitados</li>
+            <li><span style="color:var(--emerald);">&#10003;</span> 5.000 entregas/mês</li>
+            <li><span style="color:var(--emerald);">&#10003;</span> Retry automático</li>
+            <li><span style="color:var(--emerald);">&#10003;</span> Atendimento prioritário</li>
           </ul>
         </div>
       </div>
       <!-- CTAs -->
       <div id="upgrade-error" style="display:none;padding:10px 14px;background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.3);border-radius:8px;color:var(--red);font-size:12px;margin-bottom:10px;"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-        <button onclick="startCheckout('basic')" id="btn-checkout-basic" style="display:flex;align-items:center;justify-content:center;gap:6px;background:linear-gradient(135deg,#6C63FF,#38BDF8);color:#fff;border:none;padding:13px;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;">
-          <i class="ti ti-rocket"></i> Assinar Basic — R$47
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">
+        <button onclick="startCheckout('starter')" id="btn-checkout-starter" style="display:flex;align-items:center;justify-content:center;gap:5px;background:rgba(108,99,255,.15);color:var(--indigo);border:1px solid rgba(108,99,255,.3);padding:11px 6px;border-radius:9px;font-weight:700;font-size:12px;cursor:pointer;">
+          <i class="ti ti-rocket"></i> Starter R$37
         </button>
-        <button onclick="startCheckout('pro')" id="btn-checkout-pro" style="display:flex;align-items:center;justify-content:center;gap:6px;background:linear-gradient(135deg,#38BDF8,#10B981);color:#fff;border:none;padding:13px;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;">
-          <i class="ti ti-crown"></i> Assinar Pro — R$97
+        <button onclick="startCheckout('basic')" id="btn-checkout-basic" style="display:flex;align-items:center;justify-content:center;gap:5px;background:linear-gradient(135deg,#6C63FF,#38BDF8);color:#fff;border:none;padding:11px 6px;border-radius:9px;font-weight:700;font-size:12px;cursor:pointer;">
+          <i class="ti ti-rocket"></i> Basic R$77
+        </button>
+        <button onclick="startCheckout('pro')" id="btn-checkout-pro" style="display:flex;align-items:center;justify-content:center;gap:5px;background:linear-gradient(135deg,#38BDF8,#10B981);color:#fff;border:none;padding:11px 6px;border-radius:9px;font-weight:700;font-size:12px;cursor:pointer;">
+          <i class="ti ti-crown"></i> Pro R$147
         </button>
       </div>
       <button onclick="hideUpgradeModal()" style="display:block;width:100%;background:transparent;border:1px solid var(--border2);color:var(--text2);padding:10px;border-radius:10px;cursor:pointer;font-size:13px;">
-        Continuar no plano Free
+        Continuar no plano atual
       </button>
     </div>
   </div>
@@ -1418,8 +1415,8 @@ function showApp() {
     document.getElementById('admin-nav-section').style.display = 'block';
   }
   // Card de assinatura na aba Config
-  var planLabels = { free: 'Free', basic: 'Basic', pro: 'Pro' };
-  var planSubs   = { free: 'Grátis · 1 produto · 50 entregas/mês', basic: 'R$47/mês · 5 produtos · 500 entregas/mês', pro: 'R$97/mês · produtos e entregas ilimitados' };
+  var planLabels = { free: 'Free', starter: 'Starter', basic: 'Basic', pro: 'Pro', business: 'Business' };
+  var planSubs   = { free: 'Grátis · 1 produto · 50 entregas/mês', starter: 'R$37/mês · 2 produtos · 200 entregas/mês', basic: 'R$77/mês · 5 produtos · 1.000 entregas/mês', pro: 'R$147/mês · produtos ilimitados · 5.000 entregas/mês', business: 'R$297/mês · ilimitado' };
   var userPlan   = currentUser ? (currentUser.plan_id || 'free') : 'free';
   var cfgName = document.getElementById('cfg-plan-name');
   var cfgSub  = document.getElementById('cfg-plan-sub');
@@ -1945,7 +1942,8 @@ async function startCheckout(planId) {
     window.location.href = res.url;
   } catch (e) {
     if (errEl) { errEl.textContent = e.message; errEl.style.display = 'block'; }
-    if (btn) { btn.disabled = false; btn.innerHTML = (planId === 'basic' ? '<i class="ti ti-rocket"></i> Assinar Basic — R$47' : '<i class="ti ti-crown"></i> Assinar Pro — R$97'); }
+    var labels = { starter: '<i class="ti ti-rocket"></i> Starter R$37', basic: '<i class="ti ti-rocket"></i> Basic R$77', pro: '<i class="ti ti-crown"></i> Pro R$147' };
+    if (btn) { btn.disabled = false; btn.innerHTML = labels[planId] || planId; }
   }
 }
 
