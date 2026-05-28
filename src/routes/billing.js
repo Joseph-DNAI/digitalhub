@@ -11,8 +11,10 @@ function getStripe() {
 }
 
 const PRICE_IDS = {
-  basic: process.env.STRIPE_PRICE_BASIC,
-  pro:   process.env.STRIPE_PRICE_PRO
+  starter:  process.env.STRIPE_PRICE_STARTER,
+  basic:    process.env.STRIPE_PRICE_BASIC,
+  pro:      process.env.STRIPE_PRICE_PRO,
+  business: process.env.STRIPE_PRICE_BUSINESS
 };
 
 // POST /api/billing/create-checkout — inicia sessao de pagamento Stripe
