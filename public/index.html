@@ -613,6 +613,12 @@ tbody tr:hover td { background: rgba(255,255,255,0.02); }
       <button class="nav-item" onclick="switchTab('config',this)">
         <i class="ti ti-settings"></i> Configurações
       </button>
+      <div id="admin-nav-section" style="display:none">
+        <div class="nav-section">Administração</div>
+        <a class="nav-item" href="/admin.html" style="text-decoration:none;">
+          <i class="ti ti-shield-check"></i> Painel Admin
+        </a>
+      </div>
     </div>
 
     <div class="sidebar-footer">
@@ -1398,6 +1404,10 @@ function showApp() {
   // Preenche email do simulador com email do usuario logado
   var simEmail = document.getElementById('sim-email');
   if (simEmail && currentUser && currentUser.email) simEmail.value = currentUser.email;
+  // Mostra link admin apenas para admins
+  if (currentUser && currentUser.role === 'admin') {
+    document.getElementById('admin-nav-section').style.display = 'block';
+  }
   initApp();
 }
 
