@@ -4,10 +4,12 @@ const logger = require('../config/logger');
 
 // Rodapé de branding para plano Free — publicidade gratuita em cada entrega
 const VAULTLY_BRANDING = `
-  <div style="margin-top:24px;padding:14px 18px;background:#F5F3FF;border-radius:6px;text-align:center;border:1px solid #DDD6FE;">
-    <p style="margin:0;font-size:12px;color:#6D28D9;">
-      Entregue por <a href="https://vaultly.com.br" style="color:#6C63FF;font-weight:700;text-decoration:none;">Vaultly</a>
-      &nbsp;·&nbsp; Automatize a entrega dos seus produtos digitais
+  <div style="margin-top:28px;padding:16px 18px;background:#FFF4EE;border:1px solid #FFD9C7;border-radius:10px;text-align:center;">
+    <p style="margin:0;font-size:12px;color:#C2410C;line-height:1.5;">
+      Entrega automática por
+      <a href="https://vaultly.digital" style="color:#FF6B35;font-weight:700;text-decoration:none;">Vaultly</a>
+      <br>
+      <span style="color:#9A7B6B;font-size:11px;">Venda produtos digitais e entregue no piloto automático.</span>
     </p>
   </div>
 `;
@@ -15,22 +17,45 @@ const VAULTLY_BRANDING = `
 function renderTemplate(template, vars, showBranding) {
   const brandingHtml = showBranding ? VAULTLY_BRANDING : '';
   const defaultTemplate = `
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#333;">
-      <div style="background:linear-gradient(135deg,#6C63FF,#38BDF8);padding:30px 24px;border-radius:8px 8px 0 0;">
-        <h1 style="color:#fff;margin:0;font-size:22px;">Seu produto chegou!</h1>
-      </div>
-      <div style="background:#f9f9f9;padding:28px 24px;border-radius:0 0 8px 8px;border:1px solid #e5e5e5;">
-        <p style="font-size:16px;">Ola, <strong>{{nome}}</strong>!</p>
-        <p style="font-size:15px;line-height:1.6;">
-          Sua compra de <strong>{{produto}}</strong> foi confirmada.<br>
-          O arquivo esta disponivel em anexo neste email.
-        </p>
-        <div style="background:#EEF2FF;border-left:4px solid #6C63FF;padding:14px 18px;border-radius:4px;margin:20px 0;">
-          <p style="margin:0;font-size:14px;color:#4338CA;"><strong>{{arquivo}}</strong> esta em anexo.</p>
+    <div style="background:#F4F5F7;padding:32px 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+      <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.06);">
+
+        <!-- Header -->
+        <div style="background:#FF6B35;background:linear-gradient(135deg,#FF6B35 0%,#FF9F1C 100%);padding:36px 32px;text-align:center;">
+          <div style="display:inline-block;width:56px;height:56px;line-height:56px;background:rgba(255,255,255,0.18);border-radius:50%;margin-bottom:14px;font-size:28px;">📦</div>
+          <h1 style="color:#ffffff;margin:0;font-size:24px;font-weight:800;letter-spacing:-0.5px;">Seu produto chegou!</h1>
+          <p style="color:rgba(255,255,255,0.9);margin:8px 0 0;font-size:14px;">Compra confirmada e entregue na hora</p>
         </div>
-        <p style="font-size:13px;color:#888;margin-top:24px;">Pedido: <code>{{pedido}}</code></p>
-        <hr style="border:none;border-top:1px solid #e5e5e5;margin:20px 0;" />
-        {{branding}}
+
+        <!-- Body -->
+        <div style="padding:32px;">
+          <p style="font-size:16px;color:#1F2937;margin:0 0 16px;">Olá, <strong>{{nome}}</strong>! 👋</p>
+          <p style="font-size:15px;line-height:1.7;color:#4B5563;margin:0 0 24px;">
+            Sua compra de <strong style="color:#1F2937;">{{produto}}</strong> foi confirmada com sucesso.
+            O seu arquivo está <strong>anexado neste email</strong>, prontinho para baixar.
+          </p>
+
+          <!-- Caixa do arquivo -->
+          <div style="background:#FFF4EE;border:1px solid #FFD9C7;border-radius:12px;padding:18px 20px;margin:0 0 24px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+              <td style="font-size:22px;width:36px;vertical-align:middle;">📎</td>
+              <td style="vertical-align:middle;">
+                <div style="font-size:14px;font-weight:700;color:#C2410C;line-height:1.4;">{{arquivo}}</div>
+                <div style="font-size:12px;color:#9A7B6B;margin-top:2px;">Anexo neste email · baixe quando quiser</div>
+              </td>
+            </tr></table>
+          </div>
+
+          <p style="font-size:14px;line-height:1.6;color:#4B5563;margin:0 0 8px;">
+            Qualquer dúvida sobre o produto, basta responder este email. Bom proveito! 🚀
+          </p>
+
+          <div style="border-top:1px solid #EDEFF2;margin:24px 0 0;padding-top:16px;">
+            <p style="font-size:12px;color:#9CA3AF;margin:0;">Número do pedido: <span style="font-family:'Courier New',monospace;color:#6B7280;">{{pedido}}</span></p>
+          </div>
+
+          {{branding}}
+        </div>
       </div>
     </div>
   `;
@@ -63,7 +88,7 @@ async function sendProductEmail({ buyerEmail, buyerName, productName, filePath, 
     body: JSON.stringify({
       from:        fName + ' <' + fAddr + '>',
       to:          [buyerEmail],
-      subject:     'Seu produto "' + productName + '" esta aqui!',
+      subject:     '🎉 Seu produto chegou: ' + productName,
       html:        htmlBody,
       attachments: [{ filename: fileName, content: fileBase64 }]
     })
