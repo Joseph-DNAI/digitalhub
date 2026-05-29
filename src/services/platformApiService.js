@@ -21,12 +21,12 @@ async function fetchYampiProducts(storeAlias, apiToken, secretToken) {
   var url = 'https://api.dooki.com.br/v2/' + alias + '/catalog/products?page=1&limit=100&include=skus';
   logger.info('Buscando produtos Yampi — loja: ' + alias);
 
-  // Yampi exige DOIS headers: User-Token e User-Secret-Token
+  // Yampi exige DOIS headers: User-Token e User-Secret-Key
   var headers = {
     'User-Token':   apiToken,
     'Content-Type': 'application/json'
   };
-  if (secretToken) headers['User-Secret-Token'] = secretToken;
+  if (secretToken) headers['User-Secret-Key'] = secretToken;
 
   var resp = await fetch(url, { headers: headers });
 
