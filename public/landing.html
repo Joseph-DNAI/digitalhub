@@ -663,11 +663,191 @@ footer { position: relative; z-index: 1; background: #09090E; border-top: 1px so
 </div>
 
 <script>
-function openLoginModal() { openAuthModal(); switchAuthTab('login'); }
-function openModal(plan) {}
-function openAuthModal() {}
-function closeAuthModal() {}
-function switchAuthTab(tab) {}
+/* ── Billing Toggle ── */
+let billing = 'monthly';
+const prices = {
+  monthly: { free: 0, starter: 37, basic: 77, pro: 147, business: 247 },
+  annual:  { free: 0, starter: 37, basic: 64, pro: 122, business: 247 }
+};
+
+function setBilling(type) {
+  billing = type;
+  var isAnnual = type === 'annual';
+  document.getElementById('toggleMonthly').classList.toggle('active', !isAnnual);
+  document.getElementById('toggleAnnual').classList.toggle('active', isAnnual);
+  document.getElementById('discountBadge').style.display = isAnnual ? 'flex' : 'none';
+  document.getElementById('price-free').textContent     = prices[type].free;
+  document.getElementById('price-starter').textContent  = prices[type].starter;
+  document.getElementById('price-basic').textContent    = prices[type].basic;
+  document.getElementById('price-pro').textContent      = prices[type].pro;
+  document.getElementById('price-business').textContent = prices[type].business;
+  var annuals = {
+    basic:    { orig: 'R$77/mês',  save: 'Economize R$156/ano' },
+    pro:      { orig: 'R$147/mês', save: 'Economize R$300/ano' },
+    business: { orig: 'R$297/mês', save: 'Economize R$600/ano' }
+  };
+  ['basic','pro','business'].forEach(function(p) {
+    var el = document.getElementById('annual-' + p);
+    if (!el) return;
+    el.innerHTML = isAnnual
+      ? '<span class="plan-original">' + annuals[p].orig + '</span><span class="plan-save">— ' + annuals[p].save + '</span>'
+      : '';
+  });
+  document.getElementById('annual-free').innerHTML    = '';
+  document.getElementById('annual-starter').innerHTML = '';
+  var starterCard  = document.getElementById('lp-card-starter');
+  var businessCard = document.getElementById('lp-card-business');
+  if (starterCard)  starterCard.style.display  = isAnnual ? 'none'  : 'block';
+  if (businessCard) businessCard.style.display = isAnnual ? 'block' : 'none';
+}
+
+/* ── Auth Modal ── */
+function openAuthModal() {
+  document.getElementById('authOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeAuthModal() {
+  document.getElementById('authOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function closeModal() { closeAuthModal(); }
+function closeLoginModal() { closeAuthModal(); }
+function openLoginModal() { switchAuthTab('login'); openAuthModal(); }
+
+function switchAuthTab(tab) {
+  document.getElementById('tab-reg').classList.toggle('active', tab === 'register');
+  document.getElementById('tab-log').classList.toggle('active', tab === 'login');
+  document.getElementById('auth-register').style.display = tab === 'register' ? 'block' : 'none';
+  document.getElementById('auth-login').style.display    = tab === 'login'    ? 'block' : 'none';
+  var me = document.getElementById('msgError');
+  var lme = document.getElementById('login-msg-error');
+  if (me)  me.style.display  = 'none';
+  if (lme) lme.style.display = 'none';
+}
+
+function openModal(plan) {
+  switchAuthTab('register');
+  var ms = document.getElementById('msgSuccess');
+  var fa = document.getElementById('formArea');
+  if (ms) ms.style.display = 'none';
+  if (fa) fa.style.display = 'block';
+  openAuthModal();
+  setTimeout(function() {
+    var el = document.getElementById('regName');
+    if (el) el.focus();
+  }, 300);
+}
+
+document.getElementById('authOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeAuthModal();
+});
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeAuthModal(); });
+
+/* ── Password Toggle ── */
+function togglePassword() {
+  var inp  = document.getElementById('regPassword');
+  var icon = document.getElementById('eyeIcon');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    icon.className = 'ti ti-eye-off';
+  } else {
+    inp.type = 'password';
+    icon.className = 'ti ti-eye';
+  }
+}
+
+/* ── Register ── */
+async function handleRegister() {
+  var btn  = document.getElementById('regBtn');
+  var err  = document.getElementById('msgError');
+  var succ = document.getElementById('msgSuccess');
+  var fa   = document.getElementById('formArea');
+  var name  = document.getElementById('regName').value.trim();
+  var email = document.getElementById('regEmail').value.trim();
+  var pass  = document.getElementById('regPassword').value;
+  if (err)  err.style.display  = 'none';
+  if (succ) succ.style.display = 'none';
+  if (!name || !email || !pass) {
+    if (err) { err.textContent = 'Preencha todos os campos.'; err.style.display = 'block'; }
+    return;
+  }
+  if (pass.length < 8) {
+    if (err) { err.textContent = 'A senha deve ter pelo menos 8 caracteres.'; err.style.display = 'block'; }
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Criando conta...';
+  try {
+    var res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name, email: email, password: pass })
+    });
+    var data = await res.json();
+    if (!data.success) {
+      if (err) { err.textContent = data.error || 'Erro ao criar conta.'; err.style.display = 'block'; }
+    } else {
+      if (fa)   fa.style.display   = 'none';
+      if (succ) { succ.textContent = 'Conta criada! Redirecionando...'; succ.style.display = 'block'; }
+      setTimeout(function() { window.location.href = '/app'; }, 1200);
+    }
+  } catch(e) {
+    if (err) { err.textContent = 'Erro de conexão. Tente novamente.'; err.style.display = 'block'; }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Criar conta grátis';
+  }
+}
+
+/* ── Login ── */
+async function handleLogin() {
+  var btn   = document.getElementById('loginBtn');
+  var err   = document.getElementById('login-msg-error');
+  var email = document.getElementById('loginEmail').value.trim();
+  var pass  = document.getElementById('loginPassword').value;
+  if (err) err.style.display = 'none';
+  if (!email || !pass) {
+    if (err) { err.textContent = 'Preencha email e senha.'; err.style.display = 'block'; }
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Entrando...';
+  try {
+    var res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, password: pass })
+    });
+    var data = await res.json();
+    if (!data.success) {
+      if (err) { err.textContent = data.error || 'Credenciais inválidas.'; err.style.display = 'block'; }
+    } else {
+      if (data.token) localStorage.setItem('vaultly_token', data.token);
+      window.location.href = '/app';
+    }
+  } catch(e) {
+    if (err) { err.textContent = 'Erro de conexão. Tente novamente.'; err.style.display = 'block'; }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Entrar';
+  }
+}
+
+/* ── Scroll reveal ── */
+(function() {
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) {
+      if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.07, rootMargin: '0px 0px -48px 0px' });
+  document.querySelectorAll('.reveal').forEach(function(el) { obs.observe(el); });
+})();
+
+/* ── Navbar scroll ── */
+window.addEventListener('scroll', function() {
+  document.getElementById('main-nav').style.background =
+    window.scrollY > 40 ? 'rgba(13,15,24,0.97)' : 'rgba(13,15,24,0.8)';
+});
 </script>
 </body>
 </html>
