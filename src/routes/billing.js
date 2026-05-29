@@ -15,7 +15,6 @@ const PRICE_IDS = {
   basic:           process.env.STRIPE_PRICE_BASIC,
   pro:             process.env.STRIPE_PRICE_PRO,
   business:        process.env.STRIPE_PRICE_BUSINESS,
-  starter_annual:  process.env.STRIPE_PRICE_STARTER_ANNUAL,
   basic_annual:    process.env.STRIPE_PRICE_BASIC_ANNUAL,
   pro_annual:      process.env.STRIPE_PRICE_PRO_ANNUAL,
   business_annual: process.env.STRIPE_PRICE_BUSINESS_ANNUAL
