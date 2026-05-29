@@ -163,7 +163,52 @@ nav {
 .problem h2 span { color: var(--orange); }
 .problem p { font-size: 18px; color: var(--text2); line-height: 1.7; }
 
-/* placeholder sections — will be filled in Tasks 2-6 */
+/* placeholder sections — will be filled in Tasks 3-6 */
+
+/* ── How It Works ── */
+.hiw { position: relative; z-index: 1; padding: 100px 0; }
+.hiw-header { text-align: center; margin-bottom: 72px; }
+.section-title {
+  font-family: 'Satoshi', sans-serif;
+  font-size: clamp(30px, 4vw, 50px); font-weight: 900;
+  letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 14px;
+}
+.section-title em { font-style: normal; color: var(--orange); }
+.section-sub { font-size: 17px; color: var(--text2); max-width: 520px; margin: 0 auto; line-height: 1.6; }
+.hiw-steps {
+  display: flex; align-items: flex-start; justify-content: center; gap: 0; position: relative;
+}
+.hiw-step { flex: 1; max-width: 300px; text-align: center; padding: 0 24px; position: relative; z-index: 1; }
+.hiw-num {
+  font-family: 'Satoshi', sans-serif; font-size: 96px; font-weight: 900;
+  color: rgba(255,255,255,0.04); line-height: 1; margin-bottom: -16px; letter-spacing: -4px;
+}
+.hiw-step h3 { font-family: 'Satoshi', sans-serif; font-size: 20px; font-weight: 700; margin-bottom: 10px; color: var(--text); }
+.hiw-step p { font-size: 14px; color: var(--text2); line-height: 1.6; }
+.hiw-connector {
+  width: 80px; flex-shrink: 0; height: 2px;
+  background: repeating-linear-gradient(90deg, var(--orange) 0, var(--orange) 6px, transparent 6px, transparent 14px);
+  margin-top: 56px; opacity: 0.4;
+}
+
+/* ── Features Bento ── */
+.features { position: relative; z-index: 1; padding: 100px 0; background: var(--bg2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.bento { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.bento-card {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 28px; position: relative; overflow: hidden;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.bento-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+.bento-card.wide { grid-column: span 2; }
+.bento-card h3 { font-family: 'Satoshi', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+.bento-card p { font-size: 13px; color: var(--text2); line-height: 1.6; }
+.demo-log { margin-top: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 7px; padding: 10px 12px; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+.demo-log .log-line { display: flex; gap: 8px; padding: 3px 0; }
+.demo-log .log-ok   { color: var(--emerald); }
+.demo-log .log-warn { color: var(--yellow); }
+.demo-log .log-info { color: var(--text3); }
+.bento-badge { display: inline-flex; align-items: center; gap: 5px; background: rgba(34,197,94,0.1); color: var(--emerald); border: 1px solid rgba(34,197,94,0.2); font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 99px; margin-top: 14px; }
 </style>
 </head>
 <body>
@@ -217,6 +262,91 @@ nav {
       às 23h dizendo "já enviei". Para quem vende no automático, isso não deveria existir.
       O Vaultly cuida de tudo enquanto você foca no que importa: vender mais.
     </p>
+  </div>
+</section>
+
+<!-- ── HOW IT WORKS ── -->
+<section class="hiw" id="como-funciona">
+  <div class="container">
+    <div class="hiw-header reveal">
+      <h2 class="section-title">Da compra ao cliente em<br><em>3 passos</em></h2>
+      <p class="section-sub">Zero intervenção manual.</p>
+    </div>
+    <div class="hiw-steps">
+      <div class="hiw-step reveal">
+        <div class="hiw-num">01</div>
+        <h3>Conecte a plataforma</h3>
+        <p>Cole o webhook da Kiwify ou Yampi no painel. Leva 2 minutos.</p>
+      </div>
+      <div class="hiw-connector"></div>
+      <div class="hiw-step reveal reveal-d1">
+        <div class="hiw-num">02</div>
+        <h3>Cadastre o produto</h3>
+        <p>Suba o arquivo PDF ou ebook. O sistema mapeia automaticamente.</p>
+      </div>
+      <div class="hiw-connector"></div>
+      <div class="hiw-step reveal reveal-d2">
+        <div class="hiw-num">03</div>
+        <h3>Venda e esqueça</h3>
+        <p>Cada compra aprovada dispara o envio automaticamente, com retry incluído.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FEATURES BENTO ── -->
+<section class="features" id="recursos">
+  <div class="container">
+    <div style="margin-bottom:56px;" class="reveal">
+      <h2 class="section-title">Tudo que você precisa,<br><em>nada que atrapalha</em></h2>
+      <p class="section-sub" style="max-width:480px;">Para infoprodutores que querem escalar sem dor de cabeça técnica.</p>
+    </div>
+    <div class="bento">
+      <div class="bento-card wide reveal">
+        <h3>Retry automático — zero perda de venda</h3>
+        <p>Se o email falhar, o sistema tenta novamente até 3 vezes sozinho. Você nunca fica sabendo porque nunca falha de vez.</p>
+        <div class="demo-log">
+          <div class="log-line"><span class="log-ok">✓</span><span>Ana Costa — ebook_marketing.pdf — entregue em 1.3s</span></div>
+          <div class="log-line"><span class="log-warn">⟳</span><span>Carlos Lima — tentativa 1/3 — aguardando...</span></div>
+          <div class="log-line"><span class="log-ok">✓</span><span>Carlos Lima — entregue na 2ª tentativa</span></div>
+          <div class="log-line"><span class="log-info">·</span><span>Mariana R. — na fila</span></div>
+        </div>
+      </div>
+      <div class="bento-card reveal reveal-d1">
+        <h3>Segurança por assinatura</h3>
+        <p>Cada webhook é validado por HMAC-SHA256. Nenhum pedido falso passa.</p>
+        <div class="demo-log" style="margin-top:14px;">
+          <div class="log-line"><span class="log-ok">✓</span><span>assinatura válida</span></div>
+          <div class="log-line"><span class="log-info">·</span><span>pedido: #KW-2847</span></div>
+        </div>
+        <div class="bento-badge"><i class="ti ti-shield-check"></i> Kiwify &amp; Yampi</div>
+      </div>
+      <div class="bento-card reveal reveal-d2">
+        <h3>Use sua conta Resend</h3>
+        <p>Conecte sua API key a partir do plano Basic. Sua reputação, seu domínio.</p>
+        <div class="demo-log" style="margin-top:14px;">
+          <div class="log-line"><span class="log-ok">✓</span><span>re_••••••••••••</span></div>
+          <div class="log-line"><span class="log-info">·</span><span>entregas@seudominio.com</span></div>
+        </div>
+      </div>
+      <div class="bento-card reveal reveal-d1">
+        <h3>Kiwify e Yampi nativos</h3>
+        <p>Nenhuma configuração extra. Cole o URL e pronto.</p>
+        <div style="display:flex;gap:8px;margin-top:14px;">
+          <span style="background:rgba(255,107,53,0.1);color:var(--amber);border:1px solid rgba(255,107,53,0.25);font-size:12px;font-weight:700;padding:5px 12px;border-radius:6px;">Kiwify</span>
+          <span style="background:rgba(255,107,53,0.1);color:var(--amber);border:1px solid rgba(255,107,53,0.25);font-size:12px;font-weight:700;padding:5px 12px;border-radius:6px;">Yampi</span>
+        </div>
+      </div>
+      <div class="bento-card reveal reveal-d2">
+        <h3>Logs em tempo real</h3>
+        <p>Veja cada entrega acontecer. Filtre por status, plataforma ou período.</p>
+        <div class="demo-log" style="margin-top:14px;">
+          <div class="log-line"><span style="color:var(--text3);font-size:10px;">14:32:01</span><span class="log-ok">entregue</span></div>
+          <div class="log-line"><span style="color:var(--text3);font-size:10px;">14:31:55</span><span class="log-ok">entregue</span></div>
+          <div class="log-line"><span style="color:var(--text3);font-size:10px;">14:31:48</span><span class="log-warn">retry #1</span></div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 <script>
