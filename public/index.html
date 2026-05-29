@@ -171,6 +171,31 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .login-sub { font-size: 13px; color: var(--text2); margin-bottom: 24px; }
 .login-error-msg { padding: 10px 14px; background: var(--red-dim); border: 1px solid rgba(239,68,68,0.3); border-radius: 7px; color: var(--red); font-size: 13px; margin-bottom: 14px; display: none; }
 
+/* ── Modal produto ── */
+.modal-bg {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
+  align-items: center; justify-content: center; z-index: 200;
+}
+.modal-bg.open { display: flex; }
+.modal {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: var(--radius-xl); padding: 28px;
+  width: 90%; max-width: 560px; max-height: 90vh; overflow-y: auto;
+  animation: fadeUp .25s ease;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+}
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.modal-title { font-family: 'Satoshi', sans-serif; font-size: 18px; font-weight: 800; letter-spacing: -0.4px; }
+
+/* ── Table wrap ── */
+.table-wrap { overflow-x: auto; }
+.table-wrap table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table-wrap table th { padding: 10px 14px; text-align: left; font-size: 10px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; font-family: 'JetBrains Mono', monospace; border-bottom: 1px solid var(--border); }
+.table-wrap table td { padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.table-wrap table tr:last-child td { border-bottom: none; }
+.table-wrap table tr:hover td { background: rgba(255,255,255,0.02); }
+
 /* ── Webhook accordion ── */
 .wh-accordion { margin-bottom: 12px; }
 .wh-acc-header { user-select: none; }
