@@ -262,7 +262,130 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
       <span id="topbar-btn" style="display:none;"></span>
     </div>
     <div class="content">
-      <!-- sections added in Tasks 10-11 -->
+      <!-- ── DASHBOARD ── -->
+      <div id="tab-dashboard" class="section active">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Dashboard</div>
+            <div class="page-sub">visão geral do sistema em tempo real</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="loadDashboard()">
+            <i class="ti ti-refresh"></i> Atualizar
+          </button>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon cyan"><i class="ti ti-calendar-stats"></i></div>
+            <div class="stat-label">Vendas hoje</div>
+            <div class="stat-val loading" id="s-today"> </div>
+            <div class="stat-sub">entregas disparadas</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon emerald"><i class="ti ti-circle-check"></i></div>
+            <div class="stat-label">Entregues</div>
+            <div class="stat-val loading" id="s-delivered"> </div>
+            <div class="stat-sub">emails enviados com sucesso</div>
+          </div>
+          <div class="stat-card" id="stat-failed-card">
+            <div class="stat-icon red"><i class="ti ti-alert-triangle"></i></div>
+            <div class="stat-label">Falhas</div>
+            <div class="stat-val loading" id="s-failed" style="color:var(--red);"> </div>
+            <div class="stat-sub">necessitam atenção</div>
+          </div>
+          <div class="stat-card" id="stat-products-card">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+              <div>
+                <div class="stat-icon orange" id="products-icon"><i class="ti ti-packages"></i></div>
+                <div class="stat-label">Produtos</div>
+                <div class="stat-val loading" id="s-products"> </div>
+                <div class="stat-sub" id="products-sub">cadastrados na plataforma</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;padding-top:2px;flex-shrink:0;">
+                <div style="font-size:9px;color:var(--text3);font-family:'JetBrains Mono',monospace;letter-spacing:.06em;text-transform:uppercase;">24h · vendas</div>
+                <svg id="sparkline-svg" width="80" height="44" viewBox="0 0 80 44" fill="none" style="display:block;"></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="limit-warning-banner" style="display:none;"></div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-activity"></i> Últimas entregas</div>
+            <button class="btn btn-ghost btn-xs" onclick="switchTab('entregas', document.querySelectorAll('.nav-item')[2])">Ver todas</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Comprador</th><th>Produto</th><th>Plataforma</th><th>Data</th><th>Status</th></tr></thead>
+              <tbody id="recent-deliveries">
+                <tr><td colspan="5" style="text-align:center;color:var(--text3);padding:32px;">Carregando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PRODUTOS ── -->
+      <div id="tab-produtos" class="section">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Produtos</div>
+            <div class="page-sub">gerencie seus produtos digitais</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-ghost" id="btn-import-kiwify" onclick="importFromPlatform('kiwify')" title="Saiba como conectar a Kiwify">
+              <i class="ti ti-download"></i> Importar da Kiwify
+            </button>
+            <button class="btn btn-ghost" id="btn-import-yampi" onclick="importFromPlatform('yampi')" title="Requer yampi_store_alias e yampi_api_token nas Configurações">
+              <i class="ti ti-download"></i> Importar da Yampi
+            </button>
+            <button class="btn btn-primary" onclick="openModal()">
+              <i class="ti ti-plus"></i> Novo produto
+            </button>
+          </div>
+        </div>
+
+        <!-- Produtos não mapeados (capturados via webhook) -->
+        <div id="unmatched-section" style="background:var(--bg3);border:1px solid var(--yellow);border-radius:var(--radius);padding:16px 20px;margin-bottom:24px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+            <i class="ti ti-alert-triangle" style="color:var(--yellow);font-size:16px;"></i>
+            <span style="font-weight:600;font-size:13px;color:var(--yellow);">Produtos Pendentes</span>
+            <span id="unmatched-badge" style="display:none;background:var(--yellow);color:#000;border-radius:99px;font-size:10px;font-weight:700;padding:2px 7px;"></span>
+            <span style="font-size:12px;color:var(--text2);margin-left:4px;">— chegaram via webhook mas ainda não têm arquivo vinculado</span>
+          </div>
+          <div id="unmatched-list" style="color:var(--text3);font-size:13px;">Verificando...</div>
+          <div id="platform-import-list" style="margin-top:8px;"></div>
+        </div>
+
+        <div class="products-grid" id="products-grid">
+          <div style="grid-column:1/-1;text-align:center;color:var(--text3);padding:48px;">Carregando...</div>
+        </div>
+      </div>
+
+      <!-- ── ENTREGAS ── -->
+      <div id="tab-entregas" class="section">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Entregas</div>
+            <div class="page-sub">histórico completo de envios automáticos</div>
+          </div>
+          <button class="btn btn-ghost" onclick="loadDeliveries()">
+            <i class="ti ti-refresh"></i> Atualizar
+          </button>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Comprador</th><th>Produto</th><th>Plataforma</th><th>Pedido</th><th>Data</th><th>Status</th></tr></thead>
+              <tbody id="deliveries-table">
+                <tr><td colspan="6" style="text-align:center;color:var(--text3);padding:32px;">Carregando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
