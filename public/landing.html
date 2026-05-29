@@ -209,6 +209,67 @@ nav {
 .demo-log .log-warn { color: var(--yellow); }
 .demo-log .log-info { color: var(--text3); }
 .bento-badge { display: inline-flex; align-items: center; gap: 5px; background: rgba(34,197,94,0.1); color: var(--emerald); border: 1px solid rgba(34,197,94,0.2); font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 99px; margin-top: 14px; }
+
+/* ── Comparison ── */
+.comparison { position: relative; z-index: 1; padding: 100px 0; }
+.comparison-header { text-align: center; margin-bottom: 52px; }
+.comp-table { width: 100%; border-collapse: collapse; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-xl); overflow: hidden; }
+.comp-table thead th { padding: 18px 24px; font-size: 13px; font-weight: 700; border-bottom: 1px solid var(--border); background: var(--bg3); }
+.comp-table thead th:first-child { text-align: left; }
+.comp-table thead .th-vaultly { background: rgba(255,107,53,0.08); color: var(--orange); border-bottom: 2px solid var(--orange); }
+.comp-table thead .th-comp { color: var(--text3); }
+.comp-table tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+.comp-table tbody tr:last-child { border-bottom: none; }
+.comp-table tbody tr:hover { background: rgba(255,255,255,0.02); }
+.comp-table tbody td { padding: 15px 24px; text-align: center; font-size: 14px; }
+.comp-table tbody td:first-child { text-align: left; color: var(--text2); }
+.comp-table tbody td.vaultly-col { background: rgba(255,107,53,0.04); font-weight: 600; }
+.comp-table tbody td.comp-col { color: var(--text3); }
+.check { color: var(--emerald); font-size: 18px; }
+.cross { color: var(--text3); font-size: 18px; opacity: 0.5; }
+.highlight-row td:first-child { color: var(--text); font-weight: 600; }
+
+/* ── Pricing ── */
+.pricing { position: relative; z-index: 1; padding: 100px 0; background: var(--bg2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.pricing-header { text-align: center; margin-bottom: 40px; }
+.billing-toggle {
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 99px; padding: 3px; width: fit-content; margin: 0 auto 14px;
+}
+.toggle-opt { padding: 7px 22px; border-radius: 99px; font-size: 14px; font-weight: 600; cursor: pointer; color: var(--text3); transition: all 0.2s; user-select: none; }
+.toggle-opt.active { background: var(--orange); color: #fff; box-shadow: 0 2px 8px rgba(255,107,53,0.4); }
+.discount-badge {
+  display: none; align-items: center; gap: 6px; justify-content: center;
+  background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2);
+  color: var(--emerald); font-size: 13px; font-weight: 600;
+  padding: 7px 16px; border-radius: 99px; width: fit-content; margin: 0 auto 32px;
+}
+.pricing-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; align-items: start; }
+.plan-card { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 32px; transition: all 0.3s; position: relative; overflow: hidden; }
+.plan-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+.plan-card.popular { border-color: rgba(255,107,53,0.4); background: linear-gradient(160deg, rgba(255,107,53,0.06) 0%, var(--bg3) 60%); transform: scale(1.03); }
+.plan-card.popular:hover { transform: scale(1.03) translateY(-4px); }
+.plan-pop-badge { position: absolute; top: -1px; left: 50%; transform: translateX(-50%); background: var(--orange); color: #fff; font-size: 10px; font-weight: 700; padding: 4px 16px; border-radius: 0 0 8px 8px; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+.plan-name { font-family: 'Satoshi', sans-serif; font-size: 18px; font-weight: 800; margin-bottom: 6px; }
+.plan-price { display: flex; align-items: baseline; gap: 2px; margin-bottom: 4px; }
+.plan-price .currency { font-size: 18px; font-weight: 600; color: var(--text2); }
+.plan-price .amount { font-family: 'Satoshi', sans-serif; font-size: 40px; font-weight: 900; letter-spacing: -2px; }
+.plan-price .period { font-size: 14px; color: var(--text3); padding-bottom: 8px; }
+.plan-price-annual { font-size: 12px; color: var(--text3); margin-bottom: 4px; min-height: 18px; }
+.plan-original { text-decoration: line-through; }
+.plan-save { color: var(--emerald); font-weight: 700; margin-left: 4px; }
+.plan-desc { font-size: 13px; color: var(--text2); line-height: 1.5; margin-bottom: 22px; border-top: 1px solid var(--border); padding-top: 16px; }
+.plan-features { list-style: none; display: flex; flex-direction: column; gap: 9px; margin-bottom: 28px; }
+.plan-features li { display: flex; align-items: flex-start; gap: 9px; font-size: 13px; color: var(--text2); line-height: 1.4; }
+.plan-features li i { font-size: 15px; margin-top: 1px; flex-shrink: 0; }
+.li-check i { color: var(--emerald); }
+.li-cross { opacity: 0.35; }
+.btn-plan { width: 100%; padding: 13px; border-radius: 9px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.25s; font-family: inherit; border: none; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.btn-plan-outline { background: rgba(255,255,255,0.04); border: 1px solid var(--border2) !important; color: var(--text); }
+.btn-plan-outline:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.22) !important; }
+.btn-plan-primary { background: var(--orange); color: #fff; box-shadow: 0 0 28px rgba(255,107,53,0.35); }
+.btn-plan-primary:hover { background: #FF7A4A; box-shadow: 0 0 44px rgba(255,107,53,0.5); transform: translateY(-1px); }
 </style>
 </head>
 <body>
@@ -349,6 +410,124 @@ nav {
     </div>
   </div>
 </section>
+<!-- ── COMPARISON ── -->
+<section class="comparison" id="comparativo">
+  <div class="container">
+    <div class="comparison-header reveal">
+      <h2 class="section-title">O que você não encontra<br><em>em mais nenhum lugar</em></h2>
+    </div>
+    <div class="reveal" style="overflow-x:auto;">
+      <table class="comp-table">
+        <thead>
+          <tr>
+            <th style="text-align:left;">Funcionalidade</th>
+            <th class="th-vaultly">Vaultly</th>
+            <th class="th-comp">Concorrentes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="highlight-row">
+            <td>Cobra % sobre cada venda</td>
+            <td class="vaultly-col"><i class="ti ti-circle-x cross"></i></td>
+            <td class="comp-col"><i class="ti ti-circle-check-filled check"></i></td>
+          </tr>
+          <tr><td>Entrega automática por email</td><td class="vaultly-col"><i class="ti ti-circle-check-filled check"></i></td><td class="comp-col"><i class="ti ti-circle-check-filled check"></i></td></tr>
+          <tr><td>Retry automático em falhas</td><td class="vaultly-col"><i class="ti ti-circle-check-filled check"></i></td><td class="comp-col"><i class="ti ti-circle-x cross"></i></td></tr>
+          <tr><td>Use sua própria conta de email</td><td class="vaultly-col"><i class="ti ti-circle-check-filled check"></i></td><td class="comp-col"><i class="ti ti-circle-x cross"></i></td></tr>
+          <tr><td>Integração Kiwify e Yampi</td><td class="vaultly-col"><i class="ti ti-circle-check-filled check"></i></td><td class="comp-col"><i class="ti ti-circle-x cross"></i></td></tr>
+          <tr><td>Proteção contra pedidos falsos</td><td class="vaultly-col"><i class="ti ti-circle-check-filled check"></i></td><td class="comp-col"><i class="ti ti-circle-x cross"></i></td></tr>
+          <tr><td>Suporte em português</td><td class="vaultly-col"><i class="ti ti-circle-check-filled check"></i></td><td class="comp-col"><i class="ti ti-circle-x cross"></i></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ── PRICING ── -->
+<section class="pricing" id="precos">
+  <div class="container">
+    <div class="pricing-header reveal">
+      <h2 class="section-title">Simples, transparente,<br><em>sem surpresas</em></h2>
+      <p class="section-sub">Comece grátis e escale conforme seu negócio cresce.</p>
+    </div>
+    <div class="billing-toggle reveal" id="billingToggle">
+      <div class="toggle-opt active" id="toggleMonthly" onclick="setBilling('monthly')">Mensal</div>
+      <div class="toggle-opt" id="toggleAnnual" onclick="setBilling('annual')">Anual</div>
+    </div>
+    <div class="discount-badge reveal" id="discountBadge" style="display:none;">
+      <i class="ti ti-tag"></i> Economize até <strong>R$600/ano</strong> no plano Business — 2 meses grátis!
+    </div>
+    <div class="pricing-grid">
+      <div class="plan-card reveal">
+        <div class="plan-name">Free</div>
+        <div class="plan-price"><span class="currency">R$</span><span class="amount" id="price-free">0</span><span class="period">/mês</span></div>
+        <div class="plan-price-annual" id="annual-free"></div>
+        <p class="plan-desc">Teste a plataforma sem pagar nada.</p>
+        <ul class="plan-features">
+          <li class="li-check"><i class="ti ti-circle-check-filled"></i> 1 produto digital</li>
+          <li class="li-check"><i class="ti ti-circle-check-filled"></i> 50 entregas por mês</li>
+          <li class="li-check"><i class="ti ti-circle-check-filled"></i> Kiwify e Yampi</li>
+          <li class="li-cross"><i class="ti ti-circle-x"></i> Reenvio automático</li>
+        </ul>
+        <button class="btn-plan btn-plan-outline" onclick="openModal('free')"><i class="ti ti-rocket"></i> Começar grátis</button>
+      </div>
+      <div class="plan-card reveal reveal-d1" id="lp-card-starter">
+        <div class="plan-name">Starter</div>
+        <div class="plan-price"><span class="currency">R$</span><span class="amount" id="price-starter">37</span><span class="period">/mês</span></div>
+        <div class="plan-price-annual" id="annual-starter"></div>
+        <p class="plan-desc">Para quem está começando.</p>
+        <ul class="plan-features">
+          <li class="li-check"><i class="ti ti-circle-check-filled"></i> 2 produtos digitais</li>
+          <li class="li-check"><i class="ti ti-circle-check-filled"></i> 200 entregas por mês</li>
+          <li class="li-check"><i class="ti ti-circle-check-filled"></i> Reenvio automático</li>
+          <li class="li-check"><i class="ti ti-circle-check-filled"></i> Email com sua marca</li>
+        </ul>
+        <button class="btn-plan btn-plan-outline" onclick="openModal('starter')"><i class="ti ti-rocket"></i> Assinar Starter</button>
+      </div>
+      <div class="plan-card popular reveal reveal-d2">
+        <div class="plan-pop-badge">Mais popular</div>
+        <div class="plan-name" style="color:var(--orange);">Basic</div>
+        <div class="plan-price"><span class="currency">R$</span><span class="amount" id="price-basic">77</span><span class="period">/mês</span></div>
+        <div class="plan-price-annual" id="annual-basic"></div>
+        <p class="plan-desc">Para quem já vende com consistência.</p>
+        <ul class="plan-features">
+          <li class="li-check"><i class="ti ti-circle-check-filled"></i> 5 produtos digitais</li>
+          <li class="li-check"><i class="ti ti-circle-check-filled"></i> 1.000 entregas por mês</li>
+          <li class="li-check"><i class="ti ti-circle-check-filled"></i> BYOK Resend</li>
+          <li class="li-check"><i class="ti ti-circle-check-filled"></i> Painel completo + logs</li>
+        </ul>
+        <button class="btn-plan btn-plan-primary" onclick="openModal('basic')"><i class="ti ti-rocket"></i> Assinar Basic</button>
+      </div>
+      <div class="plan-card reveal reveal-d3">
+        <div class="plan-name">Pro</div>
+        <div class="plan-price"><span class="currency">R$</span><span class="amount" id="price-pro">147</span><span class="period">/mês</span></div>
+        <div class="plan-price-annual" id="annual-pro"></div>
+        <p class="plan-desc">Para alto volume sem limitações.</p>
+        <ul class="plan-features">
+          <li class="li-check"><i class="ti ti-circle-check-filled"></i> Produtos ilimitados</li>
+          <li class="li-check"><i class="ti ti-circle-check-filled"></i> 5.000 entregas por mês</li>
+          <li class="li-check"><i class="ti ti-circle-check-filled"></i> Atendimento prioritário</li>
+          <li class="li-check"><i class="ti ti-circle-check-filled"></i> Painel completo + logs</li>
+        </ul>
+        <button class="btn-plan btn-plan-outline" onclick="openModal('pro')"><i class="ti ti-stars"></i> Assinar Pro</button>
+      </div>
+      <div class="plan-card reveal reveal-d3" id="lp-card-business" style="display:none;border-color:rgba(255,107,53,0.2);background:linear-gradient(160deg,rgba(255,107,53,0.04) 0%,var(--bg3) 60%);">
+        <div class="plan-name" style="color:var(--amber);">Business</div>
+        <div class="plan-price"><span class="currency">R$</span><span class="amount" id="price-business">247</span><span class="period">/mês</span></div>
+        <div class="plan-price-annual" id="annual-business"></div>
+        <p class="plan-desc">Para operações de alto volume com equipe.</p>
+        <ul class="plan-features">
+          <li class="li-check"><i class="ti ti-circle-check-filled"></i> Tudo ilimitado</li>
+          <li class="li-check"><i class="ti ti-circle-check-filled"></i> Multi-usuário</li>
+          <li class="li-check"><i class="ti ti-circle-check-filled"></i> SLA e suporte dedicado</li>
+          <li class="li-check"><i class="ti ti-circle-check-filled"></i> Entregas ilimitadas</li>
+        </ul>
+        <button class="btn-plan btn-plan-outline" onclick="openModal('business')" style="border-color:rgba(255,159,28,0.4);color:var(--amber);"><i class="ti ti-building"></i> Assinar Business</button>
+      </div>
+    </div>
+  </div>
+</section>
+
 <script>
 function openLoginModal() { openAuthModal(); switchAuthTab('login'); }
 function openModal(plan) {}
