@@ -171,6 +171,19 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .login-sub { font-size: 13px; color: var(--text2); margin-bottom: 24px; }
 .login-error-msg { padding: 10px 14px; background: var(--red-dim); border: 1px solid rgba(239,68,68,0.3); border-radius: 7px; color: var(--red); font-size: 13px; margin-bottom: 14px; display: none; }
 
+/* ── Sticky save bar ── */
+.save-bar {
+  display: none; position: fixed; bottom: 0; left: 220px; right: 0;
+  background: var(--bg2); border-top: 1px solid var(--border2);
+  padding: 14px 28px; z-index: 50;
+  align-items: center; justify-content: space-between;
+  box-shadow: 0 -8px 32px rgba(0,0,0,0.35);
+  animation: slideIn 0.2s ease;
+}
+.save-bar.visible { display: flex; }
+.save-bar-msg { font-size: 13px; color: var(--text2); display: flex; align-items: center; gap: 7px; }
+.save-bar-msg::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--orange); box-shadow: 0 0 8px var(--orange); flex-shrink: 0; }
+
 /* ── Modal produto ── */
 .modal-bg {
   display: none; position: fixed; inset: 0;
@@ -438,9 +451,6 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
             <div class="page-title">Webhook</div>
             <div class="page-sub">integração e configuração de plataformas</div>
           </div>
-          <button class="btn btn-primary btn-sm" onclick="saveWebhookConfig()" id="btn-save-webhook">
-            <i class="ti ti-device-floppy"></i> Salvar
-          </button>
         </div>
 
         <!-- Kiwify Acordeão -->
@@ -466,8 +476,8 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
               <div class="form-group" style="max-width:480px;">
                 <label class="form-label">Secret Kiwify</label>
                 <div style="display:flex;gap:8px;">
-                  <input type="password" class="form-input" id="cfg-kiwify-secret" placeholder="Token gerado pela Kiwify" style="flex:1;" />
-                  <button class="btn btn-ghost btn-sm" onclick="this.previousElementSibling.type=this.previousElementSibling.type==='password'?'text':'password'" title="Mostrar/ocultar"><i class="ti ti-eye"></i></button>
+                  <input type="password" class="form-input" id="cfg-kiwify-secret" placeholder="Token gerado pela Kiwify" style="flex:1;" oninput="markWebhookDirty()"/>
+                  <button class="btn btn-ghost btn-sm" onclick="var i=this.previousElementSibling;var ic=this.querySelector('i');i.type=i.type==='password'?'text':'password';ic.className=i.type==='password'?'ti ti-eye':'ti ti-eye-off';" title="Mostrar/ocultar"><i class="ti ti-eye"></i></button>
                 </div>
                 <div class="form-hint">Kiwify → Configurações → Webhooks → seu webhook → <em>Chave secreta</em>. Deixe em branco para não validar.</div>
               </div>
@@ -497,26 +507,41 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
                 <code id="url-yampi">—</code>
                 <button class="btn btn-ghost btn-xs" onclick="copyText('url-yampi',this)"><i class="ti ti-copy"></i></button>
               </div>
-              <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:8px;">Segurança</div>
-              <div class="form-group" style="max-width:480px;margin-bottom:16px;">
-                <label class="form-label">Secret Yampi</label>
-                <div style="display:flex;gap:8px;">
-                  <input type="password" class="form-input" id="cfg-yampi-secret" placeholder="Token gerado pela Yampi" style="flex:1;" />
-                  <button class="btn btn-ghost btn-sm" onclick="this.previousElementSibling.type=this.previousElementSibling.type==='password'?'text':'password'" title="Mostrar/ocultar"><i class="ti ti-eye"></i></button>
+              <!-- Bloco 1: Webhook -->
+              <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:16px;">
+                <div style="display:flex;align-items:center;gap:7px;margin-bottom:14px;">
+                  <i class="ti ti-webhook" style="color:var(--orange);font-size:14px;"></i>
+                  <span style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text2);text-transform:uppercase;">Para receber pedidos</span>
                 </div>
-                <div class="form-hint">Yampi → Configurações → Webhooks → token. Deixe em branco para nao validar.</div>
+                <p style="font-size:12px;color:var(--text2);margin-bottom:14px;">Cole a URL acima em <strong>Yampi → Configurações → Webhooks → Adicionar</strong>, evento <strong>order.paid</strong>.</p>
+                <div class="form-group" style="max-width:480px;">
+                  <label class="form-label">Secret do Webhook</label>
+                  <div style="display:flex;gap:8px;">
+                    <input type="password" class="form-input" id="cfg-yampi-secret" placeholder="Token de validação (opcional)" style="flex:1;" oninput="markWebhookDirty()"/>
+                    <button class="btn btn-ghost btn-sm" onclick="var i=this.previousElementSibling;var ic=this.querySelector('i');i.type=i.type==='password'?'text':'password';ic.className=i.type==='password'?'ti ti-eye':'ti ti-eye-off';" title="Mostrar/ocultar"><i class="ti ti-eye"></i></button>
+                  </div>
+                  <div class="form-hint">Yampi → Configurações → Webhooks → seu webhook → Token. Deixe vazio para não validar assinatura.</div>
+                </div>
               </div>
-              <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:8px;">API — Importar Produtos</div>
-              <div class="form-grid">
-                <div class="form-group">
-                  <label class="form-label">Alias da loja</label>
-                  <input type="text" class="form-input" id="cfg-yampi-alias" placeholder="minha-loja" />
-                  <div class="form-hint">URL: yampi.com.br/<strong>alias</strong></div>
+
+              <!-- Bloco 2: API para importar produtos -->
+              <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;">
+                <div style="display:flex;align-items:center;gap:7px;margin-bottom:14px;">
+                  <i class="ti ti-download" style="color:var(--orange);font-size:14px;"></i>
+                  <span style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text2);text-transform:uppercase;">Para importar produtos</span>
                 </div>
-                <div class="form-group">
-                  <label class="form-label">Token API Yampi</label>
-                  <input type="password" class="form-input" id="cfg-yampi-token" placeholder="live_xxxxxxxxx" />
-                  <div class="form-hint">Yampi → Configurações → Integracoes → API</div>
+                <p style="font-size:12px;color:var(--text2);margin-bottom:14px;">Necessário para usar o botão <strong>Importar da Yampi</strong> na aba de produtos.</p>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label class="form-label">Alias da loja</label>
+                    <input type="text" class="form-input" id="cfg-yampi-alias" placeholder="minha-loja" oninput="markWebhookDirty()"/>
+                    <div class="form-hint">A parte final da URL: yampi.com.br/<strong>alias</strong></div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Token API Yampi</label>
+                    <input type="password" class="form-input" id="cfg-yampi-token" placeholder="live_xxxxxxxxx" oninput="markWebhookDirty()"/>
+                    <div class="form-hint">Yampi → Configurações → Integrações → API → Gerar token</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -878,6 +903,15 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
         <button id="ob-btn-next" class="btn btn-primary btn-sm" onclick="obNext()">Continuar <i class="ti ti-arrow-right"></i></button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ── STICKY SAVE BAR (webhook) ── -->
+<div class="save-bar" id="webhook-save-bar">
+  <span class="save-bar-msg">Você tem alterações não salvas</span>
+  <div style="display:flex;gap:10px;">
+    <button class="btn btn-ghost btn-sm" onclick="discardWebhookChanges()"><i class="ti ti-x"></i> Descartar</button>
+    <button class="btn btn-primary btn-sm" onclick="saveWebhookConfig()" id="btn-save-webhook"><i class="ti ti-device-floppy"></i> Salvar alterações</button>
   </div>
 </div>
 
@@ -1259,10 +1293,23 @@ function toggleAccordion(platform) {
   if (el) el.classList.toggle('open');
 }
 
+function markWebhookDirty() {
+  var bar = document.getElementById('webhook-save-bar');
+  if (bar) bar.classList.add('visible');
+}
+
+function discardWebhookChanges() {
+  var bar = document.getElementById('webhook-save-bar');
+  if (bar) bar.classList.remove('visible');
+  _tenantConfigCache = null;
+  loadWebhookConfig();
+}
+
 async function saveWebhookConfig() {
   var btn = document.getElementById('btn-save-webhook');
+  var bar = document.getElementById('webhook-save-bar');
   btn.disabled = true;
-  btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i>';
+  btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i> Salvando...';
   try {
     var body = {};
     var kiwifySecret = document.getElementById('cfg-kiwify-secret').value.trim();
@@ -1276,8 +1323,9 @@ async function saveWebhookConfig() {
     if (yampiToken   && !yampiToken.startsWith('•'))   body.yampi_api_token        = yampiToken;
 
     if (Object.keys(body).length === 0) {
+      if (bar) bar.classList.remove('visible');
       btn.disabled = false;
-      btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar';
+      btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar alterações';
       return;
     }
     const res = await apiFetch('/api/tenants/me', {
@@ -1286,11 +1334,11 @@ async function saveWebhookConfig() {
     if (!res.success) throw new Error(res.error);
     _tenantConfigCache = null;
     loadWebhookConfig();
-    btn.innerHTML = '<i class="ti ti-check"></i> Salvo!';
-    setTimeout(() => { btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar'; }, 2000);
+    if (bar) bar.classList.remove('visible');
+    showToast('Configurações salvas com sucesso!', 'success');
   } catch(e) {
-    alert('Erro ao salvar: ' + e.message);
-    btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar';
+    showToast('Erro ao salvar: ' + e.message, 'error');
+    btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar alterações';
   } finally {
     btn.disabled = false;
   }
@@ -2429,12 +2477,21 @@ async function importFromPlatform(platform) {
     _tenantConfigCache = null; // limpa cache após operação
   } catch(e) {
     var msg = e.message || 'Erro desconhecido';
-    if (listEl) listEl.innerHTML =
-      '<div style="background:var(--red-dim);border:1px solid rgba(244,63,94,0.2);border-radius:var(--radius);padding:14px 16px;margin-top:4px;">' +
-        '<div style="font-size:12px;font-weight:600;color:var(--red);margin-bottom:4px;"><i class="ti ti-alert-circle"></i> Erro ao conectar com a Yampi</div>' +
-        '<div style="font-size:12px;color:var(--text2);">' + msg + '</div>' +
-        '<div style="font-size:11px;color:var(--text3);margin-top:8px;">Verifique o alias e o token em <button class="btn btn-ghost btn-xs" onclick="switchTabById(\'config\')">Configurações</button></div>' +
-      '</div>';
+    if (listEl) {
+      listEl.style.display = 'block';
+      listEl.innerHTML =
+        '<div style="background:var(--bg2);border:1px solid rgba(239,68,68,0.35);border-left:3px solid var(--red);border-radius:var(--radius-lg);padding:18px 20px;">' +
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">' +
+            '<i class="ti ti-alert-circle" style="font-size:18px;color:var(--red);flex-shrink:0;"></i>' +
+            '<span style="font-family:\'Satoshi\',sans-serif;font-size:15px;font-weight:700;">Erro ao conectar com a Yampi</span>' +
+          '</div>' +
+          '<div style="font-size:13px;color:var(--text2);margin-bottom:14px;background:var(--bg3);border-radius:var(--radius);padding:10px 12px;font-family:\'JetBrains Mono\',monospace;">' + msg + '</div>' +
+          '<div style="font-size:12px;color:var(--text2);margin-bottom:12px;">Verifique se o <strong>alias da loja</strong> e o <strong>token API</strong> estão corretos nas configurações.</div>' +
+          '<button class="btn btn-primary btn-sm" onclick="switchTabById(\'webhook\')">' +
+            '<i class="ti ti-settings"></i> Ir para Configurações' +
+          '</button>' +
+        '</div>';
+    }
   } finally {
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-download"></i> Importar da Yampi'; }
   }
