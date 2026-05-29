@@ -120,6 +120,13 @@ app.get('/suporte', (req, res) => {
   res.redirect('/');
 });
 
+// Página pública de termos legais (Termos de Uso, Privacidade, Responsabilidade)
+app.get('/termos', (req, res) => {
+  const termos = path.join(publicPath, 'termos.html');
+  if (fs.existsSync(termos)) return res.sendFile(termos);
+  res.redirect('/');
+});
+
 app.use((err, req, res, next) => {
   logger.error('Erro global: ' + err.message);
   res.status(500).json({ success: false, error: 'Erro interno do servidor' });

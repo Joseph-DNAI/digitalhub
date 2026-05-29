@@ -601,9 +601,9 @@ footer { position: relative; z-index: 1; background: #09090E; border-top: 1px so
       </div>
       <span class="footer-copy">© 2026 Vaultly. Todos os direitos reservados.</span>
       <div class="footer-links">
-        <a href="#">Termos</a>
-        <a href="#">Privacidade</a>
-        <a href="#">Suporte</a>
+        <a href="/termos">Termos</a>
+        <a href="/termos#privacidade">Privacidade</a>
+        <a href="/suporte">Suporte</a>
         <a href="#" onclick="openLoginModal();return false;">Entrar</a>
       </div>
     </div>
@@ -643,6 +643,15 @@ footer { position: relative; z-index: 1; background: #09090E; border-top: 1px so
               </button>
             </div>
           </div>
+          <label style="display:flex;align-items:flex-start;gap:9px;margin-bottom:16px;cursor:pointer;">
+            <input type="checkbox" id="regTerms" style="margin-top:3px;width:16px;height:16px;accent-color:var(--orange);flex-shrink:0;cursor:pointer;"/>
+            <span style="font-size:12px;color:var(--text2);line-height:1.5;">
+              Li e concordo com os
+              <a href="/termos" target="_blank" style="color:var(--orange);text-decoration:none;font-weight:600;">Termos de Uso</a>,
+              a <a href="/termos#privacidade" target="_blank" style="color:var(--orange);text-decoration:none;font-weight:600;">Política de Privacidade</a>
+              e o <a href="/termos#responsabilidade" target="_blank" style="color:var(--orange);text-decoration:none;font-weight:600;">Termo de Responsabilidade</a>.
+            </span>
+          </label>
           <button class="btn-submit" id="regBtn" onclick="handleRegister()">Criar conta grátis</button>
         </div>
       </div>
@@ -775,13 +784,18 @@ async function handleRegister() {
     if (err) { err.textContent = 'A senha deve ter pelo menos 8 caracteres.'; err.style.display = 'block'; }
     return;
   }
+  var terms = document.getElementById('regTerms');
+  if (!terms || !terms.checked) {
+    if (err) { err.textContent = 'Você precisa aceitar os Termos de Uso e a Política de Privacidade.'; err.style.display = 'block'; }
+    return;
+  }
   btn.disabled = true;
   btn.textContent = 'Criando conta...';
   try {
     var res = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name, email: email, password: pass })
+      body: JSON.stringify({ name: name, email: email, password: pass, accept_terms: true })
     });
     var data = await res.json();
     if (!data.success) {

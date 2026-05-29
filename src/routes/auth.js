@@ -8,21 +8,27 @@ const bcrypt   = require('../models/bcrypt');
 const { requireAuth } = require('../middleware/auth');
 const logger   = require('../config/logger');
 
+// Versão atual dos termos — atualize ao publicar mudanças relevantes
+const TERMS_VERSION = '2026-05-29';
+
 // POST /api/auth/register — cadastro self-service
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, accept_terms } = req.body;
     if (!name || !email || !password) {
       return res.status(400).json({ success: false, error: 'name, email e password são obrigatórios' });
     }
     if (password.length < 8) {
       return res.status(400).json({ success: false, error: 'Senha deve ter ao menos 8 caracteres' });
     }
+    if (!accept_terms) {
+      return res.status(400).json({ success: false, error: 'É necessário aceitar os Termos de Uso e a Política de Privacidade para criar a conta.' });
+    }
 
     const existing = await users.findByEmail(email);
     if (existing) return res.status(409).json({ success: false, error: 'Email já cadastrado' });
 
-    const user = await users.create({ name, email, password, plan_id: 'free', is_active: true, email_verified: true });
+    const user = await users.create({ name, email, password, plan_id: 'free', is_active: true, email_verified: true, terms_version: TERMS_VERSION });
     const token = await sessions.create(user.id);
 
     logger.info(`Novo usuário cadastrado: ${email}`);

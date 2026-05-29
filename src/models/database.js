@@ -190,6 +190,8 @@ async function initDatabase() {
       ALTER TABLE users   ADD COLUMN IF NOT EXISTS subscription_id         TEXT;
       ALTER TABLE users   ADD COLUMN IF NOT EXISTS subscription_status     TEXT DEFAULT 'none';
       ALTER TABLE users   ADD COLUMN IF NOT EXISTS current_period_end      TIMESTAMP;
+      ALTER TABLE users   ADD COLUMN IF NOT EXISTS terms_accepted_at       TIMESTAMP;
+      ALTER TABLE users   ADD COLUMN IF NOT EXISTS terms_version           TEXT;
     `);
 
     // Planos — DO UPDATE garante que mudancas de preco/limite sejam aplicadas no restart
@@ -258,9 +260,10 @@ const users = {
     const hash = await bcrypt.hash(data.password);
 
     await query(`
-      INSERT INTO users (id, name, email, password_hash, role, plan_id, is_active, email_verified)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-    `, [id, data.name, data.email, hash, data.role||'client', data.plan_id||'free', data.is_active!==false, data.email_verified||false]);
+      INSERT INTO users (id, name, email, password_hash, role, plan_id, is_active, email_verified, terms_accepted_at, terms_version)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+    `, [id, data.name, data.email, hash, data.role||'client', data.plan_id||'free', data.is_active!==false, data.email_verified||false,
+        data.terms_version ? new Date() : null, data.terms_version || null]);
 
     await query(`INSERT INTO tenants (id, user_id) VALUES ($1,$2)`, [tenantId, id]);
 

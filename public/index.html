@@ -832,6 +832,23 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
             </button>
           </div>
         </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-file-text"></i> Documentos legais</div>
+          </div>
+          <div class="card-body">
+            <p style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:14px;">
+              Consulte os termos que você aceitou ao criar sua conta.
+              <span id="cfg-terms-status"></span>
+            </p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <a class="btn btn-ghost btn-sm" href="/termos" target="_blank" style="text-decoration:none;"><i class="ti ti-external-link"></i> Termos de Uso</a>
+              <a class="btn btn-ghost btn-sm" href="/termos#privacidade" target="_blank" style="text-decoration:none;"><i class="ti ti-shield-lock"></i> Política de Privacidade</a>
+              <a class="btn btn-ghost btn-sm" href="/termos#responsabilidade" target="_blank" style="text-decoration:none;"><i class="ti ti-scale"></i> Termo de Responsabilidade</a>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- ── SUPORTE ── -->
@@ -1272,6 +1289,13 @@ function showApp() {
     if (userPlan !== 'pro') {
       cfgAct.innerHTML += '<button class="btn btn-primary btn-sm" onclick="showUpgradeModal()"><i class="ti ti-rocket"></i> Fazer upgrade</button>';
     }
+  }
+
+  // Status de aceitação dos termos
+  var cfgTerms = document.getElementById('cfg-terms-status');
+  if (cfgTerms && currentUser && currentUser.terms_accepted_at) {
+    var d = new Date(currentUser.terms_accepted_at);
+    cfgTerms.innerHTML = ' <span style="color:var(--emerald);"><i class="ti ti-circle-check" style="font-size:12px;"></i> Aceitos em ' + d.toLocaleDateString('pt-BR') + (currentUser.terms_version ? ' (versão ' + currentUser.terms_version + ')' : '') + '.</span>';
   }
 
   // Detecta retorno do Stripe Checkout

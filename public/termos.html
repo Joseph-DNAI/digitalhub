@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Termos e Políticas — Vaultly</title>
+<meta name="description" content="Termos de Uso, Política de Privacidade e Termo de Responsabilidade da Vaultly."/>
+<link rel="icon" type="image/png" href="/img/logo-icon.png"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Satoshi:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0D0F18; --bg2: #111320; --bg3: #171A2E; --bg4: #1E2440;
+  --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.13);
+  --orange: #FF6B35; --amber: #FF9F1C; --orange-dim: rgba(255,107,53,0.12);
+  --text: #F8FAFC; --text2: #94A3B8; --text3: #475569;
+  --radius: 10px; --radius-lg: 14px; --radius-xl: 20px;
+}
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 16px; -webkit-font-smoothing: antialiased; }
+.dot-grid { position: fixed; inset: 0; z-index: 0; pointer-events: none; background-image: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px); background-size: 32px 32px; mask-image: radial-gradient(ellipse 70% 40% at 50% 0%, black 20%, transparent 80%); }
+::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 99px; }
+
+nav { position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; height: 64px; background: rgba(13,15,24,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); }
+.nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.logo-mark { width: 34px; height: 34px; border-radius: 9px; background: var(--orange); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(255,107,53,0.4); }
+.logo-mark i { color: #fff; font-size: 18px; }
+.logo-name { font-family: 'Satoshi', sans-serif; font-size: 19px; font-weight: 800; letter-spacing: -0.5px; color: var(--text); }
+.nav-back { color: var(--text2); text-decoration: none; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; }
+.nav-back:hover { color: var(--text); }
+
+.wrap { max-width: 920px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; display: grid; grid-template-columns: 220px 1fr; gap: 40px; }
+.hero { text-align: center; padding: 56px 24px 32px; position: relative; z-index: 1; }
+.hero h1 { font-family: 'Satoshi', sans-serif; font-size: clamp(30px, 5vw, 44px); font-weight: 900; letter-spacing: -0.03em; margin-bottom: 12px; }
+.hero h1 em { font-style: normal; color: var(--orange); }
+.hero p { font-size: 15px; color: var(--text3); }
+
+/* Índice lateral */
+.toc { position: sticky; top: 88px; align-self: start; }
+.toc-title { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; }
+.toc a { display: block; padding: 9px 12px; font-size: 13px; color: var(--text2); text-decoration: none; border-radius: 8px; border-left: 2px solid transparent; transition: all 0.15s; margin-bottom: 2px; }
+.toc a:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+.toc a.active { color: var(--orange); border-left-color: var(--orange); background: var(--orange-dim); }
+
+/* Conteúdo */
+.doc { padding-bottom: 80px; }
+.doc section { margin-bottom: 56px; scroll-margin-top: 84px; }
+.doc h2 { font-family: 'Satoshi', sans-serif; font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+.doc h2 i { color: var(--orange); font-size: 22px; }
+.doc .updated { font-size: 12px; color: var(--text3); margin-bottom: 20px; font-family: monospace; }
+.doc h3 { font-size: 16px; font-weight: 700; margin: 26px 0 10px; color: var(--text); }
+.doc p { font-size: 14px; color: var(--text2); line-height: 1.8; margin-bottom: 12px; }
+.doc ul { margin: 0 0 14px 0; padding-left: 4px; list-style: none; }
+.doc li { font-size: 14px; color: var(--text2); line-height: 1.7; margin-bottom: 8px; padding-left: 22px; position: relative; }
+.doc li::before { content: ''; position: absolute; left: 4px; top: 11px; width: 6px; height: 6px; border-radius: 50%; background: var(--orange); }
+.doc strong { color: var(--text); }
+.doc .box { background: var(--bg2); border: 1px solid var(--border2); border-left: 3px solid var(--orange); border-radius: var(--radius); padding: 16px 18px; margin: 16px 0; }
+.doc .box p { margin: 0; font-size: 13px; }
+
+footer { border-top: 1px solid var(--border); padding: 28px 0; text-align: center; position: relative; z-index: 1; }
+.footer-copy { font-size: 13px; color: var(--text3); }
+
+@media (max-width: 760px) {
+  .wrap { grid-template-columns: 1fr; gap: 0; }
+  .toc { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="dot-grid"></div>
+
+<nav>
+  <a class="nav-logo" href="/"><div class="logo-mark"><i class="ti ti-package"></i></div><span class="logo-name">Vaultly</span></a>
+  <a class="nav-back" href="/"><i class="ti ti-arrow-left"></i> Voltar ao site</a>
+</nav>
+
+<section class="hero">
+  <h1>Termos e <em>Políticas</em></h1>
+  <p>Última atualização: 29 de maio de 2026 · versão 2026-05-29</p>
+</section>
+
+<div class="wrap">
+  <!-- Índice -->
+  <aside class="toc">
+    <div class="toc-title">Documentos</div>
+    <a href="#termos-uso" class="toc-link">Termos de Uso</a>
+    <a href="#privacidade" class="toc-link">Política de Privacidade</a>
+    <a href="#responsabilidade" class="toc-link">Termo de Responsabilidade</a>
+  </aside>
+
+  <!-- Conteúdo -->
+  <main class="doc">
+
+    <!-- TERMOS DE USO -->
+    <section id="termos-uso">
+      <h2><i class="ti ti-file-text"></i> Termos de Uso</h2>
+      <div class="updated">Versão 2026-05-29</div>
+
+      <h3>1. Sobre a Vaultly</h3>
+      <p>A <strong>Vaultly</strong> é uma plataforma de software (SaaS) que automatiza a entrega de produtos digitais. Quando um cliente compra um produto em uma plataforma de venda integrada (como Kiwify ou Yampi), a Vaultly recebe a notificação da compra e envia automaticamente o arquivo correspondente por email ao comprador.</p>
+      <p>A Vaultly é apenas a <strong>ferramenta de transporte e automação</strong>. Não vendemos produtos, não processamos pagamentos e não somos parte na relação comercial entre o vendedor e o comprador.</p>
+
+      <h3>2. Cadastro e conta</h3>
+      <ul>
+        <li>Para usar a Vaultly você deve criar uma conta com informações verdadeiras e mantê-las atualizadas.</li>
+        <li>Você é o único responsável por manter a confidencialidade da sua senha e por toda atividade realizada na sua conta.</li>
+        <li>É necessário ter pelo menos 18 anos ou autorização legal para usar a plataforma.</li>
+        <li>Podemos suspender ou encerrar contas que violem estes termos, sem aviso prévio.</li>
+      </ul>
+
+      <h3>3. Planos e pagamentos</h3>
+      <ul>
+        <li>A Vaultly oferece um plano gratuito e planos pagos com limites de produtos e entregas mensais.</li>
+        <li>As assinaturas pagas são cobradas de forma recorrente (mensal ou anual) por meio do nosso processador de pagamentos.</li>
+        <li>Você pode cancelar a assinatura a qualquer momento; o acesso permanece até o fim do ciclo já pago.</li>
+        <li>Não há reembolso proporcional de períodos já iniciados, salvo exigência legal.</li>
+      </ul>
+
+      <h3>4. Uso aceitável</h3>
+      <p>Ao usar a Vaultly, você concorda em <strong>não</strong> utilizá-la para entregar ou comercializar:</p>
+      <ul>
+        <li>Conteúdo ilegal, fraudulento ou que configure golpe;</li>
+        <li>Material pirateado ou que viole direitos autorais e propriedade intelectual;</li>
+        <li>Conteúdo adulto envolvendo menores, dados roubados, armas, drogas ou documentos falsos;</li>
+        <li>Esquemas de pirâmide, correntes ou promessas de enriquecimento garantido;</li>
+        <li>Qualquer material que viole a legislação brasileira.</li>
+      </ul>
+      <div class="box"><p>Contas que descumprirem esta cláusula podem ser <strong>bloqueadas imediatamente</strong>, e os fatos podem ser comunicados às autoridades competentes.</p></div>
+
+      <h3>5. Disponibilidade do serviço</h3>
+      <p>Trabalhamos para manter a plataforma disponível e funcional, mas não garantimos operação ininterrupta. Podemos realizar manutenções, atualizações ou suspender temporariamente o serviço. Não nos responsabilizamos por falhas de terceiros (plataformas de venda, provedores de email, servidores de armazenamento).</p>
+
+      <h3>6. Alterações nos termos</h3>
+      <p>Podemos atualizar estes termos periodicamente. Mudanças relevantes serão comunicadas e a versão vigente estará sempre disponível nesta página. O uso continuado após alterações representa concordância com a nova versão.</p>
+    </section>
+
+    <!-- PRIVACIDADE -->
+    <section id="privacidade">
+      <h2><i class="ti ti-shield-lock"></i> Política de Privacidade</h2>
+      <div class="updated">Versão 2026-05-29 · em conformidade com a LGPD (Lei 13.709/2018)</div>
+
+      <h3>1. Dados que coletamos</h3>
+      <ul>
+        <li><strong>Do titular da conta (vendedor):</strong> nome, email e senha (armazenada de forma criptografada).</li>
+        <li><strong>De configuração:</strong> chaves de integração das plataformas e do serviço de email que você optar por conectar.</li>
+        <li><strong>Dos compradores finais:</strong> nome e email recebidos via webhook da plataforma de venda, usados exclusivamente para entregar o produto.</li>
+        <li><strong>De uso:</strong> registros de entregas, logs de webhook e estatísticas da conta.</li>
+      </ul>
+
+      <h3>2. Como usamos os dados</h3>
+      <ul>
+        <li>Para operar o serviço: processar compras e entregar os arquivos por email.</li>
+        <li>Para gerenciar sua conta, cobrança e suporte.</li>
+        <li>Para enviar avisos importantes (ex: limite de entregas, falhas, segurança).</li>
+        <li>Não vendemos nem compartilhamos seus dados com terceiros para fins de marketing.</li>
+      </ul>
+
+      <h3>3. Compartilhamento</h3>
+      <p>Compartilhamos dados apenas com prestadores essenciais à operação — processador de pagamentos, serviço de envio de email e provedor de armazenamento — e somente o necessário para a entrega do serviço. Esses parceiros têm suas próprias políticas de privacidade.</p>
+
+      <h3>4. Seus direitos (LGPD)</h3>
+      <p>Você pode, a qualquer momento, solicitar: acesso aos seus dados, correção, exclusão, portabilidade e informações sobre o tratamento. Para exercer esses direitos, entre em contato pela nossa <a href="/suporte" style="color:var(--orange);">central de suporte</a>.</p>
+
+      <h3>5. Segurança e retenção</h3>
+      <ul>
+        <li>Senhas são armazenadas com criptografia (hash). Chaves sensíveis ficam protegidas no servidor.</li>
+        <li>Os arquivos dos produtos ficam em armazenamento seguro e só são acessados para realizar a entrega.</li>
+        <li>Mantemos os dados pelo tempo necessário à prestação do serviço e às obrigações legais.</li>
+      </ul>
+
+      <h3>6. Cookies</h3>
+      <p>Usamos apenas o necessário para manter sua sessão ativa após o login. Não utilizamos cookies de rastreamento publicitário.</p>
+    </section>
+
+    <!-- RESPONSABILIDADE -->
+    <section id="responsabilidade">
+      <h2><i class="ti ti-scale"></i> Termo de Responsabilidade</h2>
+      <div class="updated">Versão 2026-05-29</div>
+
+      <p>Este termo deixa clara a divisão de responsabilidades no uso da Vaultly.</p>
+
+      <h3>1. Responsabilidade pelo conteúdo</h3>
+      <div class="box"><p>A <strong>Vaultly não produz, revisa, aprova ou se responsabiliza pelo conteúdo</strong> dos arquivos entregues. O conteúdo, a qualidade, a legalidade e a veracidade do produto são de <strong>responsabilidade exclusiva do vendedor</strong> (titular da conta).</p></div>
+      <p>Ao subir um arquivo e configurar uma entrega, o vendedor declara que possui todos os direitos sobre o material e que ele não viola leis nem direitos de terceiros.</p>
+
+      <h3>2. Responsabilidade pela relação de venda</h3>
+      <ul>
+        <li>A relação de compra e venda ocorre entre o <strong>vendedor</strong> e o <strong>comprador</strong>, intermediada pela plataforma de pagamento (Kiwify, Yampi, etc.).</li>
+        <li><strong>Reembolsos, garantias e disputas comerciais</strong> são tratados pelo vendedor e pela plataforma de pagamento. A Vaultly não processa pagamentos e não realiza reembolsos.</li>
+      </ul>
+
+      <h3>3. Limitação de responsabilidade</h3>
+      <p>A Vaultly não se responsabiliza por: prejuízos decorrentes do conteúdo dos produtos; falhas em serviços de terceiros; uso indevido da plataforma pelo vendedor; ou danos indiretos. Nossa responsabilidade, quando aplicável por lei, limita-se ao valor pago pelo titular nos 12 meses anteriores ao evento.</p>
+
+      <h3>4. Denúncias</h3>
+      <p>Mantemos um canal aberto para denúncias de produtos suspeitos ou conteúdo proibido. Qualquer pessoa pode denunciar pela <a href="/suporte" style="color:var(--orange);">central de suporte</a>. Denúncias são analisadas e podem resultar no bloqueio do vendedor e na comunicação às autoridades.</p>
+
+      <h3>5. Indenização</h3>
+      <p>O titular da conta concorda em isentar e indenizar a Vaultly por quaisquer reclamações, perdas ou danos decorrentes do conteúdo que ele distribuir ou do descumprimento destes termos.</p>
+
+      <div class="box"><p>Ao criar uma conta na Vaultly, você declara ter lido e concordado com os <strong>Termos de Uso</strong>, a <strong>Política de Privacidade</strong> e este <strong>Termo de Responsabilidade</strong>.</p></div>
+    </section>
+
+  </main>
+</div>
+
+<footer>
+  <div class="footer-copy">© 2026 Vaultly · Entrega automática de produtos digitais</div>
+</footer>
+
+<script>
+// Destaca o item do índice conforme a rolagem
+var links = document.querySelectorAll('.toc-link');
+var sections = Array.prototype.map.call(links, function(a) { return document.querySelector(a.getAttribute('href')); });
+function onScroll() {
+  var y = window.scrollY + 120;
+  var idx = 0;
+  for (var i = 0; i < sections.length; i++) { if (sections[i] && sections[i].offsetTop <= y) idx = i; }
+  links.forEach(function(l, i) { l.classList.toggle('active', i === idx); });
+}
+window.addEventListener('scroll', onScroll);
+onScroll();
+</script>
+</body>
+</html>
