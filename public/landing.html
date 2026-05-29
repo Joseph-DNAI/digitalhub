@@ -387,6 +387,7 @@ nav {
 .reveal-d1 { transition-delay: 0.08s; }
 .reveal-d2 { transition-delay: 0.16s; }
 .reveal-d3 { transition-delay: 0.24s; }
+.reveal-d4 { transition-delay: 0.32s; }
 
 /* Badge shimmer */
 @keyframes badge-glow {
@@ -669,13 +670,13 @@ section { position: relative; z-index: 1; }
 }
 
 .pricing-grid {
-  display: grid; grid-template-columns: repeat(4, 1fr);
-  gap: 16px; align-items: start;
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  gap: 12px; align-items: start;
 }
 
 .plan-card {
   background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--radius-xl); padding: 36px;
+  border-radius: var(--radius-xl); padding: 26px;
   transition: all 0.3s; position: relative; overflow: hidden;
 }
 .plan-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
@@ -993,6 +994,9 @@ footer {
 /* ════════════════════════════════════════════════════════
    RESPONSIVE
 ════════════════════════════════════════════════════════ */
+@media (max-width: 1400px) and (min-width: 1101px) {
+  .pricing-grid { grid-template-columns: repeat(3, 1fr); }
+}
 @media (max-width: 1100px) and (min-width: 601px) {
   .pricing-grid { grid-template-columns: repeat(2, 1fr); }
 }
@@ -1356,7 +1360,7 @@ footer {
 
     <div class="discount-badge reveal" id="discountBadge" style="display:none;">
       <i class="ti ti-tag"></i>
-      Economize até <strong>R$ 300/ano</strong> no plano Pro — 2 meses grátis!
+      Economize até <strong>R$600/ano</strong> no plano Business — 2 meses grátis!
     </div>
 
     <div class="pricing-grid">
@@ -1400,9 +1404,16 @@ footer {
           <li class="li-check"><i class="ti ti-circle-check-filled"></i> Reenvio automático</li>
           <li class="li-check"><i class="ti ti-circle-check-filled"></i> Email com sua marca</li>
         </ul>
-        <button class="btn-plan btn-plan-outline" onclick="openModal('starter')">
+        <button class="btn-plan btn-plan-outline" id="lp-btn-starter" onclick="openModal('starter')">
           <i class="ti ti-rocket"></i> Assinar Starter
         </button>
+        <!-- Overlay anual — incentivo -->
+        <div id="lp-starter-annual-lock" style="display:none;position:absolute;inset:0;background:rgba(8,12,24,0.93);backdrop-filter:blur(4px);border-radius:inherit;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:22px;text-align:center;">
+          <i class="ti ti-trending-up" style="font-size:34px;color:var(--indigo);"></i>
+          <div style="font-size:14px;color:var(--text);font-weight:700;line-height:1.4;">Em 1 ano com a Vaultly, o Starter vai ser pequeno demais para você.</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.5;">Aproveite o plano anual a partir do Basic e cresça sem limitações.</div>
+          <button onclick="setBilling('monthly')" style="margin-top:4px;background:none;border:1px solid rgba(255,255,255,0.12);color:var(--text2);font-size:12px;padding:6px 14px;border-radius:8px;cursor:pointer;font-family:inherit;">Ver plano mensal</button>
+        </div>
       </div>
 
       <!-- BASIC — POPULAR -->
@@ -1451,6 +1462,29 @@ footer {
         </ul>
         <button class="btn-plan btn-plan-outline" onclick="openModal('pro')">
           <i class="ti ti-stars"></i> Assinar Pro
+        </button>
+      </div>
+
+      <!-- BUSINESS -->
+      <div class="plan-card reveal reveal-d4" style="border-color:rgba(168,85,247,0.25);background:linear-gradient(160deg,rgba(168,85,247,0.05) 0%,var(--bg2) 60%);">
+        <div class="plan-name" style="color:#A855F7;">Business</div>
+        <div class="plan-price">
+          <span class="currency">R$</span>
+          <span class="amount" id="price-business">297</span>
+          <span class="period">/mês</span>
+        </div>
+        <div class="plan-price-annual" id="annual-business"></div>
+        <p class="plan-desc">Para operações de alto volume com equipe, SLA dedicado e capacidade ilimitada.</p>
+        <ul class="plan-features">
+          <li class="li-check"><i class="ti ti-circle-check-filled"></i> Produtos ilimitados</li>
+          <li class="li-check"><i class="ti ti-circle-check-filled"></i> Entregas ilimitadas</li>
+          <li class="li-check"><i class="ti ti-circle-check-filled"></i> Kiwify e Yampi</li>
+          <li class="li-check"><i class="ti ti-circle-check-filled"></i> Reenvio automático</li>
+          <li class="li-check"><i class="ti ti-circle-check-filled"></i> Multi-usuário</li>
+          <li class="li-check"><i class="ti ti-circle-check-filled"></i> SLA e suporte dedicado</li>
+        </ul>
+        <button class="btn-plan btn-plan-outline" onclick="openModal('business')" style="border-color:rgba(168,85,247,0.4);color:#A855F7;">
+          <i class="ti ti-building"></i> Assinar Business
         </button>
       </div>
 
@@ -1628,34 +1662,41 @@ footer {
 /* ── Billing Toggle ───────────────────────── */
 let billing = 'monthly';
 const prices = {
-  monthly: { free: 0, starter: 37, basic: 77,  pro: 147 },
-  annual:  { free: 0, starter: 31, basic: 64,  pro: 122 }
+  monthly: { free: 0, starter: 37, basic: 77,  pro: 147, business: 297 },
+  annual:  { free: 0, starter: 37, basic: 64,  pro: 122, business: 247 }
 };
 
 function setBilling(type) {
   billing = type;
-  document.getElementById('toggleMonthly').classList.toggle('active', type==='monthly');
-  document.getElementById('toggleAnnual').classList.toggle('active', type==='annual');
-  document.getElementById('discountBadge').style.display = type === 'annual' ? 'flex' : 'none';
+  var isAnnual = type === 'annual';
+  document.getElementById('toggleMonthly').classList.toggle('active', !isAnnual);
+  document.getElementById('toggleAnnual').classList.toggle('active', isAnnual);
+  document.getElementById('discountBadge').style.display = isAnnual ? 'flex' : 'none';
 
-  document.getElementById('price-free').textContent    = prices[type].free;
-  document.getElementById('price-starter').textContent = prices[type].starter;
-  document.getElementById('price-basic').textContent   = prices[type].basic;
-  document.getElementById('price-pro').textContent     = prices[type].pro;
+  document.getElementById('price-free').textContent     = prices[type].free;
+  document.getElementById('price-starter').textContent  = prices[type].starter;
+  document.getElementById('price-basic').textContent    = prices[type].basic;
+  document.getElementById('price-pro').textContent      = prices[type].pro;
+  document.getElementById('price-business').textContent = prices[type].business;
 
   var annuals = {
-    starter: { orig: 'R$37/mês', save: 'Economize R$72/ano' },
-    basic:   { orig: 'R$77/mês', save: 'Economize R$156/ano' },
-    pro:     { orig: 'R$147/mês', save: 'Economize R$300/ano' }
+    basic:    { orig: 'R$77/mês',  save: 'Economize R$156/ano' },
+    pro:      { orig: 'R$147/mês', save: 'Economize R$300/ano' },
+    business: { orig: 'R$297/mês', save: 'Economize R$600/ano' }
   };
-  ['starter','basic','pro'].forEach(function(p) {
+  ['basic','pro','business'].forEach(function(p) {
     var el = document.getElementById('annual-' + p);
     if (!el) return;
-    el.innerHTML = type === 'annual'
+    el.innerHTML = isAnnual
       ? '<span class="plan-original">' + annuals[p].orig + '</span><span class="plan-save">— ' + annuals[p].save + '</span>'
       : '';
   });
-  document.getElementById('annual-free').innerHTML = '';
+  document.getElementById('annual-free').innerHTML    = '';
+  document.getElementById('annual-starter').innerHTML = '';
+
+  // Starter sem plano anual — exibe overlay de incentivo
+  var starterLock = document.getElementById('lp-starter-annual-lock');
+  if (starterLock) starterLock.style.display = isAnnual ? 'flex' : 'none';
 }
 
 /* ── Modal unificado ───────────────────────── */
