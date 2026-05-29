@@ -386,9 +386,455 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
           </div>
         </div>
       </div>
+
+      <!-- ── WEBHOOK ── -->
+      <div id="tab-webhook" class="section">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Webhook</div>
+            <div class="page-sub">integração e configuração de plataformas</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveWebhookConfig()" id="btn-save-webhook">
+            <i class="ti ti-device-floppy"></i> Salvar
+          </button>
+        </div>
+
+        <!-- Kiwify Acordeão -->
+        <div class="card wh-accordion" id="wh-kiwify">
+          <div class="card-header wh-acc-header" onclick="toggleAccordion('kiwify')" style="cursor:pointer;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:18px;">🟢</span>
+              <div class="card-title">Kiwify</div>
+              <span id="kiwify-status-pill" class="status-pill pill-inactive">Não configurado</span>
+            </div>
+            <i class="ti ti-chevron-down wh-chevron" id="kiwify-chevron"></i>
+          </div>
+          <div class="wh-acc-body" id="kiwify-body">
+            <div class="card-body">
+              <p style="font-size:12px;color:var(--text2);margin-bottom:16px;">Cole a URL abaixo no painel Kiwify em <strong>Configurações → Webhooks</strong> e selecione o evento <strong>Compra aprovada</strong>.</p>
+              <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:8px;">URL do Webhook</div>
+              <div class="url-box" style="margin-bottom:16px;">
+                <code id="url-kiwify">—</code>
+                <button class="btn btn-ghost btn-xs" onclick="copyText('url-kiwify',this)"><i class="ti ti-copy"></i></button>
+              </div>
+              <input type="hidden" id="kiwify-url-input" />
+              <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:8px;">Segurança</div>
+              <div class="form-group" style="max-width:480px;">
+                <label class="form-label">Secret Kiwify</label>
+                <div style="display:flex;gap:8px;">
+                  <input type="password" class="form-input" id="cfg-kiwify-secret" placeholder="Token gerado pela Kiwify" style="flex:1;" />
+                  <button class="btn btn-ghost btn-sm" onclick="this.previousElementSibling.type=this.previousElementSibling.type==='password'?'text':'password'" title="Mostrar/ocultar"><i class="ti ti-eye"></i></button>
+                </div>
+                <div class="form-hint">Kiwify → Configurações → Webhooks → seu webhook → <em>Chave secreta</em>. Deixe em branco para não validar.</div>
+              </div>
+              <div style="background:var(--bg4);border-radius:var(--radius);padding:12px 14px;margin-top:16px;border-left:3px solid var(--yellow);">
+                <div style="font-size:12px;font-weight:600;color:var(--yellow);margin-bottom:4px;"><i class="ti ti-info-circle"></i> Sobre importar produtos da Kiwify</div>
+                <div style="font-size:12px;color:var(--text2);line-height:1.6;">A Kiwify nao tem API publica de produtos. Seus produtos aparecem automaticamente em <strong style="color:var(--text);">Produtos Pendentes</strong> apos a primeira compra aprovada.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Yampi Acordeão -->
+        <div class="card wh-accordion" id="wh-yampi">
+          <div class="card-header wh-acc-header" onclick="toggleAccordion('yampi')" style="cursor:pointer;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:18px;">🔵</span>
+              <div class="card-title">Yampi</div>
+              <span id="yampi-status-pill" class="status-pill pill-inactive">Não configurado</span>
+            </div>
+            <i class="ti ti-chevron-down wh-chevron" id="yampi-chevron"></i>
+          </div>
+          <div class="wh-acc-body" id="yampi-body">
+            <div class="card-body">
+              <p style="font-size:12px;color:var(--text2);margin-bottom:16px;">Cole a URL abaixo no painel Yampi em <strong>Configurações → Webhooks</strong> e selecione o evento <strong>order.paid</strong>.</p>
+              <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:8px;">URL do Webhook</div>
+              <div class="url-box" style="margin-bottom:16px;">
+                <code id="url-yampi">—</code>
+                <button class="btn btn-ghost btn-xs" onclick="copyText('url-yampi',this)"><i class="ti ti-copy"></i></button>
+              </div>
+              <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:8px;">Segurança</div>
+              <div class="form-group" style="max-width:480px;margin-bottom:16px;">
+                <label class="form-label">Secret Yampi</label>
+                <div style="display:flex;gap:8px;">
+                  <input type="password" class="form-input" id="cfg-yampi-secret" placeholder="Token gerado pela Yampi" style="flex:1;" />
+                  <button class="btn btn-ghost btn-sm" onclick="this.previousElementSibling.type=this.previousElementSibling.type==='password'?'text':'password'" title="Mostrar/ocultar"><i class="ti ti-eye"></i></button>
+                </div>
+                <div class="form-hint">Yampi → Configurações → Webhooks → token. Deixe em branco para nao validar.</div>
+              </div>
+              <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:8px;">API — Importar Produtos</div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Alias da loja</label>
+                  <input type="text" class="form-input" id="cfg-yampi-alias" placeholder="minha-loja" />
+                  <div class="form-hint">URL: yampi.com.br/<strong>alias</strong></div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Token API Yampi</label>
+                  <input type="password" class="form-input" id="cfg-yampi-token" placeholder="live_xxxxxxxxx" />
+                  <div class="form-hint">Yampi → Configurações → Integracoes → API</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Simulador de webhook -->
+        <div class="card" style="border-color:rgba(255,107,53,0.3);">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-test-pipe"></i> Simular envio (teste interno)</div>
+          </div>
+          <div class="card-body">
+            <p style="font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.6;">
+              Simule uma compra aprovada diretamente no painel — sem precisar da Kiwify ou Yampi.
+              O sistema vai processar como se fosse um webhook real e tentar entregar o produto por email.
+            </p>
+            <div class="form-grid" style="margin-bottom:14px;">
+              <div class="form-group">
+                <label class="form-label">Plataforma</label>
+                <select class="form-select" id="sim-platform">
+                  <option value="kiwify">Kiwify</option>
+                  <option value="yampi">Yampi</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Email do comprador (teste)</label>
+                <input type="email" class="form-input" id="sim-email" placeholder="seu@email.com" />
+                <div class="form-hint">O arquivo será enviado para este email</div>
+              </div>
+              <div class="form-group full">
+                <label class="form-label">ID do produto na plataforma</label>
+                <div style="display:flex;gap:8px;">
+                  <select class="form-select" id="sim-product-select" style="flex:1;" onchange="syncSimProductId()">
+                    <option value="">— digitar manualmente —</option>
+                  </select>
+                  <input type="text" class="form-input" id="sim-product-id" placeholder="ID do produto (kiwify_id ou yampi_id)" style="flex:1;" />
+                </div>
+                <div class="form-hint">Selecione um produto cadastrado ou cole o ID da plataforma manualmente</div>
+              </div>
+            </div>
+            <div id="sim-result" style="display:none;"></div>
+            <button class="btn btn-primary" onclick="runSimulate()" id="btn-simulate">
+              <i class="ti ti-player-play"></i> Simular compra aprovada
+            </button>
+          </div>
+        </div>
+
+        <!-- Log de eventos -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="ti ti-terminal-2"></i> Log de eventos
+              <span id="log-live-dot" style="display:inline-flex;align-items:center;gap:5px;margin-left:10px;font-size:11px;color:var(--emerald);font-weight:600;">
+                <span style="width:6px;height:6px;border-radius:50%;background:var(--emerald);animation:pulse 2s ease infinite;display:inline-block;"></span>
+                ao vivo
+              </span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span id="log-last-time" style="font-size:11px;color:var(--text3);"></span>
+              <button class="btn btn-ghost btn-xs" onclick="loadLogs()"><i class="ti ti-refresh"></i></button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="log-box" id="webhook-log">
+              <div style="color:var(--text3);">Carregando logs...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── EMAIL ── -->
+      <div id="tab-email" class="section">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Email</div>
+            <div class="page-sub">remetente e template de entrega</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-ghost btn-sm" onclick="testEmail()">
+              <i class="ti ti-send"></i> Testar envio
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="saveEmailTab()" id="btn-save-email">
+              <i class="ti ti-device-floppy"></i> Salvar
+            </button>
+          </div>
+        </div>
+
+        <!-- Status do remetente -->
+        <div id="email-status-card" class="card" style="border-color:var(--orange);margin-bottom:8px;">
+          <div class="card-body" style="padding:14px 20px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div id="email-status-dot" style="width:8px;height:8px;border-radius:50%;background:var(--emerald);flex-shrink:0;"></div>
+              <div>
+                <div style="font-size:12px;color:var(--text2);">Enviando como</div>
+                <div id="email-status-label" style="font-size:14px;font-weight:600;color:var(--text);">Carregando...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Remetente -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-user"></i> Identidade do Remetente</div>
+          </div>
+          <div class="card-body">
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Nome do remetente</label>
+                <input type="text" class="form-input" id="cfg-from-name" placeholder="Minha Loja Digital" />
+                <div class="form-hint">Aparece no "De:" do email do comprador</div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Email remetente <span style="color:var(--text3);font-weight:400;">(opcional)</span></label>
+                <input type="email" class="form-input" id="cfg-from-address" placeholder="entregas@sualojadigital.com.br" />
+                <div class="form-hint">Deixe em branco para usar o domínio da plataforma</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Infraestrutura de Envio — disponível a partir do Basic -->
+        <div class="card" style="position:relative;overflow:hidden;">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-server"></i> Infraestrutura de Envio</div>
+            <span id="resend-infra-badge" style="display:none;font-size:10px;font-weight:700;background:rgba(255,107,53,0.15);color:var(--orange);border:1px solid rgba(255,107,53,0.3);padding:2px 8px;border-radius:99px;">BASIC+</span>
+          </div>
+          <div class="card-body">
+            <div style="background:var(--bg4);border-radius:var(--radius);padding:14px 16px;margin-bottom:20px;border-left:3px solid var(--orange);">
+              <div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:6px;"><i class="ti ti-info-circle"></i> Como funciona</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.7;">
+                Por padrão, seus emails são enviados pela <strong style="color:var(--text);">infraestrutura Vaultly</strong> sem nenhuma configuração.
+                Para usar <strong style="color:var(--text);">sua própria conta Resend</strong> (reputação separada, limites próprios, remetente customizado), preencha a API Key abaixo.
+              </div>
+            </div>
+            <div class="form-group" style="max-width:480px;">
+              <label class="form-label">API Key Resend <span style="color:var(--orange);font-size:10px;font-weight:600;background:rgba(255,107,53,0.12);padding:2px 7px;border-radius:99px;margin-left:4px;">OPCIONAL</span></label>
+              <div style="display:flex;gap:8px;">
+                <input type="password" class="form-input" id="cfg-resend-key" placeholder="re_xxxxxxxxxxxxxxxxxxxx" style="flex:1;" />
+                <button class="btn btn-ghost btn-sm" onclick="toggleResendKey()" id="btn-toggle-key" title="Mostrar/ocultar"><i class="ti ti-eye"></i></button>
+              </div>
+              <div class="form-hint">Crie em <a href="https://resend.com/api-keys" target="_blank" style="color:var(--orange);">resend.com/api-keys</a></div>
+            </div>
+          </div>
+          <!-- Lock overlay — Free e Starter -->
+          <div id="resend-infra-lock" style="display:none;position:absolute;inset:0;background:rgba(11,16,32,0.85);backdrop-filter:blur(4px);flex-direction:column;align-items:center;justify-content:center;gap:12px;border-radius:inherit;">
+            <i class="ti ti-lock" style="font-size:32px;color:var(--orange);"></i>
+            <div style="text-align:center;">
+              <div style="font-weight:700;font-size:15px;margin-bottom:4px;">Disponível a partir do plano Basic</div>
+              <div style="font-size:12px;color:var(--text2);max-width:280px;">Use sua própria conta Resend com domínio verificado e reputação separada.</div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="showUpgradeModal()"><i class="ti ti-rocket"></i> Fazer upgrade</button>
+          </div>
+        </div>
+
+        <!-- Template Global — bloqueado no Free -->
+        <div class="card" style="position:relative;overflow:hidden;">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-file-text"></i> Template Global de Email</div>
+            <span id="email-template-plan-badge" style="display:none;font-size:10px;font-weight:700;background:rgba(245,158,11,0.15);color:var(--yellow);border:1px solid rgba(245,158,11,0.3);padding:2px 8px;border-radius:99px;">PLANO PAGO</span>
+          </div>
+          <div class="card-body" id="email-template-body">
+            <div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.6;">
+              Este template é enviado em <strong style="color:var(--text);">todas as entregas</strong>. Use as variáveis abaixo para personalizar.
+              Deixe em branco para usar o padrão Vaultly.
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
+              <span class="var-pill" onclick="insertVar('{{nome}}')">{{nome}}</span>
+              <span class="var-pill" onclick="insertVar('{{produto}}')">{{produto}}</span>
+              <span class="var-pill" onclick="insertVar('{{arquivo}}')">{{arquivo}}</span>
+              <span class="var-pill" onclick="insertVar('{{email}}')">{{email}}</span>
+              <span class="var-pill" onclick="insertVar('{{pedido}}')">{{pedido}}</span>
+            </div>
+            <textarea class="form-textarea" id="cfg-email-template" rows="10"
+              placeholder="Olá {{nome}}! Aqui está seu produto {{produto}}.&#10;&#10;O arquivo {{arquivo}} está em anexo neste email.&#10;&#10;Pedido: {{pedido}}&#10;&#10;Obrigado pela compra!"></textarea>
+          </div>
+          <!-- Overlay Free -->
+          <div id="email-template-lock" style="display:none;position:absolute;inset:0;background:rgba(11,16,32,0.85);backdrop-filter:blur(4px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;border-radius:inherit;">
+            <i class="ti ti-lock" style="font-size:32px;color:var(--yellow);"></i>
+            <div style="text-align:center;">
+              <div style="font-weight:700;font-size:15px;margin-bottom:4px;">Recurso exclusivo do plano pago</div>
+              <div style="font-size:12px;color:var(--text2);">No plano Free, os emails são enviados com o template padrão e propaganda Vaultly.</div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="showUpgradeModal()"><i class="ti ti-rocket"></i> Fazer upgrade</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── CONFIG ── -->
+      <div id="tab-config" class="section">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Configurações</div>
+            <div class="page-sub">segurança e conta</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-shield-check"></i> Comportamento do sistema</div>
+          </div>
+          <div class="card-body">
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="t-title">Verificar assinatura do webhook</div>
+                <div class="t-desc">Valida token HMAC em cada requisição recebida</div>
+              </div>
+              <button class="toggle on" onclick="this.classList.toggle('on')"></button>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="t-title">Reenvio automático em falha</div>
+                <div class="t-desc">Tenta reenviar o email até 3 vezes automaticamente</div>
+              </div>
+              <button class="toggle on" onclick="this.classList.toggle('on')"></button>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="t-title">Notificar admin em falha</div>
+                <div class="t-desc">Envia alerta ao email do administrador quando ocorre erro</div>
+              </div>
+              <button class="toggle" onclick="this.classList.toggle('on')"></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-credit-card"></i> Assinatura</div>
+          </div>
+          <div class="card-body">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+              <div>
+                <div style="font-size:13px;color:var(--text2);">Plano atual</div>
+                <div style="font-size:18px;font-weight:700;margin-top:2px;" id="cfg-plan-name">—</div>
+                <div style="font-size:12px;color:var(--text3);margin-top:2px;" id="cfg-plan-sub"></div>
+              </div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;" id="cfg-billing-actions">
+                <button class="btn btn-primary btn-sm" onclick="showUpgradeModal()">
+                  <i class="ti ti-rocket"></i> Fazer upgrade
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-key"></i> Alterar senha do painel</div>
+          </div>
+          <div class="card-body">
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Nova senha</label>
+                <input type="password" class="form-input" id="new-pass" placeholder="••••••••" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Confirmar senha</label>
+                <input type="password" class="form-input" id="confirm-pass" placeholder="••••••••" />
+              </div>
+            </div>
+            <button class="btn btn-primary" style="margin-top:16px;" onclick="changePass()">
+              <i class="ti ti-lock"></i> Salvar senha
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
+</div>
 
+<!-- ── MODAL ONBOARDING ── -->
+<div id="onboarding-modal" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:20px;max-width:540px;width:100%;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,0.6);">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,var(--orange),var(--amber));padding:28px 28px 22px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.7);text-transform:uppercase;margin-bottom:6px;">Bem-vindo ao Vaultly</div>
+      <h2 style="color:#fff;margin:0;font-size:22px;font-weight:700;" id="ob-step-title">Vamos configurar sua conta</h2>
+      <p style="color:rgba(255,255,255,0.8);margin:6px 0 0;font-size:13px;" id="ob-step-sub">Responda rapidamente para personalizar sua experiência</p>
+      <!-- Progress -->
+      <div style="display:flex;gap:6px;margin-top:18px;">
+        <div id="ob-prog-1" style="height:3px;flex:1;border-radius:99px;background:rgba(255,255,255,0.9);"></div>
+        <div id="ob-prog-2" style="height:3px;flex:1;border-radius:99px;background:rgba(255,255,255,0.3);"></div>
+        <div id="ob-prog-3" style="height:3px;flex:1;border-radius:99px;background:rgba(255,255,255,0.3);"></div>
+        <div id="ob-prog-4" style="height:3px;flex:1;border-radius:99px;background:rgba(255,255,255,0.3);"></div>
+      </div>
+    </div>
+    <!-- Body -->
+    <div style="padding:28px;">
+
+      <!-- Step 1: Nome da loja -->
+      <div id="ob-step-1">
+        <div class="form-group">
+          <label class="form-label">Qual o nome da sua loja?</label>
+          <input type="text" class="form-input" id="ob-store-name" placeholder="Ex: Minha Loja Digital" style="font-size:16px;padding:14px 16px;" />
+          <div class="form-hint">Usado no campo "De:" dos emails enviados aos clientes</div>
+        </div>
+      </div>
+
+      <!-- Step 2: Plataformas -->
+      <div id="ob-step-2" style="display:none;">
+        <div class="form-label" style="margin-bottom:14px;">Quais plataformas você vai usar?</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <label id="ob-kiwify-card" class="ob-platform-card ob-selected" onclick="togglePlatform('kiwify')">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span style="font-size:24px;">🟢</span>
+              <div><div style="font-weight:600;">Kiwify</div><div style="font-size:12px;color:var(--text2);">Webhook de compra aprovada</div></div>
+            </div>
+            <div class="ob-check" id="ob-check-kiwify"><i class="ti ti-check"></i></div>
+          </label>
+          <label id="ob-yampi-card" class="ob-platform-card ob-selected" onclick="togglePlatform('yampi')">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span style="font-size:24px;">🔵</span>
+              <div><div style="font-weight:600;">Yampi</div><div style="font-size:12px;color:var(--text2);">Evento order.paid + importação de produtos</div></div>
+            </div>
+            <div class="ob-check" id="ob-check-yampi"><i class="ti ti-check"></i></div>
+          </label>
+        </div>
+        <div style="font-size:12px;color:var(--text3);margin-top:10px;">Você pode alterar isso depois em Webhook.</div>
+      </div>
+
+      <!-- Step 3: Email -->
+      <div id="ob-step-3" style="display:none;">
+        <div class="form-label" style="margin-bottom:14px;">Como deseja enviar os emails?</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <label id="ob-email-vaultly" class="ob-platform-card ob-selected" onclick="selectEmailMode('vaultly')">
+            <div><div style="font-weight:600;">Infraestrutura Vaultly <span style="color:var(--emerald);font-size:11px;font-weight:700;margin-left:6px;">RECOMENDADO</span></div><div style="font-size:12px;color:var(--text2);">Pronto para usar, sem configuração</div></div>
+            <div class="ob-check" id="ob-check-vaultly"><i class="ti ti-check"></i></div>
+          </label>
+          <label id="ob-email-resend" class="ob-platform-card" onclick="selectEmailMode('resend')">
+            <div><div style="font-weight:600;">Conta Resend própria</div><div style="font-size:12px;color:var(--text2);">Reputação separada, domínio próprio, limites próprios</div></div>
+            <div class="ob-check ob-uncheck" id="ob-check-resend"><i class="ti ti-check"></i></div>
+          </label>
+        </div>
+        <div id="ob-resend-key-wrap" style="display:none;margin-top:14px;">
+          <div class="form-group">
+            <label class="form-label">API Key Resend</label>
+            <input type="password" class="form-input" id="ob-resend-key" placeholder="re_xxxxxxxxxxxxxxxxxxxx" />
+            <div class="form-hint">Crie em <a href="https://resend.com/api-keys" target="_blank" style="color:var(--orange);">resend.com/api-keys</a></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4: Resumo -->
+      <div id="ob-step-4" style="display:none;">
+        <div style="text-align:center;margin-bottom:20px;">
+          <i class="ti ti-circle-check-filled" style="font-size:48px;color:var(--emerald);display:block;margin-bottom:8px;"></i>
+          <div style="font-size:18px;font-weight:700;margin-bottom:4px;">Tudo pronto!</div>
+          <div style="font-size:13px;color:var(--text2);">Sua conta foi configurada. Agora adicione seu primeiro produto e conecte o webhook à plataforma.</div>
+        </div>
+        <div style="background:var(--bg3);border-radius:12px;padding:16px 18px;" id="ob-summary"></div>
+      </div>
+
+      <!-- Footer botões -->
+      <div style="display:flex;justify-content:space-between;margin-top:24px;align-items:center;">
+        <button id="ob-btn-back" style="display:none;" class="btn btn-ghost btn-sm" onclick="obPrev()"><i class="ti ti-arrow-left"></i> Voltar</button>
+        <div style="flex:1;"></div>
+        <button id="ob-btn-skip" class="btn btn-ghost btn-sm" style="margin-right:10px;color:var(--text3);" onclick="skipOnboarding()">Pular</button>
+        <button id="ob-btn-next" class="btn btn-primary btn-sm" onclick="obNext()">Continuar <i class="ti ti-arrow-right"></i></button>
+      </div>
+    </div>
+  </div>
 </div>
 <script>
 // JS added in Task 13
