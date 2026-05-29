@@ -2614,13 +2614,28 @@ async function importFromPlatform(platform) {
       return;
     }
 
+    // Remove os produtos cujo ID Yampi já está cadastrado
+    var registered = {};
+    (productsCache || []).forEach(function(p) { if (p.yampi_id) registered[String(p.yampi_id)] = true; });
+    var novos = res.data.filter(function(p) { return !registered[String(p.platform_product_id)]; });
+    var jaCadastrados = res.data.length - novos.length;
+
     if (listEl) {
       listEl.style.display = 'block';
+      if (!novos.length) {
+        listEl.innerHTML =
+          '<div style="background:var(--emerald-dim);border:1px solid rgba(34,197,94,0.25);border-radius:var(--radius);padding:14px 16px;font-size:13px;color:var(--emerald);display:flex;align-items:center;gap:8px;">' +
+            '<i class="ti ti-circle-check" style="font-size:16px;"></i> Todos os ' + res.data.length + ' produto(s) da sua loja Yampi já estão cadastrados aqui.' +
+          '</div>';
+        _tenantConfigCache = null;
+        return;
+      }
       listEl.innerHTML =
         '<div style="font-size:12px;color:var(--text2);margin-bottom:10px;padding-top:4px;">' +
-          '<i class="ti ti-check" style="color:var(--emerald);"></i> ' + res.data.length + ' produto(s) encontrado(s) na Yampi:' +
+          '<i class="ti ti-check" style="color:var(--emerald);"></i> ' + novos.length + ' produto(s) disponível(is) para importar' +
+          (jaCadastrados > 0 ? ' <span style="color:var(--text3);">· ' + jaCadastrados + ' já cadastrado(s) e ocultado(s)</span>' : '') + ':' +
         '</div>' +
-        res.data.map(function(p) {
+        novos.map(function(p) {
           var safeName = p.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
           return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">' +
             '<div>' +
