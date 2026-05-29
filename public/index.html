@@ -836,6 +836,159 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
     </div>
   </div>
 </div>
+
+<!-- ── MODAL UPGRADE ── -->
+<div id="upgrade-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:16px;overflow-y:auto;" onclick="if(event.target===this)hideUpgradeModal()">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:18px;max-width:720px;width:100%;overflow:hidden;box-shadow:0 32px 72px rgba(0,0,0,0.6);margin:auto;">
+    <!-- Header -->
+    <div style="background:var(--orange);padding:24px 28px 20px;position:relative;">
+      <button onclick="hideUpgradeModal()" style="position:absolute;top:14px;right:14px;background:rgba(255,255,255,0.15);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">&#x2715;</button>
+      <div style="font-size:10px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.7);text-transform:uppercase;margin-bottom:4px;">Planos Vaultly</div>
+      <h2 style="color:#fff;margin:0;font-size:20px;font-weight:700;">Escolha o plano ideal para o seu negócio</h2>
+    </div>
+    <div style="padding:20px 24px 24px;">
+      <!-- Toggle mensal / anual -->
+      <div style="display:flex;align-items:center;justify-content:center;gap:0;background:var(--bg3);border:1px solid var(--border);border-radius:99px;padding:3px;width:fit-content;margin:0 auto 20px;">
+        <button id="um-tog-monthly" onclick="setUpgradeBilling('monthly')" style="padding:5px 18px;border-radius:99px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--indigo);color:#fff;transition:all .2s;">Mensal</button>
+        <button id="um-tog-annual" onclick="setUpgradeBilling('annual')" style="padding:5px 18px;border-radius:99px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--text2);transition:all .2s;">Anual&nbsp;<span style="color:var(--emerald);font-size:10px;font-weight:700;">-16%</span></button>
+      </div>
+      <!-- Grid de planos (3 visíveis por vez) -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">
+        <!-- Starter — visível apenas no mensal -->
+        <div id="um-card-starter" style="border:1px solid var(--border);border-radius:10px;padding:13px 10px;text-align:center;">
+          <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:5px;letter-spacing:.04em;">STARTER</div>
+          <div style="font-size:18px;font-weight:800;color:var(--text);line-height:1;"><span id="um-price-starter">R$37</span></div>
+          <div id="um-period-starter" style="font-size:10px;color:var(--text3);margin-bottom:8px;">/mês</div>
+          <hr style="border:none;border-top:1px solid var(--border);margin:7px 0;"/>
+          <ul style="list-style:none;padding:0;margin:0;text-align:left;font-size:10.5px;color:var(--text2);line-height:2;">
+            <li><span style="color:var(--emerald);">✓</span> 2 produtos</li>
+            <li><span style="color:var(--emerald);">✓</span> 200 entregas/mês</li>
+            <li><span style="color:var(--emerald);">✓</span> Retry automático</li>
+            <li><span style="color:var(--emerald);">✓</span> Sua marca no email</li>
+          </ul>
+        </div>
+        <!-- Basic -->
+        <div style="border:2px solid var(--indigo);border-radius:10px;padding:13px 10px;text-align:center;position:relative;background:rgba(108,99,255,0.05);">
+          <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--indigo);color:#fff;font-size:9px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap;letter-spacing:.05em;">POPULAR</div>
+          <div style="font-size:11px;font-weight:700;color:var(--indigo);margin-bottom:5px;letter-spacing:.04em;">BASIC</div>
+          <div style="font-size:18px;font-weight:800;color:var(--text);line-height:1;"><span id="um-price-basic">R$77</span></div>
+          <div id="um-period-basic" style="font-size:10px;color:var(--text3);margin-bottom:8px;">/mês</div>
+          <hr style="border:none;border-top:1px solid var(--border);margin:7px 0;"/>
+          <ul style="list-style:none;padding:0;margin:0;text-align:left;font-size:10.5px;color:var(--text2);line-height:2;">
+            <li><span style="color:var(--emerald);">✓</span> 5 produtos</li>
+            <li><span style="color:var(--emerald);">✓</span> 1.000 entregas/mês</li>
+            <li><span style="color:var(--emerald);">✓</span> BYOK Resend</li>
+            <li><span style="color:var(--emerald);">✓</span> Logs completos</li>
+          </ul>
+        </div>
+        <!-- Pro -->
+        <div style="border:1px solid rgba(56,189,248,0.3);border-radius:10px;padding:13px 10px;text-align:center;background:rgba(56,189,248,0.03);">
+          <div style="font-size:11px;font-weight:700;color:var(--cyan);margin-bottom:5px;letter-spacing:.04em;">PRO</div>
+          <div style="font-size:18px;font-weight:800;color:var(--text);line-height:1;"><span id="um-price-pro">R$147</span></div>
+          <div id="um-period-pro" style="font-size:10px;color:var(--text3);margin-bottom:8px;">/mês</div>
+          <hr style="border:none;border-top:1px solid var(--border);margin:7px 0;"/>
+          <ul style="list-style:none;padding:0;margin:0;text-align:left;font-size:10.5px;color:var(--text2);line-height:2;">
+            <li><span style="color:var(--emerald);">✓</span> Ilimitado produtos</li>
+            <li><span style="color:var(--emerald);">✓</span> 5.000 entregas/mês</li>
+            <li><span style="color:var(--emerald);">✓</span> BYOK Resend</li>
+            <li><span style="color:var(--emerald);">✓</span> Atend. prioritário</li>
+          </ul>
+        </div>
+        <!-- Business — visível apenas no anual -->
+        <div id="um-card-business" style="display:none;border:1px solid rgba(168,85,247,0.3);border-radius:10px;padding:13px 10px;text-align:center;background:rgba(168,85,247,0.03);">
+          <div style="font-size:11px;font-weight:700;color:#A855F7;margin-bottom:5px;letter-spacing:.04em;">BUSINESS</div>
+          <div style="font-size:18px;font-weight:800;color:var(--text);line-height:1;"><span id="um-price-business">R$247</span></div>
+          <div id="um-period-business" style="font-size:10px;color:var(--text3);margin-bottom:8px;">/mês (anual)</div>
+          <hr style="border:none;border-top:1px solid var(--border);margin:7px 0;"/>
+          <ul style="list-style:none;padding:0;margin:0;text-align:left;font-size:10.5px;color:var(--text2);line-height:2;">
+            <li><span style="color:var(--emerald);">✓</span> Ilimitado tudo</li>
+            <li><span style="color:var(--emerald);">✓</span> Entregas ilimitadas</li>
+            <li><span style="color:var(--emerald);">✓</span> Multi-usuário</li>
+            <li><span style="color:var(--emerald);">✓</span> SLA dedicado</li>
+          </ul>
+        </div>
+      </div>
+      <!-- CTAs -->
+      <div id="upgrade-error" style="display:none;padding:10px 14px;background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.3);border-radius:8px;color:var(--red);font-size:12px;margin-bottom:10px;"></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:10px;" id="um-btn-grid">
+        <button onclick="startCheckout('starter')" id="btn-checkout-starter" style="display:flex;align-items:center;justify-content:center;gap:4px;background:rgba(108,99,255,.15);color:var(--indigo);border:1px solid rgba(108,99,255,.3);padding:10px 4px;border-radius:9px;font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">
+          <i class="ti ti-rocket"></i> <span id="btn-label-starter">Starter R$37</span>
+        </button>
+        <button onclick="startCheckout('basic')" id="btn-checkout-basic" style="display:flex;align-items:center;justify-content:center;gap:4px;background:linear-gradient(135deg,#6C63FF,#38BDF8);color:#fff;border:none;padding:10px 4px;border-radius:9px;font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">
+          <i class="ti ti-rocket"></i> <span id="btn-label-basic">Basic R$77</span>
+        </button>
+        <button onclick="startCheckout('pro')" id="btn-checkout-pro" style="display:flex;align-items:center;justify-content:center;gap:4px;background:linear-gradient(135deg,#38BDF8,#10B981);color:#fff;border:none;padding:10px 4px;border-radius:9px;font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">
+          <i class="ti ti-crown"></i> <span id="btn-label-pro">Pro R$147</span>
+        </button>
+        <button onclick="startCheckout('business')" id="btn-checkout-business" style="display:none;align-items:center;justify-content:center;gap:4px;background:linear-gradient(135deg,#A855F7,#6C63FF);color:#fff;border:none;padding:10px 4px;border-radius:9px;font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">
+          <i class="ti ti-building"></i> <span id="btn-label-business">Business R$247</span>
+        </button>
+      </div>
+      <button onclick="hideUpgradeModal()" style="display:block;width:100%;background:transparent;border:1px solid var(--border2);color:var(--text2);padding:10px;border-radius:10px;cursor:pointer;font-size:13px;">
+        Continuar no plano atual
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL PRODUTO ── -->
+<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Novo produto</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label class="form-label">Nome do produto *</label>
+        <input type="text" class="form-input" id="m-name" placeholder="Ex: Ebook Marketing Digital" />
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Descrição</label>
+        <textarea class="form-textarea" id="m-desc" placeholder="Descreva brevemente seu produto..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Preço (R$)</label>
+        <input type="number" class="form-input" id="m-price" placeholder="97.00" step="0.01" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="form-select" id="m-status">
+          <option value="active">Ativo</option>
+          <option value="inactive">Inativo</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">ID Kiwify</label>
+        <input type="text" class="form-input" id="m-kiwify" placeholder="xxxxxxxx-xxxx-xxxx" />
+        <div class="form-hint">Kiwify → Produto → URL do produto</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">ID Yampi</label>
+        <input type="text" class="form-input" id="m-yampi" placeholder="123456" />
+        <div class="form-hint">Yampi → Produto → ID na listagem</div>
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Arquivo PDF / Ebook</label>
+        <div class="upload-zone" id="upload-zone" onclick="document.getElementById('m-file').click()">
+          <i class="ti ti-cloud-upload upload-icon" id="upload-icon"></i>
+          <div class="upload-title" id="upload-title">Clique para selecionar arquivo</div>
+          <div class="upload-sub" id="upload-sub">PDF, EPUB até 50MB · armazenado no Cloudflare R2</div>
+        </div>
+        <input type="file" id="m-file" accept=".pdf,.epub,.zip" style="display:none" onchange="handleFileSelect(this)" />
+      </div>
+    </div>
+    <input type="hidden" id="m-editing-id" value="" />
+    <div class="grad-line"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="save-btn" onclick="saveProduct()">
+        <i class="ti ti-device-floppy"></i> Salvar produto
+      </button>
+    </div>
+  </div>
+</div>
+
 <script>
 // JS added in Task 13
 </script>
