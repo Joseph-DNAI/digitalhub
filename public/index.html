@@ -187,7 +187,86 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 </style>
 </head>
 <body>
-<!-- HTML added in Tasks 9-12 -->
+<!-- ── LOGIN ── -->
+<div id="login-screen" class="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-mark"><i class="ti ti-package"></i></div>
+      <span class="login-logo-name">Vaultly</span>
+    </div>
+    <div class="login-title">Bem-vindo de volta</div>
+    <div class="login-sub">Entre com sua conta para acessar o painel</div>
+    <div id="login-error" class="login-error-msg"></div>
+    <div class="form-group" style="margin-bottom:14px;">
+      <label class="form-label">Email</label>
+      <input type="email" id="login-user" class="form-input" placeholder="seu@email.com" autocomplete="email" onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <div class="form-group" style="margin-bottom:20px;">
+      <label class="form-label">Senha</label>
+      <input type="password" id="login-pass" class="form-input" placeholder="Sua senha" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <button class="btn btn-primary" style="width:100%;padding:11px;font-size:14px;justify-content:center;" onclick="doLogin()">
+      Entrar no painel
+    </button>
+    <p style="text-align:center;margin-top:16px;font-size:12px;color:var(--text3);">
+      Sem conta? <a href="https://vaultly.digital" style="color:var(--orange);text-decoration:none;font-weight:600;">Criar conta grátis</a>
+    </p>
+  </div>
+</div>
+
+<!-- ── APP ── -->
+<div class="app" id="app" style="display:none;">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <img src="/img/logo-horizontal.png" alt="Vaultly" style="height:38px;width:auto;">
+    </div>
+    <div class="nav-wrap">
+      <div class="nav-section">Principal</div>
+      <button class="nav-item active" onclick="switchTab('dashboard',this)"><i class="ti ti-layout-dashboard"></i> Dashboard</button>
+      <button class="nav-item" onclick="switchTab('produtos',this)"><i class="ti ti-package"></i> Produtos</button>
+      <button class="nav-item" onclick="switchTab('entregas',this)"><i class="ti ti-mail-forward"></i> Entregas</button>
+      <div class="nav-section">Sistema</div>
+      <button class="nav-item" onclick="switchTab('webhook',this)"><i class="ti ti-webhook"></i> Webhook</button>
+      <button class="nav-item" onclick="switchTab('email',this)"><i class="ti ti-mail"></i> Email</button>
+      <button class="nav-item" onclick="switchTab('config',this)"><i class="ti ti-settings"></i> Configurações</button>
+      <div id="admin-nav-section" style="display:none;">
+        <div class="nav-section">Administração</div>
+        <a class="nav-item" href="/admin.html" style="text-decoration:none;"><i class="ti ti-shield-check"></i> Painel Admin</a>
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="user-avatar" id="user-avatar">A</div>
+        <div class="user-info">
+          <div class="user-name" id="user-name-label">Usuário</div>
+          <div class="user-role" id="user-plan-label" style="color:var(--amber);font-size:10px;font-family:'JetBrains Mono',monospace;"></div>
+        </div>
+        <button class="logout-btn" onclick="doLogout()" title="Sair"><i class="ti ti-logout" style="font-size:16px;"></i></button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <div id="tb-deliveries-today" style="display:none;align-items:center;gap:5px;background:var(--emerald-dim);border:1px solid rgba(34,197,94,0.2);padding:4px 10px;border-radius:99px;font-size:12px;color:var(--emerald);font-weight:600;cursor:default;" title="Entregas hoje">
+        <i class="ti ti-package" style="font-size:13px;"></i>
+        <span id="tb-today-count">0</span>
+      </div>
+      <div id="tb-unmatched" style="display:none;align-items:center;gap:5px;background:var(--yellow-dim);border:1px solid rgba(245,158,11,0.25);padding:4px 10px;border-radius:99px;font-size:12px;color:var(--yellow);font-weight:600;cursor:pointer;" onclick="switchTabById('produtos')">
+        <i class="ti ti-alert-triangle" style="font-size:13px;"></i>
+        <span id="tb-unmatched-count">0</span> pendentes
+      </div>
+      <span id="topbar-btn" style="display:none;"></span>
+    </div>
+    <div class="content">
+      <!-- sections added in Tasks 10-11 -->
+    </div>
+  </div>
+
+</div>
 <script>
 // JS added in Task 13
 </script>
