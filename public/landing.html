@@ -110,6 +110,59 @@ nav {
 .reveal-d3 { transition-delay: 0.24s; }
 .reveal-d4 { transition-delay: 0.32s; }
 
+/* ── Hero ── */
+.hero {
+  position: relative; z-index: 1;
+  min-height: 100vh; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center; padding: 120px 24px 80px; overflow: hidden;
+}
+.hero h1 {
+  font-family: 'Satoshi', sans-serif;
+  font-size: clamp(44px, 6vw, 78px); font-weight: 900;
+  line-height: 1.05; letter-spacing: -0.035em;
+  margin-bottom: 22px; max-width: 860px;
+  animation: fadeInUp 0.6s ease both;
+}
+.hero h1 em { font-style: normal; color: var(--orange); }
+.hero > p {
+  font-size: clamp(16px, 2vw, 19px); color: var(--text2);
+  line-height: 1.6; max-width: 540px; margin-bottom: 40px;
+  animation: fadeInUp 0.6s ease 0.1s both;
+}
+.hero-actions {
+  display: flex; align-items: center; gap: 14px;
+  flex-wrap: wrap; justify-content: center;
+  animation: fadeInUp 0.6s ease 0.2s both;
+}
+.hero-proof {
+  margin-top: 24px; font-size: 13px; color: var(--text3);
+  display: flex; align-items: center; gap: 7px;
+  animation: fadeInUp 0.6s ease 0.3s both;
+}
+.hero-proof::before {
+  content: ''; display: inline-block;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--emerald); box-shadow: 0 0 8px var(--emerald);
+  animation: pulse-dot 2s ease infinite;
+}
+@keyframes pulse-dot { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+
+/* ── Problem ── */
+.problem {
+  position: relative; z-index: 1;
+  padding: 100px 0; background: var(--bg2);
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+}
+.problem-inner { max-width: 720px; margin: 0 auto; text-align: center; padding: 0 24px; }
+.problem h2 {
+  font-family: 'Satoshi', sans-serif;
+  font-size: clamp(28px, 4vw, 46px); font-weight: 800;
+  letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 24px;
+}
+.problem h2 span { color: var(--orange); }
+.problem p { font-size: 18px; color: var(--text2); line-height: 1.7; }
+
 /* placeholder sections — will be filled in Tasks 2-6 */
 </style>
 </head>
@@ -135,7 +188,37 @@ nav {
   </div>
 </nav>
 
-<!-- sections will be added in Tasks 2-6 -->
+<!-- ── HERO ── -->
+<section class="hero">
+  <h1>Seu produto digital entregue.<br><em>Automático. Sempre.</em></h1>
+  <p>
+    Conecte sua Kiwify ou Yampi em minutos. Cada venda vira uma entrega automática
+    — do checkout ao email do cliente em menos de 3 segundos.
+  </p>
+  <div class="hero-actions">
+    <button class="btn-hero" onclick="openModal('basic')">
+      Criar conta grátis <i class="ti ti-arrow-right"></i>
+    </button>
+  </div>
+  <p class="hero-proof">
+    Mais de 3.200 entregas realizadas este mês &nbsp;·&nbsp; Sem cartão de crédito
+  </p>
+</section>
+
+<!-- ── PROBLEM ── -->
+<section class="problem">
+  <div class="problem-inner">
+    <h2 class="reveal">
+      Você já perdeu uma venda porque<br>
+      <span>o produto não chegou?</span>
+    </h2>
+    <p class="reveal reveal-d1">
+      Enviar arquivo por email manualmente. Copiar link de download. Responder cliente
+      às 23h dizendo "já enviei". Para quem vende no automático, isso não deveria existir.
+      O Vaultly cuida de tudo enquanto você foca no que importa: vender mais.
+    </p>
+  </div>
+</section>
 <script>
 function openLoginModal() { openAuthModal(); switchAuthTab('login'); }
 function openModal(plan) {}
