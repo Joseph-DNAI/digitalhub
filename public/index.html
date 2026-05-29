@@ -1247,67 +1247,90 @@ tbody tr:hover td { background: rgba(255,255,255,0.02); }
 </div>
 
 <!-- ── MODAL UPGRADE ── -->
-<div id="upgrade-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:16px;" onclick="if(event.target===this)hideUpgradeModal()">
-  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;max-width:520px;width:100%;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,0.5);">
-    <!-- Header gradiente -->
-    <div style="background:linear-gradient(135deg,#6C63FF,#38BDF8);padding:28px 28px 24px;position:relative;">
+<div id="upgrade-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:16px;overflow-y:auto;" onclick="if(event.target===this)hideUpgradeModal()">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:18px;max-width:720px;width:100%;overflow:hidden;box-shadow:0 32px 72px rgba(0,0,0,0.6);margin:auto;">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#6C63FF,#38BDF8);padding:24px 28px 20px;position:relative;">
       <button onclick="hideUpgradeModal()" style="position:absolute;top:14px;right:14px;background:rgba(255,255,255,0.15);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">&#x2715;</button>
-      <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.75);text-transform:uppercase;margin-bottom:6px;">Recurso Premium</div>
-      <h2 style="color:#fff;margin:0;font-size:22px;font-weight:700;">Desbloqueie tudo com o plano pago</h2>
-      <p style="color:rgba(255,255,255,0.85);margin:8px 0 0;font-size:14px;">Prioridade na fila, sem marcas d'agua e acesso a todos os relatórios.</p>
+      <div style="font-size:10px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.7);text-transform:uppercase;margin-bottom:4px;">Planos Vaultly</div>
+      <h2 style="color:#fff;margin:0;font-size:20px;font-weight:700;">Escolha o plano ideal para o seu negócio</h2>
     </div>
-    <!-- Comparação de planos -->
-    <div style="padding:20px 24px;">
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
+    <div style="padding:20px 24px 24px;">
+      <!-- Toggle mensal / anual -->
+      <div style="display:flex;align-items:center;justify-content:center;gap:0;background:var(--bg3);border:1px solid var(--border);border-radius:99px;padding:3px;width:fit-content;margin:0 auto 20px;">
+        <button id="um-tog-monthly" onclick="setUpgradeBilling('monthly')" style="padding:5px 18px;border-radius:99px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--indigo);color:#fff;transition:all .2s;">Mensal</button>
+        <button id="um-tog-annual" onclick="setUpgradeBilling('annual')" style="padding:5px 18px;border-radius:99px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--text2);transition:all .2s;">Anual&nbsp;<span style="color:var(--emerald);font-size:10px;font-weight:700;">-16%</span></button>
+      </div>
+      <!-- Grid 4 planos -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;">
         <!-- Starter -->
-        <div style="border:1px solid var(--border);border-radius:10px;padding:14px 12px;text-align:center;">
-          <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;">Starter</div>
-          <div style="font-size:20px;font-weight:700;color:var(--text);">R$37<span style="font-size:10px;font-weight:400;color:var(--text3);">/mês</span></div>
-          <hr style="border:none;border-top:1px solid var(--border);margin:8px 0;"/>
-          <ul style="list-style:none;padding:0;margin:0;text-align:left;font-size:11px;color:var(--text2);line-height:1.9;">
-            <li><span style="color:var(--emerald);">&#10003;</span> 2 produtos</li>
-            <li><span style="color:var(--emerald);">&#10003;</span> 200 entregas/mês</li>
-            <li><span style="color:var(--emerald);">&#10003;</span> Retry automático</li>
-            <li><span style="color:var(--emerald);">&#10003;</span> Email com sua marca</li>
+        <div style="border:1px solid var(--border);border-radius:10px;padding:13px 10px;text-align:center;">
+          <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:5px;letter-spacing:.04em;">STARTER</div>
+          <div style="font-size:18px;font-weight:800;color:var(--text);line-height:1;"><span id="um-price-starter">R$37</span></div>
+          <div id="um-period-starter" style="font-size:10px;color:var(--text3);margin-bottom:8px;">/mês</div>
+          <hr style="border:none;border-top:1px solid var(--border);margin:7px 0;"/>
+          <ul style="list-style:none;padding:0;margin:0;text-align:left;font-size:10.5px;color:var(--text2);line-height:2;">
+            <li><span style="color:var(--emerald);">✓</span> 2 produtos</li>
+            <li><span style="color:var(--emerald);">✓</span> 200 entregas/mês</li>
+            <li><span style="color:var(--emerald);">✓</span> Retry automático</li>
+            <li><span style="color:var(--emerald);">✓</span> Sua marca no email</li>
           </ul>
         </div>
         <!-- Basic -->
-        <div style="border:2px solid #6C63FF;border-radius:10px;padding:14px 12px;text-align:center;position:relative;">
-          <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#6C63FF;color:#fff;font-size:10px;font-weight:700;padding:2px 10px;border-radius:20px;white-space:nowrap;">POPULAR</div>
-          <div style="font-size:12px;font-weight:600;color:#6C63FF;margin-bottom:6px;">Basic</div>
-          <div style="font-size:20px;font-weight:700;color:var(--text);">R$77<span style="font-size:10px;font-weight:400;color:var(--text3);">/mês</span></div>
-          <hr style="border:none;border-top:1px solid var(--border);margin:8px 0;"/>
-          <ul style="list-style:none;padding:0;margin:0;text-align:left;font-size:11px;color:var(--text2);line-height:1.9;">
-            <li><span style="color:var(--emerald);">&#10003;</span> 5 produtos</li>
-            <li><span style="color:var(--emerald);">&#10003;</span> 1.000 entregas/mês</li>
-            <li><span style="color:var(--emerald);">&#10003;</span> Retry automático</li>
-            <li><span style="color:var(--emerald);">&#10003;</span> Logs completos</li>
+        <div style="border:2px solid var(--indigo);border-radius:10px;padding:13px 10px;text-align:center;position:relative;background:rgba(108,99,255,0.05);">
+          <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--indigo);color:#fff;font-size:9px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap;letter-spacing:.05em;">POPULAR</div>
+          <div style="font-size:11px;font-weight:700;color:var(--indigo);margin-bottom:5px;letter-spacing:.04em;">BASIC</div>
+          <div style="font-size:18px;font-weight:800;color:var(--text);line-height:1;"><span id="um-price-basic">R$77</span></div>
+          <div id="um-period-basic" style="font-size:10px;color:var(--text3);margin-bottom:8px;">/mês</div>
+          <hr style="border:none;border-top:1px solid var(--border);margin:7px 0;"/>
+          <ul style="list-style:none;padding:0;margin:0;text-align:left;font-size:10.5px;color:var(--text2);line-height:2;">
+            <li><span style="color:var(--emerald);">✓</span> 5 produtos</li>
+            <li><span style="color:var(--emerald);">✓</span> 1.000 entregas/mês</li>
+            <li><span style="color:var(--emerald);">✓</span> BYOK Resend</li>
+            <li><span style="color:var(--emerald);">✓</span> Logs completos</li>
           </ul>
         </div>
         <!-- Pro -->
-        <div style="border:1px solid var(--border);border-radius:10px;padding:14px 12px;text-align:center;">
-          <div style="font-size:12px;font-weight:600;color:var(--cyan);margin-bottom:6px;">Pro</div>
-          <div style="font-size:20px;font-weight:700;color:var(--text);">R$147<span style="font-size:10px;font-weight:400;color:var(--text3);">/mês</span></div>
-          <hr style="border:none;border-top:1px solid var(--border);margin:8px 0;"/>
-          <ul style="list-style:none;padding:0;margin:0;text-align:left;font-size:11px;color:var(--text2);line-height:1.9;">
-            <li><span style="color:var(--emerald);">&#10003;</span> Produtos ilimitados</li>
-            <li><span style="color:var(--emerald);">&#10003;</span> 5.000 entregas/mês</li>
-            <li><span style="color:var(--emerald);">&#10003;</span> Retry automático</li>
-            <li><span style="color:var(--emerald);">&#10003;</span> Atendimento prioritário</li>
+        <div style="border:1px solid rgba(56,189,248,0.3);border-radius:10px;padding:13px 10px;text-align:center;background:rgba(56,189,248,0.03);">
+          <div style="font-size:11px;font-weight:700;color:var(--cyan);margin-bottom:5px;letter-spacing:.04em;">PRO</div>
+          <div style="font-size:18px;font-weight:800;color:var(--text);line-height:1;"><span id="um-price-pro">R$147</span></div>
+          <div id="um-period-pro" style="font-size:10px;color:var(--text3);margin-bottom:8px;">/mês</div>
+          <hr style="border:none;border-top:1px solid var(--border);margin:7px 0;"/>
+          <ul style="list-style:none;padding:0;margin:0;text-align:left;font-size:10.5px;color:var(--text2);line-height:2;">
+            <li><span style="color:var(--emerald);">✓</span> Ilimitado produtos</li>
+            <li><span style="color:var(--emerald);">✓</span> 5.000 entregas/mês</li>
+            <li><span style="color:var(--emerald);">✓</span> BYOK Resend</li>
+            <li><span style="color:var(--emerald);">✓</span> Atend. prioritário</li>
+          </ul>
+        </div>
+        <!-- Business -->
+        <div style="border:1px solid rgba(168,85,247,0.3);border-radius:10px;padding:13px 10px;text-align:center;background:rgba(168,85,247,0.03);">
+          <div style="font-size:11px;font-weight:700;color:#A855F7;margin-bottom:5px;letter-spacing:.04em;">BUSINESS</div>
+          <div style="font-size:18px;font-weight:800;color:var(--text);line-height:1;"><span id="um-price-business">R$297</span></div>
+          <div id="um-period-business" style="font-size:10px;color:var(--text3);margin-bottom:8px;">/mês</div>
+          <hr style="border:none;border-top:1px solid var(--border);margin:7px 0;"/>
+          <ul style="list-style:none;padding:0;margin:0;text-align:left;font-size:10.5px;color:var(--text2);line-height:2;">
+            <li><span style="color:var(--emerald);">✓</span> Ilimitado tudo</li>
+            <li><span style="color:var(--emerald);">✓</span> Entregas ilimitadas</li>
+            <li><span style="color:var(--emerald);">✓</span> Multi-usuário</li>
+            <li><span style="color:var(--emerald);">✓</span> SLA dedicado</li>
           </ul>
         </div>
       </div>
       <!-- CTAs -->
       <div id="upgrade-error" style="display:none;padding:10px 14px;background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.3);border-radius:8px;color:var(--red);font-size:12px;margin-bottom:10px;"></div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">
-        <button onclick="startCheckout('starter')" id="btn-checkout-starter" style="display:flex;align-items:center;justify-content:center;gap:5px;background:rgba(108,99,255,.15);color:var(--indigo);border:1px solid rgba(108,99,255,.3);padding:11px 6px;border-radius:9px;font-weight:700;font-size:12px;cursor:pointer;">
-          <i class="ti ti-rocket"></i> Starter R$37
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:10px;">
+        <button onclick="startCheckout('starter')" id="btn-checkout-starter" style="display:flex;align-items:center;justify-content:center;gap:4px;background:rgba(108,99,255,.15);color:var(--indigo);border:1px solid rgba(108,99,255,.3);padding:10px 4px;border-radius:9px;font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">
+          <i class="ti ti-rocket"></i> <span id="btn-label-starter">Starter R$37</span>
         </button>
-        <button onclick="startCheckout('basic')" id="btn-checkout-basic" style="display:flex;align-items:center;justify-content:center;gap:5px;background:linear-gradient(135deg,#6C63FF,#38BDF8);color:#fff;border:none;padding:11px 6px;border-radius:9px;font-weight:700;font-size:12px;cursor:pointer;">
-          <i class="ti ti-rocket"></i> Basic R$77
+        <button onclick="startCheckout('basic')" id="btn-checkout-basic" style="display:flex;align-items:center;justify-content:center;gap:4px;background:linear-gradient(135deg,#6C63FF,#38BDF8);color:#fff;border:none;padding:10px 4px;border-radius:9px;font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">
+          <i class="ti ti-rocket"></i> <span id="btn-label-basic">Basic R$77</span>
         </button>
-        <button onclick="startCheckout('pro')" id="btn-checkout-pro" style="display:flex;align-items:center;justify-content:center;gap:5px;background:linear-gradient(135deg,#38BDF8,#10B981);color:#fff;border:none;padding:11px 6px;border-radius:9px;font-weight:700;font-size:12px;cursor:pointer;">
-          <i class="ti ti-crown"></i> Pro R$147
+        <button onclick="startCheckout('pro')" id="btn-checkout-pro" style="display:flex;align-items:center;justify-content:center;gap:4px;background:linear-gradient(135deg,#38BDF8,#10B981);color:#fff;border:none;padding:10px 4px;border-radius:9px;font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">
+          <i class="ti ti-crown"></i> <span id="btn-label-pro">Pro R$147</span>
+        </button>
+        <button onclick="startCheckout('business')" id="btn-checkout-business" style="display:flex;align-items:center;justify-content:center;gap:4px;background:linear-gradient(135deg,#A855F7,#6C63FF);color:#fff;border:none;padding:10px 4px;border-radius:9px;font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">
+          <i class="ti ti-building"></i> <span id="btn-label-business">Business R$297</span>
         </button>
       </div>
       <button onclick="hideUpgradeModal()" style="display:block;width:100%;background:transparent;border:1px solid var(--border2);color:var(--text2);padding:10px;border-radius:10px;cursor:pointer;font-size:13px;">
@@ -1940,11 +1963,36 @@ function limitWarningBanner(used, max, pct, isCrit) {
     '</div>';
 }
 
+var upgradeBilling = 'monthly';
+var upgradePrices = {
+  monthly: { starter: 37,  basic: 77,  pro: 147, business: 297 },
+  annual:  { starter: 31,  basic: 64,  pro: 122, business: 247 }
+};
+
+function setUpgradeBilling(type) {
+  upgradeBilling = type;
+  var isAnnual = type === 'annual';
+  var togM = document.getElementById('um-tog-monthly');
+  var togA = document.getElementById('um-tog-annual');
+  if (togM) { togM.style.background = isAnnual ? 'transparent' : 'var(--indigo)'; togM.style.color = isAnnual ? 'var(--text2)' : '#fff'; }
+  if (togA) { togA.style.background = isAnnual ? 'var(--indigo)' : 'transparent'; togA.style.color = isAnnual ? '#fff' : 'var(--text2)'; }
+  ['starter','basic','pro','business'].forEach(function(p) {
+    var price  = upgradePrices[type][p];
+    var priceEl  = document.getElementById('um-price-' + p);
+    var periodEl = document.getElementById('um-period-' + p);
+    var labelEl  = document.getElementById('btn-label-' + p);
+    if (priceEl)  priceEl.textContent  = 'R$' + price;
+    if (periodEl) periodEl.textContent = isAnnual ? '/mês (anual)' : '/mês';
+    if (labelEl)  labelEl.textContent  = p.charAt(0).toUpperCase() + p.slice(1) + ' R$' + price;
+  });
+}
+
 function showUpgradeModal(plan) {
   var el = document.getElementById('upgrade-modal');
   if (el) { el.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
   var errEl = document.getElementById('upgrade-error');
   if (errEl) errEl.style.display = 'none';
+  setUpgradeBilling('monthly');
 }
 function hideUpgradeModal() {
   var el = document.getElementById('upgrade-modal');
@@ -1952,7 +2000,7 @@ function hideUpgradeModal() {
 }
 
 function showUpgradeSuccess(plan) {
-  var names = { basic: 'Basic', pro: 'Pro' };
+  var names = { starter: 'Starter', basic: 'Basic', pro: 'Pro', business: 'Business' };
   var planName = names[plan] || 'pago';
   var toast = document.createElement('div');
   toast.style.cssText = 'position:fixed;bottom:28px;right:28px;z-index:9999;background:linear-gradient(135deg,#10B981,#38BDF8);color:#fff;padding:16px 22px;border-radius:12px;font-size:14px;font-weight:600;display:flex;align-items:center;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,.4);';
@@ -1962,8 +2010,7 @@ function showUpgradeSuccess(plan) {
 }
 
 async function startCheckout(planId) {
-  var btnId = 'btn-checkout-' + planId;
-  var btn   = document.getElementById(btnId);
+  var btn   = document.getElementById('btn-checkout-' + planId);
   var errEl = document.getElementById('upgrade-error');
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite"></i> Aguarde...'; }
   if (errEl) errEl.style.display = 'none';
@@ -1971,14 +2018,19 @@ async function startCheckout(planId) {
     var res = await apiFetch('/api/billing/create-checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan_id: planId })
+      body: JSON.stringify({ plan_id: planId, billing_period: upgradeBilling })
     });
     if (!res.success) throw new Error(res.error || 'Erro ao iniciar checkout');
     window.location.href = res.url;
   } catch (e) {
     if (errEl) { errEl.textContent = e.message; errEl.style.display = 'block'; }
-    var labels = { starter: '<i class="ti ti-rocket"></i> Starter R$37', basic: '<i class="ti ti-rocket"></i> Basic R$77', pro: '<i class="ti ti-crown"></i> Pro R$147' };
-    if (btn) { btn.disabled = false; btn.innerHTML = labels[planId] || planId; }
+    if (btn) {
+      btn.disabled = false;
+      var price = upgradePrices[upgradeBilling][planId] || '';
+      var icons = { starter: 'ti-rocket', basic: 'ti-rocket', pro: 'ti-crown', business: 'ti-building' };
+      var icon  = icons[planId] || 'ti-rocket';
+      btn.innerHTML = '<i class="ti ' + icon + '"></i> <span>' + planId.charAt(0).toUpperCase() + planId.slice(1) + ' R$' + price + '</span>';
+    }
   }
 }
 

@@ -11,23 +11,29 @@ function getStripe() {
 }
 
 const PRICE_IDS = {
-  starter:  process.env.STRIPE_PRICE_STARTER,
-  basic:    process.env.STRIPE_PRICE_BASIC,
-  pro:      process.env.STRIPE_PRICE_PRO,
-  business: process.env.STRIPE_PRICE_BUSINESS
+  starter:         process.env.STRIPE_PRICE_STARTER,
+  basic:           process.env.STRIPE_PRICE_BASIC,
+  pro:             process.env.STRIPE_PRICE_PRO,
+  business:        process.env.STRIPE_PRICE_BUSINESS,
+  starter_annual:  process.env.STRIPE_PRICE_STARTER_ANNUAL,
+  basic_annual:    process.env.STRIPE_PRICE_BASIC_ANNUAL,
+  pro_annual:      process.env.STRIPE_PRICE_PRO_ANNUAL,
+  business_annual: process.env.STRIPE_PRICE_BUSINESS_ANNUAL
 };
 
 // POST /api/billing/create-checkout — inicia sessao de pagamento Stripe
 router.post('/create-checkout', requireAuth, async (req, res) => {
   try {
-    var stripe  = getStripe();
-    var planId  = req.body.plan_id;
-    var priceId = PRICE_IDS[planId];
+    var stripe        = getStripe();
+    var planId        = req.body.plan_id;
+    var billingPeriod = req.body.billing_period === 'annual' ? 'annual' : 'monthly';
+    var priceKey      = billingPeriod === 'annual' ? planId + '_annual' : planId;
+    var priceId       = PRICE_IDS[priceKey] || PRICE_IDS[planId];
 
     if (!priceId) {
       return res.status(400).json({
         success: false,
-        error: 'Plano invalido ou STRIPE_PRICE_' + (planId || '').toUpperCase() + ' nao configurado'
+        error: 'Plano invalido ou STRIPE_PRICE_' + (planId || '').toUpperCase() + (billingPeriod === 'annual' ? '_ANNUAL' : '') + ' nao configurado'
       });
     }
 
@@ -55,8 +61,8 @@ router.post('/create-checkout', requireAuth, async (req, res) => {
       cancel_url:            baseUrl + '/app',
       locale:                'pt-BR',
       allow_promotion_codes: true,
-      subscription_data:     { metadata: { user_id: user.id, plan_id: planId } },
-      metadata:              { user_id: user.id, plan_id: planId }
+      subscription_data:     { metadata: { user_id: user.id, plan_id: planId, billing_period: billingPeriod } },
+      metadata:              { user_id: user.id, plan_id: planId, billing_period: billingPeriod }
     });
 
     res.json({ success: true, url: session.url });
