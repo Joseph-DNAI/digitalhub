@@ -526,21 +526,32 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 
               <!-- Bloco 2: API para importar produtos -->
               <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;">
-                <div style="display:flex;align-items:center;gap:7px;margin-bottom:14px;">
-                  <i class="ti ti-download" style="color:var(--orange);font-size:14px;"></i>
-                  <span style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text2);text-transform:uppercase;">Para importar produtos</span>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                  <div style="display:flex;align-items:center;gap:7px;">
+                    <i class="ti ti-download" style="color:var(--orange);font-size:14px;"></i>
+                    <span style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text2);text-transform:uppercase;">Para importar produtos</span>
+                  </div>
+                  <button class="btn btn-ghost btn-xs" onclick="testYampiConnection(this)"><i class="ti ti-plug"></i> Testar conexão</button>
                 </div>
-                <p style="font-size:12px;color:var(--text2);margin-bottom:14px;">Necessário para usar o botão <strong>Importar da Yampi</strong> na aba de produtos.</p>
+                <!-- Instruções passo a passo -->
+                <div style="background:var(--bg4);border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;font-size:12px;color:var(--text2);line-height:1.8;">
+                  <div style="font-weight:600;color:var(--text);margin-bottom:6px;">Como encontrar o Token correto:</div>
+                  <div>1. Acesse <strong style="color:var(--text);">Yampi</strong> → menu lateral → <strong style="color:var(--text);">Configurações</strong></div>
+                  <div>2. Clique em <strong style="color:var(--text);">Integrações</strong> → <strong style="color:var(--text);">API</strong></div>
+                  <div>3. Copie o <strong style="color:var(--amber);">User Token</strong> (não o Secret Token — são diferentes)</div>
+                  <div>4. Cole abaixo e salve</div>
+                </div>
+                <div id="yampi-test-result" style="display:none;margin-bottom:12px;"></div>
                 <div class="form-grid">
                   <div class="form-group">
                     <label class="form-label">Alias da loja</label>
                     <input type="text" class="form-input" id="cfg-yampi-alias" placeholder="minha-loja" oninput="markWebhookDirty()"/>
-                    <div class="form-hint">A parte final da URL: yampi.com.br/<strong>alias</strong></div>
+                    <div class="form-hint">Parte final da URL: yampi.com.br/<strong>alias</strong></div>
                   </div>
                   <div class="form-group">
-                    <label class="form-label">Token API Yampi</label>
-                    <input type="password" class="form-input" id="cfg-yampi-token" placeholder="live_xxxxxxxxx" oninput="markWebhookDirty()"/>
-                    <div class="form-hint">Yampi → Configurações → Integrações → API → Gerar token</div>
+                    <label class="form-label">User Token <span style="color:var(--amber);font-size:9px;font-weight:700;background:rgba(255,159,28,0.12);padding:2px 6px;border-radius:99px;margin-left:4px;">USER TOKEN</span></label>
+                    <input type="password" class="form-input" id="cfg-yampi-token" placeholder="live_xxxxxxxxxxxxxxxxxx" oninput="markWebhookDirty()"/>
+                    <div class="form-hint">Yampi → Configurações → Integrações → API → <strong>User Token</strong></div>
                   </div>
                 </div>
               </div>
@@ -1291,6 +1302,35 @@ function updatePlatformPill(platform, hasConfig) {
 function toggleAccordion(platform) {
   var el = document.getElementById('wh-' + platform);
   if (el) el.classList.toggle('open');
+}
+
+async function testYampiConnection(btn) {
+  var resultEl = document.getElementById('yampi-test-result');
+  var alias = document.getElementById('cfg-yampi-alias').value.trim();
+  var token = document.getElementById('cfg-yampi-token').value.trim();
+
+  if (!alias || !token || token.startsWith('•')) {
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = '<div style="background:var(--yellow-dim);border:1px solid rgba(245,158,11,0.3);border-radius:var(--radius);padding:10px 12px;font-size:12px;color:var(--yellow);"><i class="ti ti-alert-triangle"></i> Preencha o Alias e o User Token antes de testar. Se o campo mostrar ••••, limpe-o e cole o token novamente.</div>';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i> Testando...';
+  resultEl.style.display = 'none';
+
+  try {
+    var res = await apiFetch('/api/products/platform-list/yampi');
+    if (!res.success) throw new Error(res.error);
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = '<div style="background:var(--emerald-dim);border:1px solid rgba(34,197,94,0.3);border-radius:var(--radius);padding:10px 12px;font-size:12px;color:var(--emerald);display:flex;align-items:center;gap:7px;"><i class="ti ti-circle-check" style="font-size:16px;"></i> Conexão bem-sucedida! ' + (res.data ? res.data.length : 0) + ' produto(s) encontrado(s) na loja.</div>';
+  } catch(e) {
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = '<div style="background:var(--red-dim);border:1px solid rgba(239,68,68,0.3);border-radius:var(--radius);padding:10px 12px;font-size:12px;color:var(--red);"><i class="ti ti-alert-circle"></i> <strong>Falha:</strong> ' + (e.message || 'Erro desconhecido') + '</div>';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-plug"></i> Testar conexão';
+  }
 }
 
 function markWebhookDirty() {
