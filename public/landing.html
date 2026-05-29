@@ -270,6 +270,59 @@ nav {
 .btn-plan-outline:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.22) !important; }
 .btn-plan-primary { background: var(--orange); color: #fff; box-shadow: 0 0 28px rgba(255,107,53,0.35); }
 .btn-plan-primary:hover { background: #FF7A4A; box-shadow: 0 0 44px rgba(255,107,53,0.5); transform: translateY(-1px); }
+
+/* ── CTA Final ── */
+.cta-final { position: relative; z-index: 1; padding: 100px 0; text-align: center; background: var(--orange); }
+.cta-final h2 { font-family: 'Satoshi', sans-serif; font-size: clamp(32px, 4vw, 52px); font-weight: 900; letter-spacing: -0.03em; margin-bottom: 16px; color: #fff; }
+.cta-final p { font-size: 18px; color: rgba(255,255,255,0.8); max-width: 480px; margin: 0 auto 40px; line-height: 1.6; }
+.btn-cta-white { background: #fff; color: var(--orange); border: none; padding: 15px 36px; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.25s; font-family: inherit; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 4px 24px rgba(0,0,0,0.2); }
+.btn-cta-white:hover { background: #FFF5F0; transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.25); }
+
+/* ── Footer ── */
+footer { position: relative; z-index: 1; background: #09090E; border-top: 1px solid rgba(255,255,255,0.06); padding: 32px 0; }
+.footer-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; }
+.footer-copy { font-size: 13px; color: var(--text3); }
+.footer-links { display: flex; gap: 22px; }
+.footer-links a { font-size: 13px; color: var(--text3); text-decoration: none; transition: color 0.2s; }
+.footer-links a:hover { color: var(--text2); }
+
+/* ── Auth Modal ── */
+.auth-overlay { display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); align-items: center; justify-content: center; padding: 20px; }
+.auth-overlay.open { display: flex; }
+.auth-box { background: var(--bg2); border: 1px solid var(--border2); border-radius: var(--radius-xl); width: 100%; max-width: 420px; overflow: hidden; box-shadow: var(--shadow-lg); animation: fadeInUp 0.3s ease both; }
+.auth-header { padding: 28px 28px 0; display: flex; align-items: flex-start; justify-content: space-between; }
+.auth-header h2 { font-family: 'Satoshi', sans-serif; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+.auth-close { background: none; border: none; color: var(--text3); font-size: 20px; cursor: pointer; padding: 4px; border-radius: 6px; transition: color 0.2s; }
+.auth-close:hover { color: var(--text); }
+.auth-tabs { display: flex; gap: 0; padding: 20px 28px 0; border-bottom: 1px solid var(--border); }
+.auth-tab { padding: 8px 18px; font-size: 14px; font-weight: 600; cursor: pointer; color: var(--text3); border-bottom: 2px solid transparent; transition: all 0.2s; margin-bottom: -1px; background: none; border-top: none; border-left: none; border-right: none; font-family: inherit; }
+.auth-tab.active { color: var(--orange); border-bottom-color: var(--orange); }
+.auth-body { padding: 24px 28px 28px; }
+.form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.form-label { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.08em; font-family: 'JetBrains Mono', monospace; }
+.form-input { background: var(--bg3); border: 1px solid var(--border2); color: var(--text); padding: 10px 14px; border-radius: 8px; font-size: 14px; font-family: inherit; transition: border-color 0.2s; outline: none; width: 100%; }
+.form-input:focus { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(255,107,53,0.15); }
+.btn-submit { width: 100%; padding: 12px; background: var(--orange); color: #fff; border: none; border-radius: 9px; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s; font-family: inherit; margin-top: 4px; }
+.btn-submit:hover { background: #FF7A4A; transform: translateY(-1px); }
+.auth-error, .auth-success { padding: 10px 14px; border-radius: 7px; font-size: 13px; margin-bottom: 14px; display: none; }
+.auth-error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: var(--red); }
+.auth-success { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: var(--emerald); }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  nav { padding: 0 20px; }
+  .nav-links { display: none; }
+  .hiw-steps { flex-direction: column; align-items: center; gap: 32px; }
+  .hiw-connector { display: none; }
+  .bento { grid-template-columns: 1fr; }
+  .bento-card.wide { grid-column: span 1; }
+  .pricing-grid { grid-template-columns: repeat(2, 1fr); }
+  .plan-card.popular { transform: none; }
+}
+@media (max-width: 600px) {
+  .pricing-grid { grid-template-columns: 1fr; }
+  .footer-inner { flex-direction: column; align-items: center; text-align: center; }
+}
 </style>
 </head>
 <body>
@@ -527,6 +580,87 @@ nav {
     </div>
   </div>
 </section>
+
+<!-- ── CTA FINAL ── -->
+<section class="cta-final">
+  <div class="container">
+    <h2>Pronto para entregar<br>no automático?</h2>
+    <p>Crie sua conta grátis em menos de 2 minutos. Sem cartão de crédito.</p>
+    <button class="btn-cta-white" onclick="openModal('basic')">
+      Criar conta grátis <i class="ti ti-arrow-right"></i>
+    </button>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div>
+        <img src="/img/logo-horizontal.png" alt="Vaultly" style="height:40px;width:auto;opacity:0.9;">
+      </div>
+      <span class="footer-copy">© 2026 Vaultly. Todos os direitos reservados.</span>
+      <div class="footer-links">
+        <a href="#">Termos</a>
+        <a href="#">Privacidade</a>
+        <a href="#">Suporte</a>
+        <a href="#" onclick="openLoginModal();return false;">Entrar</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- ── AUTH MODAL ── -->
+<div id="authOverlay" class="auth-overlay" onclick="if(event.target===this)closeAuthModal()">
+  <div class="auth-box">
+    <div class="auth-header">
+      <h2 id="auth-modal-title">Criar conta grátis</h2>
+      <button class="auth-close" onclick="closeAuthModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-reg" onclick="switchAuthTab('register')">Criar conta</button>
+      <button class="auth-tab" id="tab-log" onclick="switchAuthTab('login')">Entrar</button>
+    </div>
+    <div class="auth-body">
+      <div id="auth-register">
+        <div id="msgError" class="auth-error"></div>
+        <div id="msgSuccess" class="auth-success"></div>
+        <div id="formArea">
+          <div class="form-group">
+            <label class="form-label">Nome</label>
+            <input type="text" id="regName" class="form-input" placeholder="Seu nome completo" autocomplete="name"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" id="regEmail" class="form-input" placeholder="seu@email.com" autocomplete="email"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Senha</label>
+            <div style="position:relative;">
+              <input type="password" id="regPassword" class="form-input" placeholder="Mínimo 8 caracteres" style="width:100%;padding-right:40px;" autocomplete="new-password"/>
+              <button type="button" onclick="togglePassword()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);">
+                <i id="eyeIcon" class="ti ti-eye"></i>
+              </button>
+            </div>
+          </div>
+          <button class="btn-submit" id="regBtn" onclick="handleRegister()">Criar conta grátis</button>
+        </div>
+      </div>
+      <div id="auth-login" style="display:none;">
+        <div id="login-msg-error" class="auth-error"></div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" id="loginEmail" class="form-input" placeholder="seu@email.com" autocomplete="email" onkeydown="if(event.key==='Enter')handleLogin()"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Senha</label>
+          <input type="password" id="loginPassword" class="form-input" placeholder="Sua senha" autocomplete="current-password" onkeydown="if(event.key==='Enter')handleLogin()"/>
+        </div>
+        <button class="btn-submit" id="loginBtn" onclick="handleLogin()">Entrar</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
 function openLoginModal() { openAuthModal(); switchAuthTab('login'); }
