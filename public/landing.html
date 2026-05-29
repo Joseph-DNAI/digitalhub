@@ -1470,7 +1470,7 @@ footer {
         <div class="plan-name" style="color:#A855F7;">Business</div>
         <div class="plan-price">
           <span class="currency">R$</span>
-          <span class="amount" id="price-business">297</span>
+          <span class="amount" id="price-business">247</span>
           <span class="period">/mês</span>
         </div>
         <div class="plan-price-annual" id="annual-business"></div>
@@ -1483,9 +1483,16 @@ footer {
           <li class="li-check"><i class="ti ti-circle-check-filled"></i> Multi-usuário</li>
           <li class="li-check"><i class="ti ti-circle-check-filled"></i> SLA e suporte dedicado</li>
         </ul>
-        <button class="btn-plan btn-plan-outline" onclick="openModal('business')" style="border-color:rgba(168,85,247,0.4);color:#A855F7;">
+        <button class="btn-plan btn-plan-outline" id="lp-btn-business" onclick="openModal('business')" style="border-color:rgba(168,85,247,0.4);color:#A855F7;">
           <i class="ti ti-building"></i> Assinar Business
         </button>
+        <!-- Overlay mensal — Business apenas anual -->
+        <div id="lp-business-monthly-lock" style="display:flex;position:absolute;inset:0;background:rgba(8,12,24,0.93);backdrop-filter:blur(4px);border-radius:inherit;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:22px;text-align:center;">
+          <i class="ti ti-calendar-repeat" style="font-size:34px;color:#A855F7;"></i>
+          <div style="font-size:14px;color:var(--text);font-weight:700;line-height:1.4;">Disponível apenas no plano anual.</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.5;">Um compromisso com o crescimento sustentável do seu negócio.</div>
+          <button onclick="setBilling('annual')" style="margin-top:4px;background:linear-gradient(135deg,#A855F7,#6C63FF);border:none;color:#fff;font-size:13px;font-weight:700;padding:8px 18px;border-radius:8px;cursor:pointer;font-family:inherit;">Ver plano anual</button>
+        </div>
       </div>
 
     </div>
@@ -1662,7 +1669,7 @@ footer {
 /* ── Billing Toggle ───────────────────────── */
 let billing = 'monthly';
 const prices = {
-  monthly: { free: 0, starter: 37, basic: 77,  pro: 147, business: 297 },
+  monthly: { free: 0, starter: 37, basic: 77,  pro: 147, business: 247 },
   annual:  { free: 0, starter: 37, basic: 64,  pro: 122, business: 247 }
 };
 
@@ -1694,9 +1701,13 @@ function setBilling(type) {
   document.getElementById('annual-free').innerHTML    = '';
   document.getElementById('annual-starter').innerHTML = '';
 
-  // Starter sem plano anual — exibe overlay de incentivo
+  // Starter sem plano anual — overlay de incentivo
   var starterLock = document.getElementById('lp-starter-annual-lock');
   if (starterLock) starterLock.style.display = isAnnual ? 'flex' : 'none';
+
+  // Business apenas anual — overlay quando mensal
+  var businessLock = document.getElementById('lp-business-monthly-lock');
+  if (businessLock) businessLock.style.display = isAnnual ? 'none' : 'flex';
 }
 
 /* ── Modal unificado ───────────────────────── */
