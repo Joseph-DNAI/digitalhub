@@ -600,6 +600,12 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
               </div>
             </div>
             <div id="sim-result" style="display:none;"></div>
+            <div style="background:var(--yellow-dim);border:1px solid rgba(245,158,11,0.3);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;display:flex;align-items:flex-start;gap:8px;">
+              <i class="ti ti-info-circle" style="color:var(--yellow);font-size:15px;flex-shrink:0;margin-top:1px;"></i>
+              <div style="font-size:12px;color:var(--text2);line-height:1.5;">
+                O teste envia um <strong style="color:var(--text);">email real</strong> e consome <strong style="color:var(--text);">1 do seu limite mensal de entregas</strong>. Não conta como venda no painel.
+              </div>
+            </div>
             <button class="btn btn-primary" onclick="runSimulate()" id="btn-simulate">
               <i class="ti ti-player-play"></i> Simular compra aprovada
             </button>
@@ -2023,7 +2029,7 @@ async function loadDeliveries() {
           <span style="font-weight:500;">${d.buyer_name || '—'}</span><br>
           <span style="font-size:11px;color:var(--text3);">${d.buyer_email}</span>
         </td>
-        <td>${d.product_name || d.product_id || '—'}</td>
+        <td>${d.product_name || d.product_id || '—'}${d.is_test ? ' <span class="badge badge-yellow" style="font-size:9px;margin-left:4px;">TESTE</span>' : ''}</td>
         <td>${platformBadge(d.platform)}</td>
         <td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);">${d.platform_order_id || '—'}</td>
         <td style="font-size:12px;color:var(--text2);">${fmtDate(d.created_at)}</td>

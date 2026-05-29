@@ -110,7 +110,7 @@ router.post('/simulate', async (req, res) => {
       };
     }
 
-    const result = await processWebhookEvent(req.tenantId, platform, payload);
+    const result = await processWebhookEvent(req.tenantId, platform, payload, { isTest: true });
     res.json({ success: true, result, orderId, buyerEmail });
   } catch(err) {
     logger.error('Erro em /simulate: ' + err.message);

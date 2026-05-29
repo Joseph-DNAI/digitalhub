@@ -116,6 +116,7 @@ async function initDatabase() {
         status            TEXT DEFAULT 'pending',
         attempts          INTEGER DEFAULT 0,
         error_message     TEXT,
+        is_test           BOOLEAN DEFAULT FALSE,
         delivered_at      TIMESTAMP,
         created_at        TIMESTAMP DEFAULT NOW()
       );
@@ -168,6 +169,7 @@ async function initDatabase() {
       ALTER TABLE tenants ADD COLUMN IF NOT EXISTS platforms_enabled       TEXT DEFAULT 'kiwify,yampi';
       ALTER TABLE tenants ADD COLUMN IF NOT EXISTS notif_80_sent_month     TEXT;
       ALTER TABLE tenants ADD COLUMN IF NOT EXISTS notif_95_sent_month     TEXT;
+      ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS is_test              BOOLEAN DEFAULT FALSE;
       ALTER TABLE users   ADD COLUMN IF NOT EXISTS stripe_customer_id      TEXT;
       ALTER TABLE users   ADD COLUMN IF NOT EXISTS subscription_id         TEXT;
       ALTER TABLE users   ADD COLUMN IF NOT EXISTS subscription_status     TEXT DEFAULT 'none';
@@ -389,9 +391,9 @@ const deliveries = {
   async create(tenantId, data) {
     const id = uuidv4();
     await query(`
-      INSERT INTO deliveries (id, tenant_id, product_id, platform, platform_order_id, buyer_name, buyer_email)
-      VALUES ($1,$2,$3,$4,$5,$6,$7)
-    `, [id, tenantId, data.product_id, data.platform||'unknown', data.platform_order_id||null, data.buyer_name||null, data.buyer_email]);
+      INSERT INTO deliveries (id, tenant_id, product_id, platform, platform_order_id, buyer_name, buyer_email, is_test)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+    `, [id, tenantId, data.product_id, data.platform||'unknown', data.platform_order_id||null, data.buyer_name||null, data.buyer_email, data.is_test === true]);
     return id;
   },
 
@@ -446,11 +448,13 @@ const deliveries = {
   },
 
   async stats(tenantId) {
+    // Vendas (total/entregues/falhas/hoje) NÃO contam testes internos.
+    // delivery_month CONTA testes — eles consomem o limite mensal de envios.
     const [total, delivered, failed, today, month] = await Promise.all([
-      queryOne("SELECT COUNT(*) as n FROM deliveries WHERE tenant_id=$1", [tenantId]),
-      queryOne("SELECT COUNT(*) as n FROM deliveries WHERE tenant_id=$1 AND status='delivered'", [tenantId]),
-      queryOne("SELECT COUNT(*) as n FROM deliveries WHERE tenant_id=$1 AND status='failed'", [tenantId]),
-      queryOne("SELECT COUNT(*) as n FROM deliveries WHERE tenant_id=$1 AND created_at::date=CURRENT_DATE", [tenantId]),
+      queryOne("SELECT COUNT(*) as n FROM deliveries WHERE tenant_id=$1 AND is_test=FALSE", [tenantId]),
+      queryOne("SELECT COUNT(*) as n FROM deliveries WHERE tenant_id=$1 AND is_test=FALSE AND status='delivered'", [tenantId]),
+      queryOne("SELECT COUNT(*) as n FROM deliveries WHERE tenant_id=$1 AND is_test=FALSE AND status='failed'", [tenantId]),
+      queryOne("SELECT COUNT(*) as n FROM deliveries WHERE tenant_id=$1 AND is_test=FALSE AND created_at::date=CURRENT_DATE", [tenantId]),
       queryOne("SELECT COUNT(*) as n FROM deliveries WHERE tenant_id=$1 AND created_at >= date_trunc('month', NOW())", [tenantId])
     ]);
     return {

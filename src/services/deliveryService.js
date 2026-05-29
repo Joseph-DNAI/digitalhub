@@ -7,10 +7,11 @@ const logger = require('../config/logger');
 const RETRY_DELAY      = parseInt(process.env.RETRY_DELAY_SECONDS || '60') * 1000;
 const FREE_DELAY_MS    = 5 * 60 * 1000; // 5 minutos — planos pagos têm prioridade na fila
 
-async function processWebhookEvent(tenantId, platform, rawPayload) {
+async function processWebhookEvent(tenantId, platform, rawPayload, options) {
+  const isTest = !!(options && options.isTest);
   const normalized = normalizePayload(platform, rawPayload);
 
-  logger.info('[' + platform + '][' + tenantId.slice(0,8) + '] Evento: ' + normalized.event + ' | Comprador: ' + normalized.buyerEmail);
+  logger.info('[' + platform + '][' + tenantId.slice(0,8) + ']' + (isTest ? '[TESTE]' : '') + ' Evento: ' + normalized.event + ' | Comprador: ' + normalized.buyerEmail);
 
   if (!isApprovedEvent(platform, normalized.event)) {
     return { ignored: true, reason: 'Evento "' + normalized.event + '" nao dispara entrega' };
@@ -26,7 +27,8 @@ async function processWebhookEvent(tenantId, platform, rawPayload) {
   const isFree = !user || user.plan_id === 'free';
 
   // ── Restrição de plataforma (plano Free: apenas 1 plataforma) ──────────────
-  if (isFree) {
+  // Testes internos são livres — não aplicam a restrição de plataforma.
+  if (isFree && !isTest) {
     const recentDeliveries = await deliveries.findByTenant(tenantId, 5);
     const usedPlatforms    = [...new Set(recentDeliveries.map(d => d.platform).filter(Boolean))];
     if (usedPlatforms.length > 0 && !usedPlatforms.includes(platform)) {
@@ -58,11 +60,13 @@ async function processWebhookEvent(tenantId, platform, rawPayload) {
     platform,
     platform_order_id: normalized.orderId,
     buyer_name:        normalized.buyerName,
-    buyer_email:       normalized.buyerEmail
+    buyer_email:       normalized.buyerEmail,
+    is_test:           isTest
   });
 
   // ── Delay de entrega (plano Free: fila de baixa prioridade — 5 min) ────────
-  if (isFree) {
+  // Testes internos entregam na hora para o usuário verificar rapidamente.
+  if (isFree && !isTest) {
     logger.info('Free: entrega agendada com atraso de 5min — delivery: ' + deliveryId);
     setTimeout(() => {
       attemptDelivery(deliveryId, product, normalized, tenant, true, user)
@@ -71,8 +75,8 @@ async function processWebhookEvent(tenantId, platform, rawPayload) {
     return { deliveryId, productName: product.name, buyerEmail: normalized.buyerEmail, queued: true };
   }
 
-  // Planos pagos: entrega imediata
-  await attemptDelivery(deliveryId, product, normalized, tenant, false, user);
+  // Planos pagos: entrega imediata. Teste no Free mostra branding (igual à entrega real).
+  await attemptDelivery(deliveryId, product, normalized, tenant, isFree, user);
   return { deliveryId, productName: product.name, buyerEmail: normalized.buyerEmail };
 }
 
