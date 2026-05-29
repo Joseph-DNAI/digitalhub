@@ -36,7 +36,18 @@
       "Bash(curl -sv https://app.vaultly.digital/health)",
       "Bash(curl -v --max-time 10 https://app.vaultly.digital/)",
       "Bash(curl -sv --max-time 10 https://vaultly.digital/)",
-      "Bash(curl -sv --max-time 10 https://app.vaultly.digital/)"
+      "Bash(curl -sv --max-time 10 https://app.vaultly.digital/)",
+      "Bash(curl -sk https://vaultly.digital/admin.html)",
+      "Bash(npm install *)",
+      "WebFetch(domain:vaultly.digital)",
+      "Bash(ls public/img/)",
+      "Bash(dir public\\\\img)",
+      "Bash(Get-ChildItem -Path 'public\\\\landing.html*' -Force)",
+      "Bash(python -c ' *)",
+      "Bash(grep -c 'id=\"__TRACKED_VAR__\"' public/index.html)",
+      "Bash(awk 'NR>=1403 && /<\\\\/script>/{print NR; exit}' \"c:/Users/jojop/OneDrive/Documentos/Projetos/Webhook Yampi e Kiwify/digitalhub-multi/public/index.html.bak\")",
+      "Bash(grep -c \"#6C63FF\\\\|#38BDF8\" public/index.html public/landing.html)",
+      "Bash(grep -c \"\\\\.orb\\\\|\\\\.float-badge\\\\|orbFloat\" public/landing.html)"
     ],
     "additionalDirectories": [
       "C:\\Users\\jojop\\OneDrive\\Documentos\\Projetos\\Webhook Yampi e Kiwify\\digitalhub-multi\\.git",

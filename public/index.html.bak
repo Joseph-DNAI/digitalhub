@@ -6,189 +6,495 @@
 <title>Vaultly — Painel de Controle</title>
 <link rel="icon" type="image/png" href="/img/logo-icon.png"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Satoshi:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Satoshi:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
 <style>
+/* ── Reset ───────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* ── Tokens Vaultly ──────────────────────────────────── */
 :root {
-  --bg: #0B1020; --bg2: #111828; --bg3: #172035; --bg4: #1E2A42;
-  --border: rgba(255,255,255,0.06); --border2: rgba(255,255,255,0.11);
-  --orange: #FF6B35; --amber: #FF9F1C; --orange-dim: rgba(255,107,53,0.1);
-  --emerald: #22C55E; --emerald-dim: rgba(34,197,94,0.12);
-  --red: #EF4444; --red-dim: rgba(239,68,68,0.12);
-  --yellow: #F59E0B; --yellow-dim: rgba(245,158,11,0.12);
-  --text: #F8FAFC; --text2: #94A3B8; --text3: #3D4F6E;
-  --radius: 10px; --radius-lg: 14px; --radius-xl: 20px;
+  --bg:          #0B1020;
+  --bg2:         #121A2E;
+  --bg3:         #172035;
+  --bg4:         #1E2A42;
+  --border:      rgba(255,255,255,0.06);
+  --border2:     rgba(255,255,255,0.10);
+  --indigo:      #6C63FF;
+  --indigo2:     #5A52E0;
+  --cyan:        #38BDF8;
+  --emerald:     #10B981;
+  --emerald-dim: rgba(16,185,129,0.12);
+  --red:         #F43F5E;
+  --red-dim:     rgba(244,63,94,0.12);
+  --yellow:      #F59E0B;
+  --yellow-dim:  rgba(245,158,11,0.12);
+  --text:        #F8FAFC;
+  --text2:       #94A3B8;
+  --text3:       #3D4F6E;
+  --grad:        linear-gradient(135deg, #6C63FF 0%, #38BDF8 100%);
+  --grad-bg:     linear-gradient(135deg, #0B1020 0%, #121A2E 100%);
+  --radius:      12px;
+  --radius-lg:   18px;
+  --radius-xl:   24px;
 }
 
-html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; -webkit-font-smoothing: antialiased; }
+html, body {
+  height: 100%; background: var(--bg);
+  color: var(--text);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Scrollbar ───────────────────────────────────────── */
 ::-webkit-scrollbar { width: 4px; }
+
+/* ── Webhook Acordeão ────────────────────────────────── */
+.wh-accordion { margin-bottom: 12px; }
+.wh-acc-header { user-select: none; }
+.wh-chevron { font-size: 16px; color: var(--text3); transition: transform 0.25s; flex-shrink: 0; }
+.wh-accordion.open .wh-chevron { transform: rotate(180deg); }
+.wh-acc-body { display: none; border-top: 1px solid var(--border); }
+.wh-accordion.open .wh-acc-body { display: block; }
+.status-pill { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 99px; }
+.pill-active   { background: rgba(16,185,129,0.15); color: var(--emerald); border: 1px solid rgba(16,185,129,0.3); }
+.pill-inactive { background: rgba(61,79,110,0.3);  color: var(--text3);   border: 1px solid var(--border2); }
+
+/* ── Onboarding ──────────────────────────────────────── */
+.ob-platform-card {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--bg3); border: 2px solid var(--border2);
+  border-radius: 12px; padding: 14px 16px; cursor: pointer;
+  transition: all 0.2s;
+}
+.ob-platform-card.ob-selected { border-color: var(--indigo); background: rgba(108,99,255,0.07); }
+.ob-check {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--indigo); display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; color: #fff; font-size: 13px;
+}
+.ob-check.ob-uncheck { background: var(--bg4); color: transparent; border: 2px solid var(--border2); }
+
+/* ── Toast ───────────────────────────────────────────── */
+@keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* ── Var Pills (template) ────────────────────────────── */
+.var-pill {
+  display: inline-flex; align-items: center;
+  background: rgba(108,99,255,0.12); color: var(--indigo);
+  border: 1px solid rgba(108,99,255,0.25); border-radius: 6px;
+  padding: 3px 10px; font-size: 12px; font-family: 'JetBrains Mono', monospace;
+  cursor: pointer; transition: all 0.15s; user-select: none;
+}
+.var-pill:hover { background: rgba(108,99,255,0.22); }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 99px; }
 
-/* ── Layout ── */
+/* ── Noise overlay ───────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  opacity: 0.4;
+}
+
+/* ── Ambient glow ────────────────────────────────────── */
+.glow-orb {
+  position: fixed; border-radius: 50%; filter: blur(80px);
+  pointer-events: none; z-index: 0;
+}
+.glow-1 { width: 400px; height: 400px; background: rgba(108,99,255,0.08); top: -100px; left: 150px; }
+.glow-2 { width: 300px; height: 300px; background: rgba(56,189,248,0.06); bottom: 100px; right: 100px; }
+
+/* ── Layout ──────────────────────────────────────────── */
 .app { display: flex; height: 100vh; overflow: hidden; position: relative; z-index: 1; }
 
-/* ── Sidebar ── */
-.sidebar { width: 220px; flex-shrink: 0; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
-.sidebar-logo { display: flex; align-items: center; padding: 20px 16px 18px; border-bottom: 1px solid var(--border); }
-.sidebar-logo img { height: 38px; width: auto; }
-.nav-wrap { padding: 14px 10px; flex: 1; overflow-y: auto; }
-.nav-section { font-size: 10px; color: var(--text3); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.1em; text-transform: uppercase; padding: 12px 8px 6px; }
+/* ── Sidebar ─────────────────────────────────────────── */
+.sidebar {
+  width: 230px; flex-shrink: 0;
+  background: rgba(18,26,46,0.8);
+  backdrop-filter: blur(20px);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  padding: 0;
+}
+
+.sidebar-logo {
+  display: flex; align-items: center; gap: 12px;
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.logo-mark {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--grad);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; position: relative;
+  box-shadow: 0 0 20px rgba(108,99,255,0.4);
+}
+.logo-mark i { color: #fff; font-size: 18px; }
+.logo-text { font-family: 'Satoshi', sans-serif; }
+.logo-name { font-size: 17px; font-weight: 800; letter-spacing: -0.5px; }
+.logo-tag {
+  font-size: 10px; color: var(--text3);
+  font-family: 'JetBrains Mono', monospace;
+  margin-top: 1px; letter-spacing: 0.05em;
+}
+
+.nav-wrap { padding: 16px 12px; flex: 1; overflow-y: auto; }
+.nav-section {
+  font-size: 10px; color: var(--text3);
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 12px 8px 6px;
+}
+
 .nav-item {
-  display: flex; align-items: center; gap: 10px; padding: 9px 12px;
-  border-radius: var(--radius); cursor: pointer; color: var(--text2);
-  font-size: 13px; font-weight: 500; transition: all 0.2s;
-  border: none; background: none; width: 100%; text-align: left; margin-bottom: 2px;
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: var(--radius);
+  cursor: pointer; color: var(--text2);
+  font-size: 13px; font-weight: 500;
+  transition: all .2s; border: none; background: none;
+  width: 100%; text-align: left; margin-bottom: 2px;
+  position: relative;
 }
 .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.04); }
-.nav-item.active { color: #fff; background: var(--orange-dim); border-left: 2px solid var(--orange); padding-left: 10px; }
-.nav-item.active i { color: var(--orange); }
+.nav-item.active {
+  color: #fff;
+  background: rgba(108,99,255,0.13);
+  border: 1px solid rgba(108,99,255,0.2);
+  border-left: 3px solid var(--indigo);
+  padding-left: 10px;
+}
+.nav-item.active i { color: var(--indigo); }
 .nav-item i { font-size: 17px; flex-shrink: 0; }
-.nav-badge { margin-left: auto; background: var(--red); color: #fff; font-size: 10px; padding: 1px 6px; border-radius: 99px; font-family: 'JetBrains Mono', monospace; }
+.nav-item .nav-badge {
+  margin-left: auto; background: var(--red);
+  color: #fff; font-size: 10px; padding: 1px 6px;
+  border-radius: 99px; font-family: 'JetBrains Mono', monospace;
+}
 
-.sidebar-footer { padding: 12px 10px; border-top: 1px solid var(--border); }
-.user-card { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius); background: rgba(255,255,255,0.03); border: 1px solid var(--border); }
-.user-avatar { width: 32px; height: 32px; border-radius: 8px; background: var(--orange); display: flex; align-items: center; justify-content: center; font-size: 13px; color: #fff; font-weight: 700; font-family: 'Satoshi', sans-serif; }
+.sidebar-footer {
+  padding: 16px 12px;
+  border-top: 1px solid var(--border);
+}
+.user-card {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: var(--radius);
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+}
+.user-avatar {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--grad);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: #fff; font-weight: 700;
+  font-family: 'Satoshi', sans-serif;
+}
 .user-info { flex: 1; min-width: 0; }
 .user-name { font-size: 12px; font-weight: 600; }
 .user-role { font-size: 10px; color: var(--text3); font-family: 'JetBrains Mono', monospace; }
-.logout-btn { background: none; border: none; cursor: pointer; color: var(--text3); padding: 4px; transition: color 0.2s; border-radius: 6px; }
+.logout-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--text3); padding: 4px;
+  transition: color .2s; border-radius: 6px;
+}
 .logout-btn:hover { color: var(--red); }
 
-/* ── Main ── */
+/* ── Main ────────────────────────────────────────────── */
 .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-.topbar { height: 50px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; padding: 0 28px; background: rgba(11,16,32,0.7); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); gap: 8px; }
-.content { flex: 1; overflow-y: auto; padding: 28px; }
 
-/* ── Sections ── */
-.section { display: none; }
-.section.active { display: block; animation: fadeUp 0.22s ease; }
-@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-.page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; }
-.page-title { font-family: 'Satoshi', sans-serif; font-size: 24px; font-weight: 800; letter-spacing: -0.6px; }
-.page-sub { font-size: 12px; color: var(--text2); margin-top: 3px; }
-
-/* ── Animations ── */
-@keyframes skeleton-shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
-@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
-@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-@keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
-/* ── Stat cards ── */
-.stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 20px; }
-.stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px 22px; position: relative; overflow: hidden; transition: border-color 0.2s, box-shadow 0.2s; }
-.stat-card:hover { border-color: var(--border2); }
-.stat-icon { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 17px; }
-.stat-icon.cyan    { background: rgba(56,189,248,0.12); color: #38BDF8; }
-.stat-icon.emerald { background: var(--emerald-dim); color: var(--emerald); }
-.stat-icon.red     { background: var(--red-dim); color: var(--red); }
-.stat-icon.indigo  { background: rgba(99,102,241,0.12); color: #818CF8; }
-.stat-icon.orange  { background: var(--orange-dim); color: var(--orange); }
-.stat-label { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.08em; font-family: 'JetBrains Mono', monospace; margin-bottom: 5px; }
-.stat-val { font-family: 'Satoshi', sans-serif; font-size: 30px; font-weight: 800; letter-spacing: -1px; }
-.stat-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
-.stat-val.loading { background: linear-gradient(90deg, var(--bg3) 25%, var(--bg4) 50%, var(--bg3) 75%); background-size: 400px 100%; animation: skeleton-shimmer 1.4s ease-in-out infinite; border-radius: 5px; color: transparent !important; min-width: 40px; min-height: 32px; display: inline-block; }
-
-/* ── Cards ── */
-.card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); margin-bottom: 18px; }
-.card-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
-.card-title { display: flex; align-items: center; gap: 8px; font-family: 'Satoshi', sans-serif; font-size: 13px; font-weight: 700; }
-.card-title i { color: var(--orange); font-size: 16px; }
-.card-body { padding: 18px 20px; }
-.grad-line { height: 1px; background: linear-gradient(90deg, var(--orange) 0%, transparent 100%); margin: 0; opacity: 0.3; }
-
-/* ── Buttons ── */
-.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: var(--radius); font-size: 13px; font-weight: 600; cursor: pointer; border: none; font-family: inherit; transition: all 0.2s; white-space: nowrap; }
-.btn-primary { background: var(--orange); color: #fff; box-shadow: 0 2px 12px rgba(255,107,53,0.3); }
-.btn-primary:hover { background: #FF7A4A; box-shadow: 0 4px 20px rgba(255,107,53,0.45); transform: translateY(-1px); }
-.btn-ghost { background: rgba(255,255,255,0.04); color: var(--text2); border: 1px solid var(--border2); }
-.btn-ghost:hover { color: var(--text); background: rgba(255,255,255,0.08); }
-.btn-danger { background: var(--red-dim); color: var(--red); border: 1px solid rgba(239,68,68,0.25); }
-.btn-danger:hover { background: rgba(239,68,68,0.2); }
-.btn-sm { padding: 5px 10px; font-size: 12px; }
-.btn-xs { padding: 3px 7px; font-size: 11px; }
-
-/* ── Forms ── */
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.form-group { display: flex; flex-direction: column; gap: 6px; }
-.form-group.full { grid-column: 1 / -1; }
-.form-label { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.08em; font-family: 'JetBrains Mono', monospace; }
-.form-input, .form-select, .form-textarea { background: rgba(255,255,255,0.03); border: 1px solid var(--border2); color: var(--text); padding: 9px 12px; border-radius: 7px; font-size: 13px; font-family: inherit; transition: border-color 0.2s; outline: none; width: 100%; }
-.form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(255,107,53,0.12); }
-.form-textarea { resize: vertical; min-height: 80px; }
-.form-hint { font-size: 11px; color: var(--text3); }
-
-/* ── Tables ── */
-.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.data-table th { padding: 10px 14px; text-align: left; font-size: 10px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; font-family: 'JetBrains Mono', monospace; border-bottom: 1px solid var(--border); }
-.data-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); }
-.data-table tr:last-child td { border-bottom: none; }
-.data-table tr:hover td { background: rgba(255,255,255,0.02); }
-
-/* ── Badges ── */
-.badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; font-family: 'JetBrains Mono', monospace; }
-.badge-green  { background: var(--emerald-dim); color: var(--emerald); border: 1px solid rgba(34,197,94,0.25); }
-.badge-red    { background: var(--red-dim); color: var(--red); border: 1px solid rgba(239,68,68,0.25); }
-.badge-yellow { background: var(--yellow-dim); color: var(--yellow); border: 1px solid rgba(245,158,11,0.25); }
-.badge-gray   { background: rgba(255,255,255,0.05); color: var(--text3); border: 1px solid var(--border2); }
-.badge-orange { background: var(--orange-dim); color: var(--orange); border: 1px solid rgba(255,107,53,0.25); }
-.status-pill  { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 99px; }
-.pill-active   { background: rgba(34,197,94,0.12); color: var(--emerald); border: 1px solid rgba(34,197,94,0.25); }
-.pill-inactive { background: rgba(255,255,255,0.04); color: var(--text3); border: 1px solid var(--border2); }
-
-/* ── Toggle rows ── */
-.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); }
-.toggle-row:last-child { border-bottom: none; }
-.toggle-info .t-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
-.toggle-info .t-desc  { font-size: 12px; color: var(--text2); }
-.toggle { width: 40px; height: 22px; border-radius: 99px; background: var(--bg4); border: none; cursor: pointer; position: relative; flex-shrink: 0; transition: background 0.2s; }
-.toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--text3); transition: all 0.2s; }
-.toggle.on { background: var(--orange); }
-.toggle.on::after { left: 21px; background: #fff; }
-
-/* ── Misc ── */
-.status-dot { display: flex; align-items: center; gap: 6px; font-size: 11px; font-family: 'JetBrains Mono', monospace; }
-.status-dot::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--emerald); box-shadow: 0 0 8px var(--emerald); animation: pulse 2s infinite; }
-.var-pill { display: inline-flex; align-items: center; background: rgba(99,102,241,0.1); color: #818CF8; border: 1px solid rgba(99,102,241,0.2); border-radius: 5px; padding: 2px 9px; font-size: 11px; font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.15s; user-select: none; }
-.var-pill:hover { background: rgba(99,102,241,0.2); }
-.upload-zone { border: 2px dashed var(--border2); border-radius: var(--radius-lg); padding: 28px; text-align: center; cursor: pointer; transition: all 0.2s; }
-.upload-zone:hover { border-color: var(--orange); background: var(--orange-dim); }
-.upload-icon { font-size: 28px; color: var(--text3); margin-bottom: 8px; }
-.upload-title { font-weight: 600; margin-bottom: 4px; }
-.upload-sub { font-size: 12px; color: var(--text3); }
-
-/* ── Login screen ── */
-.login-screen { position: fixed; inset: 0; z-index: 500; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 20px; }
-.login-screen::before { content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none; background-image: radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px); background-size: 28px 28px; mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black 20%, transparent 80%); }
-.login-card { background: var(--bg2); border: 1px solid var(--border2); border-radius: var(--radius-xl); padding: 36px; width: 100%; max-width: 380px; position: relative; z-index: 1; box-shadow: 0 24px 64px rgba(0,0,0,0.5); }
-.login-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
-.login-logo-mark { width: 36px; height: 36px; border-radius: 9px; background: var(--orange); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(255,107,53,0.4); }
-.login-logo-mark i { color: #fff; font-size: 18px; }
-.login-logo-name { font-family: 'Satoshi', sans-serif; font-size: 18px; font-weight: 800; letter-spacing: -0.4px; }
-.login-title { font-family: 'Satoshi', sans-serif; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
-.login-sub { font-size: 13px; color: var(--text2); margin-bottom: 24px; }
-.login-error-msg { padding: 10px 14px; background: var(--red-dim); border: 1px solid rgba(239,68,68,0.3); border-radius: 7px; color: var(--red); font-size: 13px; margin-bottom: 14px; display: none; }
-
-/* ── Sticky save bar ── */
-.save-bar {
-  display: none; position: fixed; bottom: 0; left: 220px; right: 0;
-  background: var(--bg2); border-top: 1px solid var(--border2);
-  padding: 14px 28px; z-index: 50;
-  align-items: center; justify-content: space-between;
-  box-shadow: 0 -8px 32px rgba(0,0,0,0.35);
-  animation: slideIn 0.2s ease;
+.topbar {
+  height: 52px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: flex-end;
+  padding: 0 32px;
+  background: rgba(11,16,32,0.6);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
 }
-.save-bar.visible { display: flex; }
-.save-bar-msg { font-size: 13px; color: var(--text2); display: flex; align-items: center; gap: 7px; }
-.save-bar-msg::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--orange); box-shadow: 0 0 8px var(--orange); flex-shrink: 0; }
+.topbar-left { display: flex; flex-direction: column; }
+.topbar-title {
+  font-family: 'Satoshi', sans-serif;
+  font-size: 16px; font-weight: 700; letter-spacing: -0.3px;
+}
+.topbar-sub { font-size: 11px; color: var(--text3); font-family: 'JetBrains Mono', monospace; margin-top: 1px; }
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+.status-dot {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; font-family: 'JetBrains Mono', monospace;
+}
+.status-dot::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--emerald);
+  box-shadow: 0 0 8px var(--emerald);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
 
-/* ── Modal produto ── */
+.content { flex: 1; overflow-y: auto; padding: 32px; }
+
+/* ── Sections ────────────────────────────────────────── */
+.section { display: none; }
+.section.active { display: block; animation: fadeUp .25s ease; }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Skeleton loading ────────────────────────────────── */
+@keyframes skeleton-shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+.stat-val.loading {
+  background: linear-gradient(90deg, var(--bg3) 25%, var(--bg4) 50%, var(--bg3) 75%);
+  background-size: 400px 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  border-radius: 6px; color: transparent !important;
+  min-width: 44px; min-height: 34px; display: inline-block;
+}
+
+/* ── Page header ─────────────────────────────────────── */
+.page-header {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; margin-bottom: 28px;
+}
+.page-title {
+  font-family: 'Satoshi', sans-serif;
+  font-size: 26px; font-weight: 800; letter-spacing: -0.8px;
+}
+.page-sub { font-size: 12px; color: var(--text2); margin-top: 4px; }
+
+/* ── Stats ───────────────────────────────────────────── */
+.stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 24px; }
+
+.stat-card {
+  background: rgba(18,26,46,0.8);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 22px 24px;
+  position: relative; overflow: hidden;
+  backdrop-filter: blur(10px);
+  transition: border-color .2s, transform .2s;
+}
+.stat-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+.stat-card::after {
+  content: ''; position: absolute;
+  top: 0; left: 0; right: 0; height: 1px;
+  background: var(--grad); opacity: 0.6;
+}
+.stat-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 14px; font-size: 18px;
+}
+.stat-icon.indigo  { background: rgba(108,99,255,0.15); color: var(--indigo); }
+.stat-icon.cyan    { background: rgba(56,189,248,0.15);  color: var(--cyan); }
+.stat-icon.emerald { background: var(--emerald-dim);     color: var(--emerald); }
+.stat-icon.red     { background: var(--red-dim);         color: var(--red); }
+.stat-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.08em; font-family: 'JetBrains Mono', monospace; margin-bottom: 6px; }
+.stat-val { font-family: 'Satoshi', sans-serif; font-size: 32px; font-weight: 800; letter-spacing: -1px; }
+.stat-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+/* ── Cards ───────────────────────────────────────────── */
+.card {
+  background: rgba(18,26,46,0.8);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(10px);
+  margin-bottom: 20px;
+}
+.card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 22px; border-bottom: 1px solid var(--border);
+}
+.card-title {
+  display: flex; align-items: center; gap: 8px;
+  font-family: 'Satoshi', sans-serif; font-size: 14px; font-weight: 700;
+}
+.card-title i { color: var(--indigo); font-size: 17px; }
+.card-body { padding: 20px 22px; }
+
+/* ── Buttons ─────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 18px; border-radius: var(--radius);
+  font-size: 13px; font-weight: 600; cursor: pointer; border: none;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  transition: all .2s; white-space: nowrap;
+}
+.btn-primary {
+  background: var(--grad); color: #fff;
+  box-shadow: 0 4px 20px rgba(108,99,255,0.35);
+}
+.btn-primary:hover { opacity: 0.9; box-shadow: 0 6px 28px rgba(108,99,255,0.5); transform: translateY(-1px); }
+.btn-ghost {
+  background: rgba(255,255,255,0.04);
+  color: var(--text2); border: 1px solid var(--border2);
+}
+.btn-ghost:hover { color: var(--text); background: rgba(255,255,255,0.08); }
+.btn-danger {
+  background: var(--red-dim); color: var(--red);
+  border: 1px solid rgba(244,63,94,0.25);
+}
+.btn-danger:hover { background: rgba(244,63,94,0.2); }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn-xs { padding: 4px 8px; font-size: 11px; }
+
+/* ── Forms ───────────────────────────────────────────── */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-group { display: flex; flex-direction: column; gap: 7px; }
+.form-group.full { grid-column: 1 / -1; }
+.form-label {
+  font-size: 11px; font-weight: 600; color: var(--text2);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  font-family: 'JetBrains Mono', monospace;
+}
+.form-input, .form-select, .form-textarea {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius); padding: 10px 14px;
+  color: var(--text); font-size: 13px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  transition: all .2s; width: 100%;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  outline: none;
+  border-color: var(--indigo);
+  background: rgba(108,99,255,0.05);
+  box-shadow: 0 0 0 3px rgba(108,99,255,0.1);
+}
+.form-select { appearance: none; cursor: pointer; }
+.form-textarea { min-height: 90px; resize: vertical; }
+.form-hint { font-size: 11px; color: var(--text3); font-family: 'JetBrains Mono', monospace; }
+
+/* ── Upload ──────────────────────────────────────────── */
+.upload-zone {
+  border: 1.5px dashed rgba(255,255,255,0.12);
+  border-radius: var(--radius-lg); padding: 28px;
+  text-align: center; cursor: pointer;
+  transition: all .2s;
+  background: rgba(255,255,255,0.02);
+}
+.upload-zone:hover { border-color: var(--indigo); background: rgba(108,99,255,0.05); }
+.upload-zone.has-file { border-color: var(--emerald); background: rgba(16,185,129,0.05); }
+.upload-icon { font-size: 28px; color: var(--text3); display: block; margin-bottom: 8px; transition: color .2s; }
+.upload-zone:hover .upload-icon { color: var(--indigo); }
+.upload-zone.has-file .upload-icon { color: var(--emerald); }
+.upload-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.upload-sub { font-size: 11px; color: var(--text3); font-family: 'JetBrains Mono', monospace; }
+
+/* ── Table ───────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th {
+  font-size: 10px; font-weight: 600; color: var(--text3);
+  text-align: left; padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  font-family: 'JetBrains Mono', monospace;
+}
+tbody td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text); vertical-align: middle;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr { transition: background .15s; }
+tbody tr:hover td { background: rgba(255,255,255,0.02); }
+
+/* ── Badges ──────────────────────────────────────────── */
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 99px;
+  font-size: 11px; font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+}
+.badge-emerald { background: var(--emerald-dim); color: var(--emerald); border: 1px solid rgba(16,185,129,0.25); }
+.badge-red     { background: var(--red-dim);     color: var(--red);     border: 1px solid rgba(244,63,94,0.25); }
+.badge-yellow  { background: var(--yellow-dim);  color: var(--yellow);  border: 1px solid rgba(245,158,11,0.25); }
+.badge-gray    { background: rgba(255,255,255,0.05); color: var(--text2); border: 1px solid var(--border2); }
+.badge-indigo  { background: rgba(108,99,255,0.15); color: var(--indigo); border: 1px solid rgba(108,99,255,0.3); }
+
+/* ── Product cards ───────────────────────────────────── */
+.products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px,1fr)); gap: 16px; }
+.product-card {
+  background: rgba(18,26,46,0.8);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 20px;
+  transition: all .2s; backdrop-filter: blur(10px);
+}
+.product-card:hover { border-color: var(--border2); transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+.product-thumb {
+  width: 100%; height: 96px; border-radius: var(--radius);
+  background: linear-gradient(135deg, rgba(108,99,255,0.1) 0%, rgba(56,189,248,0.08) 100%);
+  border: 1px solid rgba(108,99,255,0.15);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 16px;
+}
+.product-thumb i { font-size: 32px; background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.product-name { font-family: 'Satoshi', sans-serif; font-size: 15px; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.3px; }
+.product-desc { font-size: 12px; color: var(--text2); margin-bottom: 12px; min-height: 36px; line-height: 1.5; }
+.product-price { font-family: 'Satoshi', sans-serif; font-size: 18px; font-weight: 800; background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.product-ids { font-size: 10px; color: var(--text3); font-family: 'JetBrains Mono', monospace; margin: 10px 0 14px; line-height: 1.8; }
+.product-id-item { display: flex; align-items: center; gap: 5px; }
+
+/* ── Log ─────────────────────────────────────────────── */
+.log-box {
+  background: rgba(11,16,32,0.8);
+  border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; max-height: 280px; overflow-y: auto;
+  line-height: 1.7;
+}
+.log-entry { display: flex; gap: 12px; margin-bottom: 4px; }
+.log-time { color: var(--text3); white-space: nowrap; }
+.log-ok   { color: var(--emerald); }
+.log-err  { color: var(--red); }
+.log-inf  { color: var(--cyan); }
+.log-warn { color: var(--yellow); }
+
+/* ── URL box ─────────────────────────────────────────── */
+.url-box {
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(11,16,32,0.8);
+  border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 16px;
+  margin-bottom: 10px;
+}
+.url-box code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; color: var(--cyan); flex: 1; word-break: break-all;
+}
+.url-platform { font-size: 10px; color: var(--text3); font-family: 'JetBrains Mono', monospace; margin-bottom: 8px; letter-spacing: 0.1em; text-transform: uppercase; }
+
+/* ── Toggle ──────────────────────────────────────────── */
+.toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 0; border-bottom: 1px solid var(--border);
+}
+.toggle-row:last-child { border-bottom: none; }
+.toggle-info .t-title { font-size: 13px; font-weight: 600; }
+.toggle-info .t-desc { font-size: 11px; color: var(--text2); margin-top: 3px; font-family: 'JetBrains Mono', monospace; }
+.toggle {
+  width: 42px; height: 24px;
+  background: var(--bg4); border-radius: 99px;
+  position: relative; cursor: pointer; border: none;
+  transition: background .25s; flex-shrink: 0;
+}
+.toggle.on { background: var(--indigo); box-shadow: 0 0 12px rgba(108,99,255,0.4); }
+.toggle::after {
+  content: ''; position: absolute; top: 3px; left: 3px;
+  width: 18px; height: 18px; border-radius: 50%; background: #fff;
+  transition: left .25s; box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+.toggle.on::after { left: 21px; }
+
+/* ── Modal ───────────────────────────────────────────── */
 .modal-bg {
   display: none; position: fixed; inset: 0;
   background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
-  align-items: center; justify-content: center; z-index: 200;
+  align-items: center; justify-content: center; z-index: 100;
 }
 .modal-bg.open { display: flex; }
 .modal {
@@ -198,107 +504,148 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   animation: fadeUp .25s ease;
   box-shadow: 0 24px 80px rgba(0,0,0,0.6);
 }
-.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.modal-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 24px;
+}
 .modal-title { font-family: 'Satoshi', sans-serif; font-size: 18px; font-weight: 800; letter-spacing: -0.4px; }
 
-/* ── Products grid ── */
-.products-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 16px;
+/* ── Divider ─────────────────────────────────────────── */
+.divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+/* ── Login ───────────────────────────────────────────── */
+.login-screen {
+  position: fixed; inset: 0; background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200;
 }
-.product-card {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--radius-lg); padding: 20px;
-  display: flex; flex-direction: column;
-  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+.login-bg-grad {
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse 60% 50% at 50% 0%, rgba(108,99,255,0.12) 0%, transparent 70%);
 }
-.product-card:hover {
-  border-color: var(--border2); transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+.login-card {
+  position: relative; z-index: 1;
+  background: rgba(18,26,46,0.9);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-xl); padding: 44px 40px;
+  width: 400px;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 32px 80px rgba(0,0,0,0.5);
+}
+.login-logo { text-align: center; margin-bottom: 36px; }
+.login-logo .lmark {
+  width: 52px; height: 52px; border-radius: 14px;
+  background: var(--grad); display: inline-flex;
+  align-items: center; justify-content: center;
+  margin-bottom: 16px;
+  box-shadow: 0 8px 32px rgba(108,99,255,0.4);
+}
+.login-logo .lmark i { font-size: 26px; color: #fff; }
+.login-logo h1 { font-family: 'Satoshi', sans-serif; font-size: 28px; font-weight: 900; letter-spacing: -1px; }
+.login-logo p { font-size: 12px; color: var(--text2); margin-top: 6px; font-family: 'JetBrains Mono', monospace; }
+.login-error {
+  background: var(--red-dim); border: 1px solid rgba(244,63,94,0.3);
+  border-radius: var(--radius); padding: 12px 16px;
+  font-size: 12px; color: var(--red); margin-bottom: 16px; display: none;
+  font-family: 'JetBrains Mono', monospace;
 }
 
-/* ── Table wrap ── */
-.table-wrap { overflow-x: auto; }
-.table-wrap table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.table-wrap table th { padding: 10px 14px; text-align: left; font-size: 10px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; font-family: 'JetBrains Mono', monospace; border-bottom: 1px solid var(--border); }
-.table-wrap table td { padding: 12px 14px; border-bottom: 1px solid var(--border); }
-.table-wrap table tr:last-child td { border-bottom: none; }
-.table-wrap table tr:hover td { background: rgba(255,255,255,0.02); }
+/* ── Empty state ─────────────────────────────────────── */
+.empty { text-align: center; padding: 56px 24px; }
+.empty i { font-size: 40px; color: var(--text3); display: block; margin-bottom: 14px; }
+.empty p { font-size: 13px; color: var(--text2); }
 
-/* ── Webhook accordion ── */
-.wh-accordion { margin-bottom: 12px; }
-.wh-acc-header { user-select: none; }
-.wh-chevron { font-size: 16px; color: var(--text3); transition: transform 0.25s; flex-shrink: 0; }
-.wh-accordion.open .wh-chevron { transform: rotate(180deg); }
-.wh-acc-body { display: none; border-top: 1px solid var(--border); }
-.wh-accordion.open .wh-acc-body { display: block; }
+/* ── Misc ────────────────────────────────────────────── */
+.mono { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text2); }
+.flex { display: flex; align-items: center; gap: 8px; }
+.ml-auto { margin-left: auto; }
+.text-grad { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
-/* ── Onboarding ── */
-.ob-platform-card { display: flex; align-items: center; justify-content: space-between; background: var(--bg3); border: 2px solid var(--border2); border-radius: 12px; padding: 14px 16px; cursor: pointer; transition: all 0.2s; }
-.ob-platform-card.ob-selected { border-color: var(--orange); background: var(--orange-dim); }
-.ob-check { width: 22px; height: 22px; border-radius: 50%; background: var(--orange); display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #fff; font-size: 13px; }
-.ob-check.ob-uncheck { background: var(--bg4); color: transparent; border: 2px solid var(--border2); }
+/* ── Grad separator ──────────────────────────────────── */
+.grad-line { height: 1px; background: var(--grad); opacity: 0.3; margin: 24px 0; }
 </style>
 </head>
 <body>
-<!-- ── LOGIN ── -->
-<div id="login-screen" class="login-screen">
+
+<!-- Ambient -->
+<div class="glow-orb glow-1"></div>
+<div class="glow-orb glow-2"></div>
+
+<!-- ── LOGIN ─────────────────────────────────────────── -->
+<div class="login-screen" id="login-screen">
+  <div class="login-bg-grad"></div>
   <div class="login-card">
     <div class="login-logo">
-      <div class="login-logo-mark"><i class="ti ti-package"></i></div>
-      <span class="login-logo-name">Vaultly</span>
+      <img src="/img/logo-vertical.png" alt="Vaultly" style="height:110px;width:auto;margin-bottom:4px;">
+      <p>digital delivery · automated</p>
     </div>
-    <div class="login-title">Bem-vindo de volta</div>
-    <div class="login-sub">Entre com sua conta para acessar o painel</div>
-    <div id="login-error" class="login-error-msg"></div>
+    <div class="login-error" id="login-error">Credenciais inválidas. Tente novamente.</div>
     <div class="form-group" style="margin-bottom:14px;">
       <label class="form-label">Email</label>
-      <input type="email" id="login-user" class="form-input" placeholder="seu@email.com" autocomplete="email" onkeydown="if(event.key==='Enter')doLogin()"/>
+      <input type="email" class="form-input" id="login-user" placeholder="seu@email.com" autocomplete="email" onkeydown="if(event.key==='Enter')doLogin()" />
     </div>
-    <div class="form-group" style="margin-bottom:20px;">
+    <div class="form-group" style="margin-bottom:24px;">
       <label class="form-label">Senha</label>
-      <input type="password" id="login-pass" class="form-input" placeholder="Sua senha" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
+      <input type="password" class="form-input" id="login-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()" />
     </div>
-    <button class="btn btn-primary" style="width:100%;padding:11px;font-size:14px;justify-content:center;" onclick="doLogin()">
-      Entrar no painel
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;" onclick="doLogin()">
+      <i class="ti ti-login"></i> Entrar no painel
     </button>
-    <p style="text-align:center;margin-top:16px;font-size:12px;color:var(--text3);">
-      Sem conta? <a href="https://vaultly.digital" style="color:var(--orange);text-decoration:none;font-weight:600;">Criar conta grátis</a>
+    <p style="text-align:center;font-size:11px;color:var(--text3);margin-top:20px;font-family:'JetBrains Mono',monospace;">
+      Vaultly v1.0 · Painel administrativo
     </p>
   </div>
 </div>
 
-<!-- ── APP ── -->
+<!-- ── APP ───────────────────────────────────────────── -->
 <div class="app" id="app" style="display:none;">
 
   <!-- Sidebar -->
   <aside class="sidebar">
     <div class="sidebar-logo">
-      <img src="/img/logo-horizontal.png" alt="Vaultly" style="height:38px;width:auto;">
+      <img src="/img/logo-horizontal.png" alt="Vaultly" style="height:42px;width:auto;">
     </div>
+
     <div class="nav-wrap">
       <div class="nav-section">Principal</div>
-      <button class="nav-item active" onclick="switchTab('dashboard',this)"><i class="ti ti-layout-dashboard"></i> Dashboard</button>
-      <button class="nav-item" onclick="switchTab('produtos',this)"><i class="ti ti-package"></i> Produtos</button>
-      <button class="nav-item" onclick="switchTab('entregas',this)"><i class="ti ti-mail-forward"></i> Entregas</button>
+      <button class="nav-item active" onclick="switchTab('dashboard',this)">
+        <i class="ti ti-layout-dashboard"></i> Dashboard
+      </button>
+      <button class="nav-item" onclick="switchTab('produtos',this)">
+        <i class="ti ti-package"></i> Produtos
+      </button>
+      <button class="nav-item" onclick="switchTab('entregas',this)">
+        <i class="ti ti-mail-forward"></i> Entregas
+      </button>
+
       <div class="nav-section">Sistema</div>
-      <button class="nav-item" onclick="switchTab('webhook',this)"><i class="ti ti-webhook"></i> Webhook</button>
-      <button class="nav-item" onclick="switchTab('email',this)"><i class="ti ti-mail"></i> Email</button>
-      <button class="nav-item" onclick="switchTab('config',this)"><i class="ti ti-settings"></i> Configurações</button>
-      <div id="admin-nav-section" style="display:none;">
+      <button class="nav-item" onclick="switchTab('webhook',this)">
+        <i class="ti ti-webhook"></i> Webhook
+      </button>
+      <button class="nav-item" onclick="switchTab('email',this)">
+        <i class="ti ti-mail"></i> Email
+      </button>
+      <button class="nav-item" onclick="switchTab('config',this)">
+        <i class="ti ti-settings"></i> Configurações
+      </button>
+      <div id="admin-nav-section" style="display:none">
         <div class="nav-section">Administração</div>
-        <a class="nav-item" href="/admin.html" style="text-decoration:none;"><i class="ti ti-shield-check"></i> Painel Admin</a>
+        <a class="nav-item" href="/admin.html" style="text-decoration:none;">
+          <i class="ti ti-shield-check"></i> Painel Admin
+        </a>
       </div>
     </div>
+
     <div class="sidebar-footer">
       <div class="user-card">
         <div class="user-avatar" id="user-avatar">A</div>
         <div class="user-info">
-          <div class="user-name" id="user-name-label">Usuário</div>
-          <div class="user-role" id="user-plan-label" style="color:var(--amber);font-size:10px;font-family:'JetBrains Mono',monospace;"></div>
+          <div class="user-name" id="user-name-label">Admin</div>
+          <div class="user-role">administrador</div>
         </div>
-        <button class="logout-btn" onclick="doLogout()" title="Sair"><i class="ti ti-logout" style="font-size:16px;"></i></button>
+        <button class="logout-btn" onclick="doLogout()" title="Sair">
+          <i class="ti ti-logout" style="font-size:16px;"></i>
+        </button>
       </div>
     </div>
   </aside>
@@ -306,17 +653,23 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   <!-- Main -->
   <div class="main">
     <div class="topbar">
-      <div id="tb-deliveries-today" style="display:none;align-items:center;gap:5px;background:var(--emerald-dim);border:1px solid rgba(34,197,94,0.2);padding:4px 10px;border-radius:99px;font-size:12px;color:var(--emerald);font-weight:600;cursor:default;" title="Entregas hoje">
-        <i class="ti ti-package" style="font-size:13px;"></i>
-        <span id="tb-today-count">0</span>
+      <div class="topbar-right">
+        <!-- Entregas hoje -->
+        <div id="tb-deliveries-today" style="display:none;align-items:center;gap:5px;background:var(--emerald-dim);border:1px solid rgba(16,185,129,0.2);padding:4px 10px;border-radius:99px;font-size:12px;color:var(--emerald);font-weight:600;cursor:default;" title="Entregas hoje">
+          <i class="ti ti-package" style="font-size:13px;"></i>
+          <span id="tb-today-count">0</span>
+        </div>
+        <!-- Produtos pendentes -->
+        <div id="tb-unmatched" style="display:none;align-items:center;gap:5px;background:var(--yellow-dim);border:1px solid rgba(245,158,11,0.25);padding:4px 10px;border-radius:99px;font-size:12px;color:var(--yellow);font-weight:600;cursor:pointer;" title="Produtos não mapeados" onclick="switchTabById('produtos')">
+          <i class="ti ti-alert-triangle" style="font-size:13px;"></i>
+          <span id="tb-unmatched-count">0</span> pendentes
+        </div>
+        <span id="topbar-btn" style="display:none;"></span>
       </div>
-      <div id="tb-unmatched" style="display:none;align-items:center;gap:5px;background:var(--yellow-dim);border:1px solid rgba(245,158,11,0.25);padding:4px 10px;border-radius:99px;font-size:12px;color:var(--yellow);font-weight:600;cursor:pointer;" onclick="switchTabById('produtos')">
-        <i class="ti ti-alert-triangle" style="font-size:13px;"></i>
-        <span id="tb-unmatched-count">0</span> pendentes
-      </div>
-      <span id="topbar-btn" style="display:none;"></span>
     </div>
+
     <div class="content">
+
       <!-- ── DASHBOARD ── -->
       <div id="tab-dashboard" class="section active">
         <div class="page-header">
@@ -351,7 +704,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
           <div class="stat-card" id="stat-products-card">
             <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
               <div>
-                <div class="stat-icon orange" id="products-icon"><i class="ti ti-packages"></i></div>
+                <div class="stat-icon indigo" id="products-icon"><i class="ti ti-packages"></i></div>
                 <div class="stat-label">Produtos</div>
                 <div class="stat-val loading" id="s-products"> </div>
                 <div class="stat-sub" id="products-sub">cadastrados na plataforma</div>
@@ -402,11 +755,8 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
           </div>
         </div>
 
-        <!-- Resultado do import (Kiwify/Yampi) — visível ao clicar em Importar -->
-        <div id="platform-import-list" style="display:none;margin-bottom:16px;"></div>
-
         <!-- Produtos não mapeados (capturados via webhook) -->
-        <div id="unmatched-section" style="display:none;background:var(--bg3);border:1px solid var(--yellow);border-radius:var(--radius);padding:16px 20px;margin-bottom:24px;">
+        <div id="unmatched-section" style="background:var(--bg3);border:1px solid var(--yellow);border-radius:var(--radius);padding:16px 20px;margin-bottom:24px;">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
             <i class="ti ti-alert-triangle" style="color:var(--yellow);font-size:16px;"></i>
             <span style="font-weight:600;font-size:13px;color:var(--yellow);">Produtos Pendentes</span>
@@ -414,6 +764,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
             <span style="font-size:12px;color:var(--text2);margin-left:4px;">— chegaram via webhook mas ainda não têm arquivo vinculado</span>
           </div>
           <div id="unmatched-list" style="color:var(--text3);font-size:13px;">Verificando...</div>
+          <div id="platform-import-list" style="margin-top:8px;"></div>
         </div>
 
         <div class="products-grid" id="products-grid">
@@ -451,6 +802,9 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
             <div class="page-title">Webhook</div>
             <div class="page-sub">integração e configuração de plataformas</div>
           </div>
+          <button class="btn btn-primary btn-sm" onclick="saveWebhookConfig()" id="btn-save-webhook">
+            <i class="ti ti-device-floppy"></i> Salvar
+          </button>
         </div>
 
         <!-- Kiwify Acordeão -->
@@ -471,13 +825,12 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
                 <code id="url-kiwify">—</code>
                 <button class="btn btn-ghost btn-xs" onclick="copyText('url-kiwify',this)"><i class="ti ti-copy"></i></button>
               </div>
-              <input type="hidden" id="kiwify-url-input" />
               <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:8px;">Segurança</div>
               <div class="form-group" style="max-width:480px;">
                 <label class="form-label">Secret Kiwify</label>
                 <div style="display:flex;gap:8px;">
-                  <input type="password" class="form-input" id="cfg-kiwify-secret" placeholder="Token gerado pela Kiwify" style="flex:1;" oninput="markWebhookDirty()"/>
-                  <button class="btn btn-ghost btn-sm" onclick="var i=this.previousElementSibling;var ic=this.querySelector('i');i.type=i.type==='password'?'text':'password';ic.className=i.type==='password'?'ti ti-eye':'ti ti-eye-off';" title="Mostrar/ocultar"><i class="ti ti-eye"></i></button>
+                  <input type="password" class="form-input" id="cfg-kiwify-secret" placeholder="Token gerado pela Kiwify" style="flex:1;" />
+                  <button class="btn btn-ghost btn-sm" onclick="this.previousElementSibling.type=this.previousElementSibling.type==='password'?'text':'password'" title="Mostrar/ocultar"><i class="ti ti-eye"></i></button>
                 </div>
                 <div class="form-hint">Kiwify → Configurações → Webhooks → seu webhook → <em>Chave secreta</em>. Deixe em branco para não validar.</div>
               </div>
@@ -507,57 +860,26 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
                 <code id="url-yampi">—</code>
                 <button class="btn btn-ghost btn-xs" onclick="copyText('url-yampi',this)"><i class="ti ti-copy"></i></button>
               </div>
-              <!-- Bloco 1: Webhook -->
-              <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:16px;">
-                <div style="display:flex;align-items:center;gap:7px;margin-bottom:14px;">
-                  <i class="ti ti-webhook" style="color:var(--orange);font-size:14px;"></i>
-                  <span style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text2);text-transform:uppercase;">Para receber pedidos</span>
+              <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:8px;">Segurança</div>
+              <div class="form-group" style="max-width:480px;margin-bottom:16px;">
+                <label class="form-label">Secret Yampi</label>
+                <div style="display:flex;gap:8px;">
+                  <input type="password" class="form-input" id="cfg-yampi-secret" placeholder="Token gerado pela Yampi" style="flex:1;" />
+                  <button class="btn btn-ghost btn-sm" onclick="this.previousElementSibling.type=this.previousElementSibling.type==='password'?'text':'password'" title="Mostrar/ocultar"><i class="ti ti-eye"></i></button>
                 </div>
-                <p style="font-size:12px;color:var(--text2);margin-bottom:14px;">Cole a URL acima em <strong>Yampi → Configurações → Webhooks → Adicionar</strong>, evento <strong>order.paid</strong>.</p>
-                <div class="form-group" style="max-width:480px;">
-                  <label class="form-label">Secret do Webhook</label>
-                  <div style="display:flex;gap:8px;">
-                    <input type="password" class="form-input" id="cfg-yampi-secret" placeholder="Token de validação (opcional)" style="flex:1;" oninput="markWebhookDirty()"/>
-                    <button class="btn btn-ghost btn-sm" onclick="var i=this.previousElementSibling;var ic=this.querySelector('i');i.type=i.type==='password'?'text':'password';ic.className=i.type==='password'?'ti ti-eye':'ti ti-eye-off';" title="Mostrar/ocultar"><i class="ti ti-eye"></i></button>
-                  </div>
-                  <div class="form-hint">Yampi → Configurações → Webhooks → seu webhook → Token. Deixe vazio para não validar assinatura.</div>
-                </div>
+                <div class="form-hint">Yampi → Configurações → Webhooks → token. Deixe em branco para nao validar.</div>
               </div>
-
-              <!-- Bloco 2: API para importar produtos -->
-              <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-                  <div style="display:flex;align-items:center;gap:7px;">
-                    <i class="ti ti-download" style="color:var(--orange);font-size:14px;"></i>
-                    <span style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text2);text-transform:uppercase;">Para importar produtos</span>
-                  </div>
-                  <button class="btn btn-ghost btn-xs" onclick="testYampiConnection(this)"><i class="ti ti-plug"></i> Testar conexão</button>
+              <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:8px;">API — Importar Produtos</div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Alias da loja</label>
+                  <input type="text" class="form-input" id="cfg-yampi-alias" placeholder="minha-loja" />
+                  <div class="form-hint">URL: yampi.com.br/<strong>alias</strong></div>
                 </div>
-                <!-- Instruções passo a passo -->
-                <div style="background:var(--bg4);border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;font-size:12px;color:var(--text2);line-height:1.8;">
-                  <div style="font-weight:600;color:var(--text);margin-bottom:6px;">Como encontrar o Token correto:</div>
-                  <div>1. Acesse <strong style="color:var(--text);">Yampi</strong> → menu lateral → <strong style="color:var(--text);">Configurações</strong></div>
-                  <div>2. Clique em <strong style="color:var(--text);">Integrações</strong> → <strong style="color:var(--text);">API</strong></div>
-                  <div>3. Copie o <strong style="color:var(--amber);">User Token</strong> (não o Secret Token — são diferentes)</div>
-                  <div>4. Cole abaixo e salve</div>
-                </div>
-                <div id="yampi-test-result" style="display:none;margin-bottom:12px;"></div>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label class="form-label">Alias da loja</label>
-                    <input type="text" class="form-input" id="cfg-yampi-alias" placeholder="minha-loja" oninput="markWebhookDirty()"/>
-                    <div class="form-hint">Parte final da URL: yampi.com.br/<strong>alias</strong></div>
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">Token</label>
-                    <input type="password" class="form-input" id="cfg-yampi-token" placeholder="Token da API" oninput="markWebhookDirty()"/>
-                    <div class="form-hint">O campo <strong>Token</strong> nas credenciais da Yampi</div>
-                  </div>
-                  <div class="form-group full">
-                    <label class="form-label">Chave secreta <span style="color:var(--amber);font-size:9px;font-weight:700;background:rgba(255,159,28,0.12);padding:2px 6px;border-radius:99px;margin-left:4px;">OBRIGATÓRIO</span></label>
-                    <input type="password" class="form-input" id="cfg-yampi-secret-token" placeholder="sk_xxxxxxxxxxxxxxxxxx" oninput="markWebhookDirty()"/>
-                    <div class="form-hint">O campo <strong>Chave secreta</strong> (sk_...) — exigido pela API da Yampi junto com o Token</div>
-                  </div>
+                <div class="form-group">
+                  <label class="form-label">Token API Yampi</label>
+                  <input type="password" class="form-input" id="cfg-yampi-token" placeholder="live_xxxxxxxxx" />
+                  <div class="form-hint">Yampi → Configurações → Integracoes → API</div>
                 </div>
               </div>
             </div>
@@ -565,7 +887,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
         </div>
 
         <!-- Simulador de webhook -->
-        <div class="card" style="border-color:rgba(255,107,53,0.3);">
+        <div class="card" style="border-color:rgba(108,99,255,0.3);">
           <div class="card-header">
             <div class="card-title"><i class="ti ti-test-pipe"></i> Simular envio (teste interno)</div>
           </div>
@@ -646,7 +968,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
         </div>
 
         <!-- Status do remetente -->
-        <div id="email-status-card" class="card" style="border-color:var(--orange);margin-bottom:8px;">
+        <div id="email-status-card" class="card" style="border-color:var(--indigo);margin-bottom:8px;">
           <div class="card-body" style="padding:14px 20px;">
             <div style="display:flex;align-items:center;gap:10px;">
               <div id="email-status-dot" style="width:8px;height:8px;border-radius:50%;background:var(--emerald);flex-shrink:0;"></div>
@@ -679,32 +1001,33 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
           </div>
         </div>
 
+        <!-- Infraestrutura de envio -->
         <!-- Infraestrutura de Envio — disponível a partir do Basic -->
         <div class="card" style="position:relative;overflow:hidden;">
           <div class="card-header">
             <div class="card-title"><i class="ti ti-server"></i> Infraestrutura de Envio</div>
-            <span id="resend-infra-badge" style="display:none;font-size:10px;font-weight:700;background:rgba(255,107,53,0.15);color:var(--orange);border:1px solid rgba(255,107,53,0.3);padding:2px 8px;border-radius:99px;">BASIC+</span>
+            <span id="resend-infra-badge" style="display:none;font-size:10px;font-weight:700;background:rgba(108,99,255,0.15);color:var(--indigo);border:1px solid rgba(108,99,255,0.3);padding:2px 8px;border-radius:99px;">BASIC+</span>
           </div>
           <div class="card-body">
-            <div style="background:var(--bg4);border-radius:var(--radius);padding:14px 16px;margin-bottom:20px;border-left:3px solid var(--orange);">
-              <div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:6px;"><i class="ti ti-info-circle"></i> Como funciona</div>
+            <div style="background:var(--bg4);border-radius:var(--radius);padding:14px 16px;margin-bottom:20px;border-left:3px solid var(--indigo);">
+              <div style="font-size:12px;font-weight:600;color:var(--cyan);margin-bottom:6px;"><i class="ti ti-info-circle"></i> Como funciona</div>
               <div style="font-size:12px;color:var(--text2);line-height:1.7;">
                 Por padrão, seus emails são enviados pela <strong style="color:var(--text);">infraestrutura Vaultly</strong> sem nenhuma configuração.
                 Para usar <strong style="color:var(--text);">sua própria conta Resend</strong> (reputação separada, limites próprios, remetente customizado), preencha a API Key abaixo.
               </div>
             </div>
             <div class="form-group" style="max-width:480px;">
-              <label class="form-label">API Key Resend <span style="color:var(--orange);font-size:10px;font-weight:600;background:rgba(255,107,53,0.12);padding:2px 7px;border-radius:99px;margin-left:4px;">OPCIONAL</span></label>
+              <label class="form-label">API Key Resend <span style="color:var(--indigo);font-size:10px;font-weight:600;background:rgba(108,99,255,0.12);padding:2px 7px;border-radius:99px;margin-left:4px;">OPCIONAL</span></label>
               <div style="display:flex;gap:8px;">
                 <input type="password" class="form-input" id="cfg-resend-key" placeholder="re_xxxxxxxxxxxxxxxxxxxx" style="flex:1;" />
                 <button class="btn btn-ghost btn-sm" onclick="toggleResendKey()" id="btn-toggle-key" title="Mostrar/ocultar"><i class="ti ti-eye"></i></button>
               </div>
-              <div class="form-hint">Crie em <a href="https://resend.com/api-keys" target="_blank" style="color:var(--orange);">resend.com/api-keys</a></div>
+              <div class="form-hint">Crie em <a href="https://resend.com/api-keys" target="_blank" style="color:var(--indigo);">resend.com/api-keys</a></div>
             </div>
           </div>
           <!-- Lock overlay — Free e Starter -->
           <div id="resend-infra-lock" style="display:none;position:absolute;inset:0;background:rgba(11,16,32,0.85);backdrop-filter:blur(4px);flex-direction:column;align-items:center;justify-content:center;gap:12px;border-radius:inherit;">
-            <i class="ti ti-lock" style="font-size:32px;color:var(--orange);"></i>
+            <i class="ti ti-lock" style="font-size:32px;color:var(--indigo);"></i>
             <div style="text-align:center;">
               <div style="font-weight:700;font-size:15px;margin-bottom:4px;">Disponível a partir do plano Basic</div>
               <div style="font-size:12px;color:var(--text2);max-width:280px;">Use sua própria conta Resend com domínio verificado e reputação separada.</div>
@@ -825,6 +1148,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
           </div>
         </div>
       </div>
+
     </div>
   </div>
 </div>
@@ -833,7 +1157,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 <div id="onboarding-modal" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:16px;">
   <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:20px;max-width:540px;width:100%;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,0.6);">
     <!-- Header -->
-    <div style="background:linear-gradient(135deg,var(--orange),var(--amber));padding:28px 28px 22px;">
+    <div style="background:linear-gradient(135deg,#6C63FF,#38BDF8);padding:28px 28px 22px;">
       <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.7);text-transform:uppercase;margin-bottom:6px;">Bem-vindo ao Vaultly</div>
       <h2 style="color:#fff;margin:0;font-size:22px;font-weight:700;" id="ob-step-title">Vamos configurar sua conta</h2>
       <p style="color:rgba(255,255,255,0.8);margin:6px 0 0;font-size:13px;" id="ob-step-sub">Responda rapidamente para personalizar sua experiência</p>
@@ -896,7 +1220,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
           <div class="form-group">
             <label class="form-label">API Key Resend</label>
             <input type="password" class="form-input" id="ob-resend-key" placeholder="re_xxxxxxxxxxxxxxxxxxxx" />
-            <div class="form-hint">Crie em <a href="https://resend.com/api-keys" target="_blank" style="color:var(--orange);">resend.com/api-keys</a></div>
+            <div class="form-hint">Crie em <a href="https://resend.com/api-keys" target="_blank" style="color:var(--indigo);">resend.com/api-keys</a></div>
           </div>
         </div>
       </div>
@@ -922,20 +1246,11 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   </div>
 </div>
 
-<!-- ── STICKY SAVE BAR (webhook) ── -->
-<div class="save-bar" id="webhook-save-bar">
-  <span class="save-bar-msg">Você tem alterações não salvas</span>
-  <div style="display:flex;gap:10px;">
-    <button class="btn btn-ghost btn-sm" onclick="discardWebhookChanges()"><i class="ti ti-x"></i> Descartar</button>
-    <button class="btn btn-primary btn-sm" onclick="saveWebhookConfig()" id="btn-save-webhook"><i class="ti ti-device-floppy"></i> Salvar alterações</button>
-  </div>
-</div>
-
 <!-- ── MODAL UPGRADE ── -->
 <div id="upgrade-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:16px;overflow-y:auto;" onclick="if(event.target===this)hideUpgradeModal()">
   <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:18px;max-width:720px;width:100%;overflow:hidden;box-shadow:0 32px 72px rgba(0,0,0,0.6);margin:auto;">
     <!-- Header -->
-    <div style="background:var(--orange);padding:24px 28px 20px;position:relative;">
+    <div style="background:linear-gradient(135deg,#6C63FF,#38BDF8);padding:24px 28px 20px;position:relative;">
       <button onclick="hideUpgradeModal()" style="position:absolute;top:14px;right:14px;background:rgba(255,255,255,0.15);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">&#x2715;</button>
       <div style="font-size:10px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.7);text-transform:uppercase;margin-bottom:4px;">Planos Vaultly</div>
       <h2 style="color:#fff;margin:0;font-size:20px;font-weight:700;">Escolha o plano ideal para o seu negócio</h2>
@@ -1008,13 +1323,13 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
         <button onclick="startCheckout('starter')" id="btn-checkout-starter" style="display:flex;align-items:center;justify-content:center;gap:4px;background:rgba(108,99,255,.15);color:var(--indigo);border:1px solid rgba(108,99,255,.3);padding:10px 4px;border-radius:9px;font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">
           <i class="ti ti-rocket"></i> <span id="btn-label-starter">Starter R$37</span>
         </button>
-        <button onclick="startCheckout('basic')" id="btn-checkout-basic" style="display:flex;align-items:center;justify-content:center;gap:4px;background:linear-gradient(135deg,#FF6B35,#FF9F1C);color:#fff;border:none;padding:10px 4px;border-radius:9px;font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">
+        <button onclick="startCheckout('basic')" id="btn-checkout-basic" style="display:flex;align-items:center;justify-content:center;gap:4px;background:linear-gradient(135deg,#6C63FF,#38BDF8);color:#fff;border:none;padding:10px 4px;border-radius:9px;font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">
           <i class="ti ti-rocket"></i> <span id="btn-label-basic">Basic R$77</span>
         </button>
         <button onclick="startCheckout('pro')" id="btn-checkout-pro" style="display:flex;align-items:center;justify-content:center;gap:4px;background:linear-gradient(135deg,#38BDF8,#10B981);color:#fff;border:none;padding:10px 4px;border-radius:9px;font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">
           <i class="ti ti-crown"></i> <span id="btn-label-pro">Pro R$147</span>
         </button>
-        <button onclick="startCheckout('business')" id="btn-checkout-business" style="display:none;align-items:center;justify-content:center;gap:4px;background:linear-gradient(135deg,#A855F7,#FF6B35);color:#fff;border:none;padding:10px 4px;border-radius:9px;font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">
+        <button onclick="startCheckout('business')" id="btn-checkout-business" style="display:none;align-items:center;justify-content:center;gap:4px;background:linear-gradient(135deg,#A855F7,#6C63FF);color:#fff;border:none;padding:10px 4px;border-radius:9px;font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">
           <i class="ti ti-building"></i> <span id="btn-label-business">Business R$247</span>
         </button>
       </div>
@@ -1084,6 +1399,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 </div>
 
 <script>
+// ── Config ───────────────────────────────────────────────────────
 let authToken = localStorage.getItem('vaultly_token') || null;
 let currentUser = null;
 
@@ -1149,7 +1465,7 @@ function showApp() {
   }
   // Card de assinatura na aba Config
   var planLabels = { free: 'Free', starter: 'Starter', basic: 'Basic', pro: 'Pro', business: 'Business' };
-  var planSubs   = { free: 'Grátis · 1 produto · 50 entregas/mês', starter: 'R$37/mês · 2 produtos · 200 entregas/mês', basic: 'R$77/mês · 5 produtos · 1.000 entregas/mês', pro: 'R$147/mês · produtos ilimitados · 5.000 entregas/mês', business: 'R$247/mês anual · ilimitado' };
+  var planSubs   = { free: 'Grátis · 1 produto · 50 entregas/mês', starter: 'R$37/mês · 2 produtos · 200 entregas/mês', basic: 'R$77/mês · 5 produtos · 1.000 entregas/mês', pro: 'R$147/mês · produtos ilimitados · 5.000 entregas/mês', business: 'R$297/mês · ilimitado' };
   var userPlan   = currentUser ? (currentUser.plan_id || 'free') : 'free';
   var cfgName = document.getElementById('cfg-plan-name');
   var cfgSub  = document.getElementById('cfg-plan-sub');
@@ -1211,6 +1527,22 @@ async function changePass() {
   document.getElementById('new-pass').value = '';
   document.getElementById('confirm-pass').value = '';
 }
+
+// Auto-login se tiver token salvo
+window.addEventListener('load', async () => {
+  if (authToken) {
+    try {
+      const res = await apiFetch('/api/auth/me');
+      if (res.success) {
+        currentUser = res.user;
+        showApp();
+        return;
+      }
+    } catch(e){}
+    authToken = null;
+    localStorage.removeItem('vaultly_token');
+  }
+});
 
 // ── Init ─────────────────────────────────────────────────────────
 async function initApp() {
@@ -1276,8 +1608,6 @@ async function loadWebhookConfig() {
       document.getElementById('cfg-yampi-alias').value = d.yampi_store_alias || '';
     if (document.getElementById('cfg-yampi-token'))
       document.getElementById('cfg-yampi-token').value = d.has_yampi_token ? '••••••••••••••••' : '';
-    if (document.getElementById('cfg-yampi-secret-token'))
-      document.getElementById('cfg-yampi-secret-token').value = d.has_yampi_secret_token ? '••••••••••••••••' : '';
 
     // Atualiza pills de status
     var platforms = (d.platforms_enabled || '').split(',');
@@ -1311,75 +1641,25 @@ function toggleAccordion(platform) {
   if (el) el.classList.toggle('open');
 }
 
-async function testYampiConnection(btn) {
-  var resultEl = document.getElementById('yampi-test-result');
-  var alias = document.getElementById('cfg-yampi-alias').value.trim();
-  var token = document.getElementById('cfg-yampi-token').value.trim();
-  var secretToken = document.getElementById('cfg-yampi-secret-token').value.trim();
-
-  // Permite testar se os valores já estão salvos (mostrando ••••) ou recém-digitados
-  var hasAlias = !!alias;
-  var hasToken = !!token;
-  var hasSecret = !!secretToken;
-  if (!hasAlias || !hasToken || !hasSecret) {
-    resultEl.style.display = 'block';
-    resultEl.innerHTML = '<div style="background:var(--yellow-dim);border:1px solid rgba(245,158,11,0.3);border-radius:var(--radius);padding:10px 12px;font-size:12px;color:var(--yellow);"><i class="ti ti-alert-triangle"></i> Preencha o Alias, o Token e a Chave secreta. Depois clique em <strong>Salvar alterações</strong> e então teste a conexão.</div>';
-    return;
-  }
-
-  btn.disabled = true;
-  btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i> Testando...';
-  resultEl.style.display = 'none';
-
-  try {
-    var res = await apiFetch('/api/products/platform-list/yampi');
-    if (!res.success) throw new Error(res.error);
-    resultEl.style.display = 'block';
-    resultEl.innerHTML = '<div style="background:var(--emerald-dim);border:1px solid rgba(34,197,94,0.3);border-radius:var(--radius);padding:10px 12px;font-size:12px;color:var(--emerald);display:flex;align-items:center;gap:7px;"><i class="ti ti-circle-check" style="font-size:16px;"></i> Conexão bem-sucedida! ' + (res.data ? res.data.length : 0) + ' produto(s) encontrado(s) na loja.</div>';
-  } catch(e) {
-    resultEl.style.display = 'block';
-    resultEl.innerHTML = '<div style="background:var(--red-dim);border:1px solid rgba(239,68,68,0.3);border-radius:var(--radius);padding:10px 12px;font-size:12px;color:var(--red);"><i class="ti ti-alert-circle"></i> <strong>Falha:</strong> ' + (e.message || 'Erro desconhecido') + '</div>';
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '<i class="ti ti-plug"></i> Testar conexão';
-  }
-}
-
-function markWebhookDirty() {
-  var bar = document.getElementById('webhook-save-bar');
-  if (bar) bar.classList.add('visible');
-}
-
-function discardWebhookChanges() {
-  var bar = document.getElementById('webhook-save-bar');
-  if (bar) bar.classList.remove('visible');
-  _tenantConfigCache = null;
-  loadWebhookConfig();
-}
-
 async function saveWebhookConfig() {
   var btn = document.getElementById('btn-save-webhook');
-  var bar = document.getElementById('webhook-save-bar');
   btn.disabled = true;
-  btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i> Salvando...';
+  btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i>';
   try {
     var body = {};
     var kiwifySecret = document.getElementById('cfg-kiwify-secret').value.trim();
     var yampiSecret  = document.getElementById('cfg-yampi-secret').value.trim();
     var yampiAlias   = document.getElementById('cfg-yampi-alias').value.trim();
     var yampiToken   = document.getElementById('cfg-yampi-token').value.trim();
-    var yampiSecretToken = document.getElementById('cfg-yampi-secret-token').value.trim();
 
     if (kiwifySecret && !kiwifySecret.startsWith('•')) body.kiwify_webhook_secret = kiwifySecret;
     if (yampiSecret  && !yampiSecret.startsWith('•'))  body.yampi_webhook_secret  = yampiSecret;
     if (yampiAlias)                                    body.yampi_store_alias      = yampiAlias;
     if (yampiToken   && !yampiToken.startsWith('•'))   body.yampi_api_token        = yampiToken;
-    if (yampiSecretToken && !yampiSecretToken.startsWith('•')) body.yampi_secret_token = yampiSecretToken;
 
     if (Object.keys(body).length === 0) {
-      if (bar) bar.classList.remove('visible');
       btn.disabled = false;
-      btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar alterações';
+      btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar';
       return;
     }
     const res = await apiFetch('/api/tenants/me', {
@@ -1388,11 +1668,11 @@ async function saveWebhookConfig() {
     if (!res.success) throw new Error(res.error);
     _tenantConfigCache = null;
     loadWebhookConfig();
-    if (bar) bar.classList.remove('visible');
-    showToast('Configurações salvas com sucesso!', 'success');
+    btn.innerHTML = '<i class="ti ti-check"></i> Salvo!';
+    setTimeout(() => { btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar'; }, 2000);
   } catch(e) {
-    showToast('Erro ao salvar: ' + e.message, 'error');
-    btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar alterações';
+    alert('Erro ao salvar: ' + e.message);
+    btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar';
   } finally {
     btn.disabled = false;
   }
@@ -1571,7 +1851,7 @@ function buildObSummary() {
   var email = obEmailMode === 'vaultly' ? 'Infraestrutura Vaultly' : 'Conta Resend propria';
   document.getElementById('ob-summary').innerHTML =
     '<div style="display:flex;flex-direction:column;gap:10px;">' +
-    '<div style="display:flex;align-items:center;gap:10px;"><i class="ti ti-store" style="color:var(--orange);"></i><span style="color:var(--text2);font-size:13px;">Loja:</span><strong>' + name + '</strong></div>' +
+    '<div style="display:flex;align-items:center;gap:10px;"><i class="ti ti-store" style="color:var(--indigo);"></i><span style="color:var(--text2);font-size:13px;">Loja:</span><strong>' + name + '</strong></div>' +
     '<div style="display:flex;align-items:center;gap:10px;"><i class="ti ti-webhook" style="color:var(--cyan);"></i><span style="color:var(--text2);font-size:13px;">Plataformas:</span><strong>' + plats.charAt(0).toUpperCase() + plats.slice(1) + '</strong></div>' +
     '<div style="display:flex;align-items:center;gap:10px;"><i class="ti ti-mail" style="color:var(--emerald);"></i><span style="color:var(--text2);font-size:13px;">Email:</span><strong>' + email + '</strong></div>' +
     '</div>';
@@ -1647,10 +1927,10 @@ function platformBadge(p) {
 
 // ── Upgrade helpers ──────────────────────────────────────────────
 function upgradeBanner(title, desc) {
-  return `<div style="margin:16px 0;padding:20px 24px;background:linear-gradient(135deg,rgba(255,107,53,0.08),rgba(56,189,248,0.06));border:1px solid rgba(255,107,53,0.2);border-radius:12px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+  return `<div style="margin:16px 0;padding:20px 24px;background:linear-gradient(135deg,rgba(108,99,255,0.08),rgba(56,189,248,0.06));border:1px solid rgba(108,99,255,0.2);border-radius:12px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
     <div style="flex:1;min-width:200px;">
       <div style="font-size:14px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:6px;">
-        <i class="ti ti-lock" style="color:var(--orange);"></i> ${title}
+        <i class="ti ti-lock" style="color:var(--indigo);"></i> ${title}
       </div>
       <div style="font-size:13px;color:var(--text2);">${desc}</div>
     </div>
@@ -1694,8 +1974,8 @@ function setUpgradeBilling(type) {
   var isAnnual = type === 'annual';
   var togM = document.getElementById('um-tog-monthly');
   var togA = document.getElementById('um-tog-annual');
-  if (togM) { togM.style.background = isAnnual ? 'transparent' : 'var(--orange)'; togM.style.color = isAnnual ? 'var(--text2)' : '#fff'; }
-  if (togA) { togA.style.background = isAnnual ? 'var(--orange)' : 'transparent'; togA.style.color = isAnnual ? '#fff' : 'var(--text2)'; }
+  if (togM) { togM.style.background = isAnnual ? 'transparent' : 'var(--indigo)'; togM.style.color = isAnnual ? 'var(--text2)' : '#fff'; }
+  if (togA) { togA.style.background = isAnnual ? 'var(--indigo)' : 'transparent'; togA.style.color = isAnnual ? '#fff' : 'var(--text2)'; }
   ['basic','pro'].forEach(function(p) {
     var price    = upgradePrices[type][p];
     var priceEl  = document.getElementById('um-price-' + p);
@@ -1818,9 +2098,9 @@ function renderSparkline(deliveries, productCount) {
   var first = pts[0];
   var fillD = pathD + ' L ' + last[0].toFixed(1) + ',' + H + ' L ' + first[0].toFixed(1) + ',' + H + ' Z';
 
-  // Cores: inativo = cinza apagado, ativo = laranja
-  var lineColor = isEmpty ? 'rgba(61,79,110,0.45)' : (hasData ? '#FF6B35' : 'rgba(255,107,53,0.35)');
-  var fillColor = isEmpty ? 'rgba(61,79,110,0.08)' : (hasData ? 'rgba(255,107,53,0.14)' : 'rgba(255,107,53,0.06)');
+  // Cores: inativo = cinza apagado, ativo = índigo
+  var lineColor = isEmpty ? 'rgba(61,79,110,0.45)' : (hasData ? '#6C63FF' : 'rgba(108,99,255,0.35)');
+  var fillColor = isEmpty ? 'rgba(61,79,110,0.08)' : (hasData ? 'rgba(108,99,255,0.14)' : 'rgba(108,99,255,0.06)');
 
   var inner =
     '<path d="' + fillD + '" fill="' + fillColor + '"/>' +
@@ -1828,8 +2108,8 @@ function renderSparkline(deliveries, productCount) {
 
   // Ponto ativo na última hora com movimento
   if (!isEmpty && hasData) {
-    inner += '<circle cx="' + last[0].toFixed(1) + '" cy="' + last[1].toFixed(1) + '" r="2.5" fill="#FF6B35" opacity="0.9"/>';
-    inner += '<circle cx="' + last[0].toFixed(1) + '" cy="' + last[1].toFixed(1) + '" r="2.5" fill="none" stroke="#FF6B35" stroke-width="1" opacity="0.5">' +
+    inner += '<circle cx="' + last[0].toFixed(1) + '" cy="' + last[1].toFixed(1) + '" r="2.5" fill="#6C63FF" opacity="0.9"/>';
+    inner += '<circle cx="' + last[0].toFixed(1) + '" cy="' + last[1].toFixed(1) + '" r="2.5" fill="none" stroke="#6C63FF" stroke-width="1" opacity="0.5">' +
       '<animate attributeName="r" from="2.5" to="6" dur="1.5s" repeatCount="indefinite"/>' +
       '<animate attributeName="opacity" from="0.5" to="0" dur="1.5s" repeatCount="indefinite"/>' +
       '</circle>';
@@ -1963,30 +2243,30 @@ async function loadProducts() {
     }
     grid.innerHTML = res.data.map(p => `
       <div class="product-card">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px;">
-          <div style="width:42px;height:42px;border-radius:10px;background:var(--orange-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <i class="ti ti-file-text" style="color:var(--orange);font-size:20px;"></i>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div style="width:40px;height:40px;border-radius:10px;background:rgba(108,99,255,0.15);display:flex;align-items:center;justify-content:center;">
+            <i class="ti ti-file-text" style="color:var(--indigo);font-size:18px;"></i>
           </div>
-          <span class="badge badge-${p.status === 'active' ? 'green' : 'red'}">
+          <span class="badge badge-${p.status === 'active' ? 'emerald' : 'red'}" style="font-size:10px;">
             ${p.status === 'active' ? 'Ativo' : 'Inativo'}
           </span>
         </div>
-        <div style="font-family:'Satoshi',sans-serif;font-weight:700;font-size:15px;margin-bottom:6px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${p.name}">${p.name}</div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.5;flex:1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+        <div style="font-weight:600;font-size:14px;margin-bottom:6px;line-height:1.3;">${p.name}</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:12px;min-height:32px;">
           ${p.description || '<span style="color:var(--text3);">Sem descrição</span>'}
         </div>
-        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px;">
-          ${p.kiwify_id ? `<span class="badge badge-orange" style="font-size:10px;"><i class="ti ti-plug"></i> Kiwify</span>` : ''}
-          ${p.yampi_id  ? `<span class="badge badge-orange" style="font-size:10px;"><i class="ti ti-plug"></i> Yampi</span>`  : ''}
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px;">
+          ${p.kiwify_id ? `<span class="badge badge-emerald" style="font-size:10px;">Kiwify</span>` : ''}
+          ${p.yampi_id  ? `<span class="badge badge-indigo"  style="font-size:10px;">Yampi</span>`  : ''}
           ${p.file_name
-            ? `<span class="badge badge-gray" style="font-size:10px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${p.file_name}"><i class="ti ti-paperclip"></i> ${p.file_name}</span>`
-            : `<span style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px;"><i class="ti ti-alert-circle" style="font-size:12px;"></i> Sem arquivo</span>`}
+            ? `<span class="badge badge-gray" style="font-size:10px;"><i class="ti ti-paperclip"></i> ${p.file_name}</span>`
+            : `<span style="font-size:10px;color:var(--text3);">Sem arquivo</span>`}
         </div>
-        <div style="display:flex;gap:8px;margin-top:auto;padding-top:12px;border-top:1px solid var(--border);">
-          <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="editProduct('${p.id}')">
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost btn-xs" style="flex:1;" onclick="editProduct('${p.id}')">
             <i class="ti ti-pencil"></i> Editar
           </button>
-          <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}','${p.name.replace(/'/g, "\\'")}')">
+          <button class="btn btn-ghost btn-xs" style="color:var(--red);" onclick="deleteProduct('${p.id}','${p.name.replace(/'/g, "\\'")}')">
             <i class="ti ti-trash"></i>
           </button>
         </div>
@@ -2040,7 +2320,7 @@ async function loadDeliveries() {
 // ── Toast ─────────────────────────────────────────────────────────
 function showToast(msg, type) {
   type = type || 'info';
-  var colors = { info: 'var(--orange)', success: 'var(--emerald)', error: 'var(--red)', warn: 'var(--yellow)' };
+  var colors = { info: 'var(--indigo)', success: 'var(--emerald)', error: 'var(--red)', warn: 'var(--yellow)' };
   var icons  = { info: 'ti-info-circle', success: 'ti-circle-check-filled', error: 'ti-alert-circle', warn: 'ti-alert-triangle' };
   var t = document.createElement('div');
   t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;background:var(--bg3);border:1px solid ' + colors[type] + ';border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text);box-shadow:0 8px 24px rgba(0,0,0,0.4);max-width:320px;animation:slideIn 0.3s ease;';
@@ -2096,7 +2376,7 @@ async function loadLogs() {
     if (!res.success) throw new Error(res.error);
 
     if (!res.data.length) {
-      box.innerHTML = '<div style="color:var(--text3);font-size:13px;"><i class="ti ti-antenna-bars-1" style="font-size:20px;display:block;margin-bottom:8px;color:var(--orange);"></i>Aguardando o primeiro evento...<br><span style="font-size:11px;">Use o simulador abaixo ou configure o webhook na plataforma.</span></div>';
+      box.innerHTML = '<div style="color:var(--text3);font-size:13px;"><i class="ti ti-antenna-bars-1" style="font-size:20px;display:block;margin-bottom:8px;color:var(--indigo);"></i>Aguardando o primeiro evento...<br><span style="font-size:11px;">Use o simulador abaixo ou configure o webhook na plataforma.</span></div>';
       _lastLogId = null;
       return;
     }
@@ -2419,79 +2699,60 @@ async function getTenantConfig() {
 }
 
 async function importFromPlatform(platform) {
-  var btn    = document.getElementById('btn-import-' + platform);
+  var btn   = document.getElementById('btn-import-' + platform);
   var listEl = document.getElementById('platform-import-list');
+  if (listEl) listEl.innerHTML = '';
 
-  function showImport(html) {
-    if (!listEl) return;
-    listEl.innerHTML = html;
-    listEl.style.display = 'block';
-    listEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }
-
-  if (listEl) { listEl.innerHTML = ''; listEl.style.display = 'none'; }
-
+  // Pré-verifica credenciais antes de chamar a API
   var cfg = await getTenantConfig();
 
   if (platform === 'yampi') {
-    if (!cfg || !cfg.yampi_store_alias || !cfg.has_yampi_token || !cfg.has_yampi_secret_token) {
-      showImport(
-        '<div style="background:var(--bg2);border:1px solid rgba(245,158,11,0.35);border-left:3px solid var(--yellow);border-radius:var(--radius-lg);padding:20px 22px;">' +
-          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">' +
-            '<i class="ti ti-alert-triangle" style="font-size:18px;color:var(--yellow);flex-shrink:0;"></i>' +
-            '<span style="font-family:\'Satoshi\',sans-serif;font-size:15px;font-weight:700;">Configuração necessária para importar da Yampi</span>' +
-            '<button onclick="this.closest(\'#platform-import-list\') && (document.getElementById(\'platform-import-list\').style.display=\'none\')" style="margin-left:auto;background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 6px;" title="Fechar">&#x2715;</button>' +
+    if (!cfg || !cfg.yampi_store_alias || !cfg.has_yampi_token) {
+      if (listEl) listEl.innerHTML =
+        '<div style="background:var(--bg4);border:1px solid var(--border2);border-radius:var(--radius);padding:16px 18px;margin-top:4px;">' +
+          '<div style="font-size:13px;font-weight:600;color:var(--yellow);margin-bottom:8px;"><i class="ti ti-settings"></i> Configurar integração Yampi</div>' +
+          '<div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:12px;">' +
+            'Para importar produtos da Yampi, você precisa de duas informações:' +
+            '<br><br>' +
+            '<strong style="color:var(--text);">1. Alias da loja</strong> — a parte final da URL da sua loja:<br>' +
+            '<code style="background:var(--bg3);padding:2px 6px;border-radius:4px;font-size:11px;">yampi.com.br/<strong>seu-alias</strong></code>' +
+            '<br><br>' +
+            '<strong style="color:var(--text);">2. Token API</strong> — em Yampi: <em>Configurações → Integrações → API → Gerar token</em>' +
           '</div>' +
-          '<div style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:16px;">' +
-            'Para importar os seus produtos da Yampi automaticamente, você precisa configurar três informações na aba <strong style="color:var(--text);">Configurações → Webhook</strong>:' +
-            '<div style="background:var(--bg3);border-radius:var(--radius);padding:12px 14px;margin-top:12px;display:flex;flex-direction:column;gap:8px;">' +
-              '<div style="display:flex;gap:10px;align-items:flex-start;">' +
-                '<span style="background:var(--orange-dim);color:var(--orange);font-weight:700;font-size:11px;padding:2px 7px;border-radius:99px;flex-shrink:0;margin-top:1px;">1</span>' +
-                '<div><strong style="color:var(--text);">Alias da loja</strong> — parte final da URL: <code style="font-size:11px;color:var(--amber);">yampi.com.br/seu-alias</code></div>' +
-              '</div>' +
-              '<div style="display:flex;gap:10px;align-items:flex-start;">' +
-                '<span style="background:var(--orange-dim);color:var(--orange);font-weight:700;font-size:11px;padding:2px 7px;border-radius:99px;flex-shrink:0;margin-top:1px;">2</span>' +
-                '<div><strong style="color:var(--text);">Token</strong> e <strong style="color:var(--text);">Chave secreta</strong> — em Yampi: <em>Configurações → Integrações → API</em> (os dois são obrigatórios)</div>' +
-              '</div>' +
-            '</div>' +
-          '</div>' +
-          '<button class="btn btn-primary btn-sm" onclick="switchTabById(\'webhook\')">' +
+          '<button class="btn btn-primary btn-sm" onclick="switchTabById(\'config\')">' +
             '<i class="ti ti-settings"></i> Ir para Configurações' +
           '</button>' +
-        '</div>'
-      );
+        '</div>';
       return;
     }
   }
 
   if (platform === 'kiwify') {
-    showImport(
-      '<div style="background:var(--bg2);border:1px solid var(--border2);border-left:3px solid var(--orange);border-radius:var(--radius-lg);padding:20px 22px;">' +
-        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">' +
-          '<i class="ti ti-plug" style="font-size:18px;color:var(--orange);flex-shrink:0;"></i>' +
-          '<span style="font-family:\'Satoshi\',sans-serif;font-size:15px;font-weight:700;">Pré-cadastrar produto Kiwify</span>' +
-          '<button onclick="document.getElementById(\'platform-import-list\').style.display=\'none\'" style="margin-left:auto;background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 6px;" title="Fechar">&#x2715;</button>' +
+    if (listEl) listEl.innerHTML =
+      '<div style="background:var(--bg4);border:1px solid var(--border2);border-radius:var(--radius);padding:18px 20px;margin-top:4px;">' +
+        '<div style="font-size:13px;font-weight:700;color:var(--cyan);margin-bottom:12px;"><i class="ti ti-brand-google"></i> Pré-cadastrar produto Kiwify pelo ID</div>' +
+        '<div style="font-size:12px;color:var(--text2);line-height:1.8;margin-bottom:16px;">' +
+          'A Kiwify <strong style="color:var(--text);">não tem API pública</strong>, então não é possível listar produtos automaticamente. ' +
+          'Mas você pode pré-cadastrar colando a <strong style="color:var(--text);">URL do produto</strong> abaixo — o sistema extrai o ID automaticamente.' +
+          '<br><br>' +
+          '<span style="color:var(--text3);">Onde encontrar: Kiwify → Seus produtos → clique no produto → copie a URL do navegador.</span>' +
+          '<br><span style="font-size:11px;color:var(--text3);">Exemplo: <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;">kiwify.com.br/products/<strong>xxxxxxxx-xxxx-xxxx</strong>/edit</code></span>' +
         '</div>' +
-        '<div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:16px;">' +
-          'A Kiwify <strong style="color:var(--text);">não tem API pública</strong> — os produtos aparecem automaticamente aqui após a primeira venda aprovada. ' +
-          'Para adiantar, cole a <strong style="color:var(--text);">URL do produto</strong> abaixo e o sistema extrai o ID sozinho.' +
-          '<br><span style="font-size:11px;color:var(--text3);">Onde achar: Kiwify → Seus produtos → clique no produto → copie a URL. Ex: <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;">kiwify.com.br/products/<strong>xxxxxxxx</strong>/edit</code></span>' +
-        '</div>' +
-        '<div style="display:flex;gap:8px;margin-bottom:10px;">' +
-          '<input type="text" class="form-input" id="kiwify-url-input" placeholder="Cole a URL do produto Kiwify..." style="flex:1;" />' +
+        '<div style="display:flex;gap:8px;margin-bottom:12px;">' +
+          '<input type="text" class="form-input" id="kiwify-url-input" placeholder="Cole a URL do produto ou só o ID..." style="flex:1;font-size:13px;" />' +
           '<button class="btn btn-primary btn-sm" onclick="preRegisterKiwify()">' +
             '<i class="ti ti-arrow-right"></i> Pré-cadastrar' +
           '</button>' +
         '</div>' +
-        '<div style="font-size:11px;color:var(--text3);border-top:1px solid var(--border);padding-top:10px;display:flex;align-items:center;gap:5px;">' +
-          '<i class="ti ti-info-circle" style="color:var(--orange);font-size:13px;"></i> Após pré-cadastrar, vincule o arquivo PDF para o produto começar a receber pedidos.' +
+        '<div style="font-size:11px;color:var(--text3);border-top:1px solid var(--border);padding-top:10px;">' +
+          '<i class="ti ti-info-circle" style="color:var(--indigo);"></i> Após pré-cadastrar, adicione o arquivo PDF e o produto estará pronto para receber pedidos.' +
         '</div>' +
-      '</div>'
-    );
+      '</div>';
+    // Foca no campo após renderizar
     setTimeout(function() {
       var el = document.getElementById('kiwify-url-input');
       if (el) el.focus();
-    }, 120);
+    }, 100);
     return;
   }
 
@@ -2502,12 +2763,11 @@ async function importFromPlatform(platform) {
     if (!res.success) throw new Error(res.error);
 
     if (!res.data || !res.data.length) {
-      if (listEl) { listEl.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:12px 0;">Nenhum produto encontrado na sua loja Yampi.</div>'; listEl.style.display = 'block'; }
+      if (listEl) listEl.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:12px 0;">Nenhum produto encontrado na sua loja Yampi.</div>';
       return;
     }
 
     if (listEl) {
-      listEl.style.display = 'block';
       listEl.innerHTML =
         '<div style="font-size:12px;color:var(--text2);margin-bottom:10px;padding-top:4px;">' +
           '<i class="ti ti-check" style="color:var(--emerald);"></i> ' + res.data.length + ' produto(s) encontrado(s) na Yampi:' +
@@ -2530,21 +2790,12 @@ async function importFromPlatform(platform) {
     _tenantConfigCache = null; // limpa cache após operação
   } catch(e) {
     var msg = e.message || 'Erro desconhecido';
-    if (listEl) {
-      listEl.style.display = 'block';
-      listEl.innerHTML =
-        '<div style="background:var(--bg2);border:1px solid rgba(239,68,68,0.35);border-left:3px solid var(--red);border-radius:var(--radius-lg);padding:18px 20px;">' +
-          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">' +
-            '<i class="ti ti-alert-circle" style="font-size:18px;color:var(--red);flex-shrink:0;"></i>' +
-            '<span style="font-family:\'Satoshi\',sans-serif;font-size:15px;font-weight:700;">Erro ao conectar com a Yampi</span>' +
-          '</div>' +
-          '<div style="font-size:13px;color:var(--text2);margin-bottom:14px;background:var(--bg3);border-radius:var(--radius);padding:10px 12px;font-family:\'JetBrains Mono\',monospace;">' + msg + '</div>' +
-          '<div style="font-size:12px;color:var(--text2);margin-bottom:12px;">Verifique se o <strong>alias da loja</strong> e o <strong>token API</strong> estão corretos nas configurações.</div>' +
-          '<button class="btn btn-primary btn-sm" onclick="switchTabById(\'webhook\')">' +
-            '<i class="ti ti-settings"></i> Ir para Configurações' +
-          '</button>' +
-        '</div>';
-    }
+    if (listEl) listEl.innerHTML =
+      '<div style="background:var(--red-dim);border:1px solid rgba(244,63,94,0.2);border-radius:var(--radius);padding:14px 16px;margin-top:4px;">' +
+        '<div style="font-size:12px;font-weight:600;color:var(--red);margin-bottom:4px;"><i class="ti ti-alert-circle"></i> Erro ao conectar com a Yampi</div>' +
+        '<div style="font-size:12px;color:var(--text2);">' + msg + '</div>' +
+        '<div style="font-size:11px;color:var(--text3);margin-top:8px;">Verifique o alias e o token em <button class="btn btn-ghost btn-xs" onclick="switchTabById(\'config\')">Configurações</button></div>' +
+      '</div>';
   } finally {
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-download"></i> Importar da Yampi'; }
   }
@@ -2586,15 +2837,6 @@ function preRegisterKiwify() {
   setTimeout(function() { document.getElementById('m-name').focus(); }, 300);
   showToast('ID extraido: ' + kiwifyId + ' — preencha o nome e o arquivo.', 'info');
 }
-
-// ── Auto-login se tiver token salvo ──────────────────────────────
-(async function() {
-  if (authToken) {
-    const me = await apiFetch('/api/auth/me');
-    if (me.success) { currentUser = me.user; showApp(); }
-    else { authToken = null; localStorage.removeItem('vaultly_token'); }
-  }
-})();
 </script>
 </body>
 </html>

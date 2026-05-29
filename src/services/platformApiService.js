@@ -8,7 +8,7 @@ const logger = require('../config/logger');
 // Auth: header "user-token: {api_key}"
 // Alias: URL da loja — yampi.com.br/{alias}
 
-async function fetchYampiProducts(storeAlias, apiToken) {
+async function fetchYampiProducts(storeAlias, apiToken, secretToken) {
   if (!storeAlias || !apiToken) {
     var err = new Error('CREDENCIAIS_AUSENTES');
     err.credentialsMissing = true;
@@ -21,17 +21,19 @@ async function fetchYampiProducts(storeAlias, apiToken) {
   var url = 'https://api.dooki.com.br/v2/' + alias + '/catalog/products?page=1&limit=100&include=skus';
   logger.info('Buscando produtos Yampi — loja: ' + alias);
 
-  var resp = await fetch(url, {
-    headers: {
-      'user-token':   apiToken,
-      'Content-Type': 'application/json'
-    }
-  });
+  // Yampi exige DOIS headers: User-Token e User-Secret-Token
+  var headers = {
+    'User-Token':   apiToken,
+    'Content-Type': 'application/json'
+  };
+  if (secretToken) headers['User-Secret-Token'] = secretToken;
+
+  var resp = await fetch(url, { headers: headers });
 
   if (!resp.ok) {
     var body = await resp.text();
     if (resp.status === 401 || resp.status === 403) {
-      throw new Error('Token Yampi invalido ou sem permissao. Verifique em: Yampi > Configuracoes > Integracoes > API');
+      throw new Error('Token Yampi invalido. Confira se preencheu o User Token E a Chave Secreta (sk_...) em: Yampi > Configuracoes > Integracoes > API');
     }
     if (resp.status === 404) {
       throw new Error('Loja "' + alias + '" nao encontrada. Verifique o alias em: yampi.com.br/{alias}');

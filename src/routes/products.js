@@ -182,7 +182,7 @@ router.get('/platform-list/:platform', async (req, res) => {
     let list = [];
 
     if (platform === 'yampi') {
-      list = await fetchYampiProducts(tenant.yampi_store_alias, tenant.yampi_api_token);
+      list = await fetchYampiProducts(tenant.yampi_store_alias, tenant.yampi_api_token, tenant.yampi_secret_token);
     } else if (platform === 'kiwify') {
       list = await fetchKiwifyProducts(tenant.kiwify_api_key);
     } else {

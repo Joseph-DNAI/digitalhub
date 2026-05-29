@@ -24,6 +24,7 @@ router.get('/me', async (req, res) => {
         has_resend_key:         !!(tenant && tenant.resend_api_key),
         has_kiwify_api_key:     !!(tenant && tenant.kiwify_api_key),
         has_yampi_token:        !!(tenant && tenant.yampi_api_token),
+        has_yampi_secret_token: !!(tenant && tenant.yampi_secret_token),
         yampi_store_alias:      tenant ? tenant.yampi_store_alias     : null,
         effective_from_name:    (tenant && tenant.email_from_name)    || process.env.EMAIL_FROM_NAME    || 'Vaultly',
         effective_from_address: (tenant && tenant.email_from_address) || process.env.EMAIL_FROM_ADDRESS || 'onboarding@resend.dev',
@@ -50,7 +51,7 @@ router.put('/me', async (req, res) => {
       'kiwify_webhook_secret', 'yampi_webhook_secret',
       'email_from_name', 'email_from_address', 'resend_api_key',
       'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass',
-      'kiwify_api_key', 'yampi_api_token', 'yampi_store_alias',
+      'kiwify_api_key', 'yampi_api_token', 'yampi_secret_token', 'yampi_store_alias',
       'onboarding_completed', 'platforms_enabled', 'email_template'
     ];
     var updateData = {};

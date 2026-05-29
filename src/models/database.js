@@ -79,6 +79,7 @@ async function initDatabase() {
         resend_api_key        TEXT,
         kiwify_api_key        TEXT,
         yampi_api_token       TEXT,
+        yampi_secret_token    TEXT,
         yampi_store_alias     TEXT,
         created_at            TIMESTAMP DEFAULT NOW(),
         updated_at            TIMESTAMP DEFAULT NOW()
@@ -160,6 +161,7 @@ async function initDatabase() {
     await client.query(`
       ALTER TABLE tenants ADD COLUMN IF NOT EXISTS kiwify_api_key         TEXT;
       ALTER TABLE tenants ADD COLUMN IF NOT EXISTS yampi_api_token         TEXT;
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS yampi_secret_token      TEXT;
       ALTER TABLE tenants ADD COLUMN IF NOT EXISTS yampi_store_alias       TEXT;
       ALTER TABLE tenants ADD COLUMN IF NOT EXISTS onboarding_completed    BOOLEAN DEFAULT FALSE;
       ALTER TABLE tenants ADD COLUMN IF NOT EXISTS email_template          TEXT;
