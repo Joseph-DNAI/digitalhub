@@ -1081,6 +1081,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
       </div>
     </div>
     <input type="hidden" id="m-editing-id" value="" />
+    <div id="m-error" style="display:none;margin-top:14px;"></div>
     <div class="grad-line"></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
@@ -2230,6 +2231,8 @@ function openModal() {
   _pendingImport = null;
   var linkWrap = document.getElementById('m-link-wrap');
   if (linkWrap) linkWrap.style.display = 'none';
+  var errEl = document.getElementById('m-error');
+  if (errEl) { errEl.style.display = 'none'; errEl.innerHTML = ''; }
   document.getElementById('modal-bg').classList.add('open');
 }
 
@@ -2328,8 +2331,11 @@ async function saveProduct() {
   const kiwify_id = document.getElementById('m-kiwify').value.trim();
   const yampi_id  = document.getElementById('m-yampi').value.trim();
 
-  if (!name)                   { alert('Informe o nome do produto'); return; }
-  if (!kiwify_id && !yampi_id) { alert('Informe pelo menos um ID (Kiwify ou Yampi)'); return; }
+  var errEl = document.getElementById('m-error');
+  if (errEl) { errEl.style.display = 'none'; errEl.innerHTML = ''; }
+
+  if (!name)                   { showModalError('Informe o nome do produto'); return; }
+  if (!kiwify_id && !yampi_id) { showModalError('Informe pelo menos um ID (Kiwify ou Yampi)'); return; }
 
   btn.disabled = true;
   btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i> Salvando...';
@@ -2366,11 +2372,40 @@ async function saveProduct() {
     loadUnmatchedProducts(); // sempre atualiza a notificacao de pendentes
     if (document.getElementById('tab-dashboard').classList.contains('active')) loadDashboard();
   } catch(e) {
-    alert('Erro ao salvar produto: ' + e.message);
+    showModalError(e.message);
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar produto';
   }
+}
+
+// Mostra erro dentro do modal de produto. Se for limite de plano, oferece upgrade.
+function showModalError(msg) {
+  var errEl = document.getElementById('m-error');
+  if (!errEl) { alert(msg); return; }
+  var isLimit = /limite do plano|máximo de|maximo de|faça upgrade|faca upgrade/i.test(msg || '');
+  if (isLimit) {
+    errEl.innerHTML =
+      '<div style="background:var(--bg2);border:1px solid rgba(255,107,53,0.35);border-left:3px solid var(--orange);border-radius:var(--radius-lg);padding:16px 18px;">' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">' +
+          '<i class="ti ti-rocket" style="font-size:18px;color:var(--orange);flex-shrink:0;"></i>' +
+          '<span style="font-family:\'Satoshi\',sans-serif;font-size:15px;font-weight:700;">Você atingiu o limite do seu plano</span>' +
+        '</div>' +
+        '<div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:14px;">' +
+          'Seu plano atual não comporta mais produtos. Faça upgrade para cadastrar produtos ilimitados e desbloquear mais entregas mensais.' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button class="btn btn-primary btn-sm" onclick="closeModal();showUpgradeModal();"><i class="ti ti-rocket"></i> Ver planos e fazer upgrade</button>' +
+          '<button class="btn btn-ghost btn-sm" onclick="closeModal()">Agora não</button>' +
+        '</div>' +
+      '</div>';
+  } else {
+    errEl.innerHTML =
+      '<div style="background:var(--red-dim);border:1px solid rgba(239,68,68,0.3);border-radius:var(--radius);padding:11px 14px;font-size:13px;color:var(--red);display:flex;align-items:center;gap:7px;">' +
+        '<i class="ti ti-alert-circle" style="font-size:15px;flex-shrink:0;"></i> ' + (msg || 'Erro ao salvar produto') +
+      '</div>';
+  }
+  errEl.style.display = 'block';
 }
 
 async function deleteProduct(id, name) {
