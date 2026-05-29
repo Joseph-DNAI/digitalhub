@@ -194,7 +194,7 @@ tbody tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="stat"><div class="stat-label">Basic</div><div class="stat-val" id="s-basic">—</div></div>
       <div class="stat"><div class="stat-label">Pro</div><div class="stat-val" id="s-pro">—</div></div>
       <div class="stat"><div class="stat-label">Próx. do limite</div><div class="stat-val" style="color:var(--yellow)" id="s-warn">—</div></div>
-      <div class="stat"><div class="stat-label">Inativos</div><div class="stat-val" style="color:var(--text3)" id="s-inactive">—</div></div>
+      <div class="stat" style="cursor:pointer;" onclick="document.getElementById('support-list').scrollIntoView({behavior:'smooth'})"><div class="stat-label">Suporte aberto</div><div class="stat-val" style="color:var(--red)" id="s-support">—</div></div>
     </div>
 
     <!-- Resend usage -->
@@ -271,6 +271,20 @@ tbody tr:hover td{background:rgba(255,255,255,0.02)}
             <tr><td colspan="9" style="text-align:center;color:var(--text3);padding:32px">Carregando...</td></tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- CAIXA DE ENTRADA — SUPORTE & DENÚNCIAS -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-inbox"></i> Caixa de entrada — Suporte &amp; Denúncias</div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-ghost btn-sm" id="sup-filter-open" onclick="loadSupport('open')" style="padding:6px 12px;font-size:12px;">Abertos</button>
+          <button class="btn btn-ghost btn-sm" id="sup-filter-all" onclick="loadSupport('')" style="padding:6px 12px;font-size:12px;">Todos</button>
+        </div>
+      </div>
+      <div id="support-list" style="padding:8px 0;">
+        <div style="text-align:center;color:var(--text3);padding:32px;">Carregando...</div>
       </div>
     </div>
   </div>
@@ -357,6 +371,7 @@ async function doLogin() {
     document.getElementById('admin-name').textContent = currentAdmin.name || currentAdmin.email;
     loadUsers();
     loadResendStats();
+    loadSupport('open');
   } catch(e) {
     err.textContent = 'Erro de conexão'; err.style.display = 'block';
   }
@@ -381,6 +396,7 @@ window.addEventListener('load', async () => {
         document.getElementById('admin-name').textContent = currentAdmin.name || currentAdmin.email;
         loadUsers();
         loadResendStats();
+        loadSupport('open');
         return;
       }
     } catch(e){}
@@ -390,6 +406,84 @@ window.addEventListener('load', async () => {
 });
 
 let allUsers = [];
+
+// ── Caixa de entrada de suporte/denúncias ────────────────────────
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtDateTime(iso) {
+  if (!iso) return '—';
+  var d = new Date(iso);
+  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+}
+
+async function loadSupport(status) {
+  var box = document.getElementById('support-list');
+  // destaca o filtro ativo
+  var fOpen = document.getElementById('sup-filter-open');
+  var fAll  = document.getElementById('sup-filter-all');
+  if (fOpen && fAll) {
+    var active = 'background:rgba(108,99,255,0.15);color:#fff;border:1px solid rgba(108,99,255,0.4);padding:6px 12px;font-size:12px;';
+    var normal = 'padding:6px 12px;font-size:12px;';
+    fOpen.style.cssText = 'display:inline-flex;align-items:center;gap:6px;border-radius:var(--radius);font-weight:600;cursor:pointer;' + (status === 'open' ? active : 'background:rgba(255,255,255,.04);color:var(--text2);border:1px solid var(--border2);' + normal);
+    fAll.style.cssText  = 'display:inline-flex;align-items:center;gap:6px;border-radius:var(--radius);font-weight:600;cursor:pointer;' + (status === '' ? active : 'background:rgba(255,255,255,.04);color:var(--text2);border:1px solid var(--border2);' + normal);
+  }
+  box.innerHTML = '<div style="text-align:center;color:var(--text3);padding:32px;">Carregando...</div>';
+  try {
+    var res = await apiFetch('/api/support/admin/list' + (status ? '?status=' + status : ''));
+    if (!res.success) throw new Error(res.error);
+    if (res.stats) {
+      var sEl = document.getElementById('s-support');
+      if (sEl) sEl.textContent = res.stats.open;
+    }
+    if (!res.data || !res.data.length) {
+      box.innerHTML = '<div style="text-align:center;color:var(--text3);padding:32px;"><i class="ti ti-circle-check" style="font-size:24px;color:var(--emerald);display:block;margin-bottom:8px;"></i>' + (status === 'open' ? 'Nenhum chamado aberto. Tudo em dia!' : 'Nenhum registro.') + '</div>';
+      return;
+    }
+    box.innerHTML = res.data.map(function(t) {
+      var isReport = t.type === 'report';
+      var isOpen   = t.status === 'open';
+      var badge = isReport
+        ? '<span style="font-size:10px;font-weight:700;background:rgba(244,63,94,0.12);color:var(--red);border:1px solid rgba(244,63,94,0.3);padding:2px 8px;border-radius:99px;">🚩 DENÚNCIA</span>'
+        : '<span style="font-size:10px;font-weight:700;background:rgba(56,189,248,0.12);color:var(--cyan);border:1px solid rgba(56,189,248,0.3);padding:2px 8px;border-radius:99px;">💬 SUPORTE</span>';
+      var statusBadge = isOpen
+        ? '<span style="font-size:10px;font-weight:700;color:var(--yellow);">● Aberto</span>'
+        : '<span style="font-size:10px;font-weight:700;color:var(--emerald);">✓ Resolvido</span>';
+      var contato = [];
+      if (t.reporter_name)  contato.push(esc(t.reporter_name));
+      if (t.reporter_email) contato.push('<a href="mailto:' + esc(t.reporter_email) + '" style="color:var(--cyan);text-decoration:none;">' + esc(t.reporter_email) + '</a>');
+      var contatoStr = contato.length ? contato.join(' · ') : '<span style="color:var(--text3);">anônimo</span>';
+      var actionBtn = isOpen
+        ? '<button class="btn btn-ghost btn-sm" style="font-size:12px;padding:6px 12px;" onclick="resolveTicket(\'' + t.id + '\',\'resolved\')"><i class="ti ti-check"></i> Marcar resolvido</button>'
+        : '<button class="btn btn-ghost btn-sm" style="font-size:12px;padding:6px 12px;" onclick="resolveTicket(\'' + t.id + '\',\'open\')"><i class="ti ti-rotate"></i> Reabrir</button>';
+      return '<div style="border-bottom:1px solid var(--border);padding:16px 20px;' + (isReport && isOpen ? 'background:rgba(244,63,94,0.03);' : '') + '">' +
+        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">' +
+          badge + statusBadge +
+          '<span style="font-size:13px;font-weight:700;">' + esc(t.subject || 'Sem assunto') + '</span>' +
+          '<span style="margin-left:auto;font-size:11px;color:var(--text3);font-family:\'JetBrains Mono\',monospace;">' + fmtDateTime(t.created_at) + '</span>' +
+        '</div>' +
+        '<div style="font-size:12px;color:var(--text2);margin-bottom:8px;">De: ' + contatoStr + (t.order_ref ? ' · Pedido: <strong>' + esc(t.order_ref) + '</strong>' : '') + '</div>' +
+        '<div style="font-size:13px;color:var(--text);line-height:1.6;background:var(--bg3);border-radius:8px;padding:12px 14px;margin-bottom:12px;white-space:pre-wrap;">' + esc(t.message) + '</div>' +
+        '<div style="display:flex;justify-content:flex-end;">' + actionBtn + '</div>' +
+      '</div>';
+    }).join('');
+  } catch(e) {
+    box.innerHTML = '<div style="text-align:center;color:var(--red);padding:32px;">Erro: ' + esc(e.message) + '</div>';
+  }
+}
+
+async function resolveTicket(id, status) {
+  try {
+    var res = await apiFetch('/api/support/admin/' + id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: status })
+    });
+    if (!res.success) throw new Error(res.error);
+    var activeFilter = document.getElementById('sup-filter-open').style.background.includes('108,99,255') ? 'open' : '';
+    loadSupport(activeFilter);
+  } catch(e) {
+    alert('Erro: ' + e.message);
+  }
+}
 
 async function loadResendStats() {
   try {

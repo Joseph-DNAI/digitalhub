@@ -73,6 +73,7 @@ app.use('/api/auth',       express.json());
 app.use('/api/admin',      express.json());
 app.use('/api/tenants',    express.json());
 app.use('/api/billing',    express.json());
+app.use('/api/support',    express.json());
 
 app.use(morgan('combined', { stream: { write: msg => logger.info(msg.trim()) } }));
 
@@ -91,6 +92,7 @@ app.use('/api/products',   require('./routes/products'));
 app.use('/api/deliveries', require('./routes/deliveries'));
 app.use('/api/tenants',    require('./routes/tenants'));
 app.use('/api/billing',    require('./routes/billing'));
+app.use('/api/support',    require('./routes/support'));
 
 app.get('/health', (req, res) => res.json({ status: 'ok', version: '2.0.0', uptime: process.uptime(), timestamp: new Date().toISOString() }));
 
@@ -110,6 +112,13 @@ app.get('/app', (req, res) => {
 
 // Login standalone — redireciona para /app (que tem overlay de login)
 app.get('/login', (req, res) => res.redirect('/app'));
+
+// Página pública de suporte (FAQ + denúncia) — linkada nos emails de entrega
+app.get('/suporte', (req, res) => {
+  const sup = path.join(publicPath, 'suporte.html');
+  if (fs.existsSync(sup)) return res.sendFile(sup);
+  res.redirect('/');
+});
 
 app.use((err, req, res, next) => {
   logger.error('Erro global: ' + err.message);

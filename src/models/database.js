@@ -156,6 +156,22 @@ async function initDatabase() {
         expires_at TIMESTAMP NOT NULL,
         created_at TIMESTAMP DEFAULT NOW()
       );
+
+      -- Chamados de suporte e denúncias (caixa de entrada do admin)
+      CREATE TABLE IF NOT EXISTS support_tickets (
+        id             TEXT PRIMARY KEY,
+        type           TEXT NOT NULL DEFAULT 'support',   -- 'support' | 'report'
+        tenant_id      TEXT REFERENCES tenants(id) ON DELETE SET NULL,
+        reporter_name  TEXT,
+        reporter_email TEXT,
+        subject        TEXT,
+        message        TEXT NOT NULL,
+        order_ref      TEXT,
+        status         TEXT NOT NULL DEFAULT 'open',       -- 'open' | 'resolved'
+        admin_note     TEXT,
+        created_at     TIMESTAMP DEFAULT NOW(),
+        resolved_at    TIMESTAMP
+      );
     `);
 
     // Migracoes incrementais — adiciona colunas novas se nao existirem
@@ -536,4 +552,49 @@ const unmatchedProducts = {
   }
 };
 
-module.exports = { initDatabase, pool, query, queryOne, users, sessions, tenants, products, deliveries, webhookLogs, plans, unmatchedProducts };
+// ─── Support Tickets (denúncias + chamados) ─────────────────────────────────────
+
+const supportTickets = {
+  async create(data) {
+    const id = uuidv4();
+    await query(`
+      INSERT INTO support_tickets (id, type, tenant_id, reporter_name, reporter_email, subject, message, order_ref)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+    `, [
+      id,
+      data.type === 'report' ? 'report' : 'support',
+      data.tenant_id || null,
+      data.reporter_name  || null,
+      data.reporter_email || null,
+      data.subject || null,
+      data.message,
+      data.order_ref || null
+    ]);
+    return id;
+  },
+
+  async findAll(status) {
+    if (status === 'open' || status === 'resolved') {
+      return query('SELECT * FROM support_tickets WHERE status=$1 ORDER BY created_at DESC', [status]);
+    }
+    return query('SELECT * FROM support_tickets ORDER BY created_at DESC LIMIT 200');
+  },
+
+  async updateStatus(id, status, adminNote) {
+    await query(`
+      UPDATE support_tickets
+      SET status=$1, admin_note=$2, resolved_at = CASE WHEN $1='resolved' THEN NOW() ELSE NULL END
+      WHERE id=$3
+    `, [status, adminNote || null, id]);
+  },
+
+  async stats() {
+    const [open, reports] = await Promise.all([
+      queryOne("SELECT COUNT(*) as n FROM support_tickets WHERE status='open'"),
+      queryOne("SELECT COUNT(*) as n FROM support_tickets WHERE status='open' AND type='report'")
+    ]);
+    return { open: parseInt(open.n), open_reports: parseInt(reports.n) };
+  }
+};
+
+module.exports = { initDatabase, pool, query, queryOne, users, sessions, tenants, products, deliveries, webhookLogs, plans, unmatchedProducts, supportTickets };

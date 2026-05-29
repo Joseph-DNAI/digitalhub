@@ -287,6 +287,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
       <button class="nav-item" onclick="switchTab('webhook',this)"><i class="ti ti-webhook"></i> Webhook</button>
       <button class="nav-item" onclick="switchTab('email',this)"><i class="ti ti-mail"></i> Email</button>
       <button class="nav-item" onclick="switchTab('config',this)"><i class="ti ti-settings"></i> Configurações</button>
+      <button class="nav-item" onclick="switchTab('suporte',this)"><i class="ti ti-lifebuoy"></i> Suporte</button>
       <div id="admin-nav-section" style="display:none;">
         <div class="nav-section">Administração</div>
         <a class="nav-item" href="/admin.html" style="text-decoration:none;"><i class="ti ti-shield-check"></i> Painel Admin</a>
@@ -832,6 +833,100 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
           </div>
         </div>
       </div>
+
+      <!-- ── SUPORTE ── -->
+      <div id="tab-suporte" class="section">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Suporte</div>
+            <div class="page-sub">tire dúvidas ou fale com a nossa equipe</div>
+          </div>
+        </div>
+
+        <!-- FAQ -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-help-circle"></i> Perguntas frequentes</div>
+          </div>
+          <div class="card-body" style="padding:8px 12px;">
+            <div class="wh-accordion" style="border:none;background:none;margin:0;">
+              <div class="wh-acc-header" onclick="this.parentElement.classList.toggle('open')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:12px 8px;">
+                <span style="font-size:14px;font-weight:600;">Como conecto minha loja Kiwify ou Yampi?</span>
+                <i class="ti ti-chevron-down wh-chevron"></i>
+              </div>
+              <div class="wh-acc-body" style="padding:0 8px 12px;font-size:13px;color:var(--text2);line-height:1.7;">Vá na aba <strong>Webhook</strong>, copie a URL da plataforma desejada e cole no painel da Kiwify/Yampi em Configurações → Webhooks. Para a Yampi, preencha também o Alias, Token e Chave Secreta para importar produtos.</div>
+            </div>
+            <div class="wh-accordion" style="border:none;background:none;margin:0;border-top:1px solid var(--border);">
+              <div class="wh-acc-header" onclick="this.parentElement.classList.toggle('open')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:12px 8px;">
+                <span style="font-size:14px;font-weight:600;">O cliente não recebeu o email de entrega</span>
+                <i class="ti ti-chevron-down wh-chevron"></i>
+              </div>
+              <div class="wh-acc-body" style="padding:0 8px 12px;font-size:13px;color:var(--text2);line-height:1.7;">Confira na aba <strong>Entregas</strong> o status do envio. Se aparecer "falha", verifique se o produto tem arquivo anexado e se o email do comprador está correto. Peça ao cliente para checar a caixa de spam. Você pode reenviar pela aba Entregas.</div>
+            </div>
+            <div class="wh-accordion" style="border:none;background:none;margin:0;border-top:1px solid var(--border);">
+              <div class="wh-acc-header" onclick="this.parentElement.classList.toggle('open')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:12px 8px;">
+                <span style="font-size:14px;font-weight:600;">Como uso minha própria conta de email (Resend)?</span>
+                <i class="ti ti-chevron-down wh-chevron"></i>
+              </div>
+              <div class="wh-acc-body" style="padding:0 8px 12px;font-size:13px;color:var(--text2);line-height:1.7;">A partir do plano <strong>Basic</strong>, vá na aba <strong>Email → Infraestrutura de Envio</strong> e cole sua API Key do Resend. Assim os emails saem com seu domínio e reputação próprios.</div>
+            </div>
+            <div class="wh-accordion" style="border:none;background:none;margin:0;border-top:1px solid var(--border);">
+              <div class="wh-acc-header" onclick="this.parentElement.classList.toggle('open')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:12px 8px;">
+                <span style="font-size:14px;font-weight:600;">Como funciona o limite de entregas do mês?</span>
+                <i class="ti ti-chevron-down wh-chevron"></i>
+              </div>
+              <div class="wh-acc-body" style="padding:0 8px 12px;font-size:13px;color:var(--text2);line-height:1.7;">Cada plano tem um limite mensal de entregas. Ao chegar em 80% e 95% você recebe um aviso por email. Testes internos também consomem esse limite, pois enviam emails reais. Faça upgrade a qualquer momento na aba Configurações.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Abrir chamado -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-message-2"></i> Abrir um chamado</div>
+          </div>
+          <div class="card-body">
+            <p style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:16px;">
+              Não encontrou a resposta? Abra um chamado e nossa equipe responde no email da sua conta.
+            </p>
+            <div id="sup-msg" style="display:none;margin-bottom:14px;"></div>
+            <div class="form-group" style="margin-bottom:14px;">
+              <label class="form-label">Assunto</label>
+              <select class="form-select" id="sup-subject">
+                <option value="Dúvida sobre a conta">Dúvida sobre a conta</option>
+                <option value="Problema técnico">Problema técnico</option>
+                <option value="Dúvida sobre cobrança / plano">Dúvida sobre cobrança / plano</option>
+                <option value="Sugestão">Sugestão de melhoria</option>
+                <option value="Outro">Outro assunto</option>
+              </select>
+            </div>
+            <div class="form-group full" style="margin-bottom:14px;">
+              <label class="form-label">Descreva sua dúvida ou problema</label>
+              <textarea class="form-textarea" id="sup-message" rows="5" placeholder="Conte com detalhes o que você precisa..."></textarea>
+            </div>
+            <button class="btn btn-primary" id="sup-btn" onclick="submitSupportTicket()">
+              <i class="ti ti-send"></i> Enviar chamado
+            </button>
+          </div>
+        </div>
+
+        <!-- Denúncia -->
+        <div class="card" style="border-color:rgba(239,68,68,0.25);">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-flag" style="color:var(--red);"></i> Denunciar abuso ou conteúdo proibido</div>
+          </div>
+          <div class="card-body">
+            <p style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:14px;">
+              Identificou uso indevido da plataforma — golpe, pirataria, conteúdo ilegal? Ajude a manter a Vaultly segura.
+              A página pública de denúncia é a mesma que aparece nos emails enviados aos seus clientes.
+            </p>
+            <a class="btn btn-ghost btn-sm" href="/suporte" target="_blank" style="text-decoration:none;">
+              <i class="ti ti-external-link"></i> Abrir página de denúncia
+            </a>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -1204,6 +1299,41 @@ async function loadConfig() {
 
 // saveEmailConfig mantida para compatibilidade — delega para saveEmailTab
 async function saveEmailConfig() { return saveEmailTab(); }
+
+// ── Suporte: abrir chamado ───────────────────────────────────────
+async function submitSupportTicket() {
+  var btn = document.getElementById('sup-btn');
+  var msg = document.getElementById('sup-msg');
+  var subject = document.getElementById('sup-subject').value;
+  var message = document.getElementById('sup-message').value.trim();
+  msg.style.display = 'none';
+
+  if (message.length < 10) {
+    msg.style.display = 'block';
+    msg.innerHTML = '<div style="background:var(--yellow-dim);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--yellow);"><i class="ti ti-alert-triangle"></i> Descreva sua dúvida com pelo menos 10 caracteres.</div>';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i> Enviando...';
+  try {
+    var res = await apiFetch('/api/support/ticket', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subject: subject, message: message })
+    });
+    if (!res.success) throw new Error(res.error || 'Erro ao enviar.');
+    document.getElementById('sup-message').value = '';
+    msg.style.display = 'block';
+    msg.innerHTML = '<div style="background:var(--emerald-dim);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--emerald);"><i class="ti ti-circle-check"></i> Chamado enviado! Responderemos no email da sua conta.</div>';
+  } catch(e) {
+    msg.style.display = 'block';
+    msg.innerHTML = '<div style="background:var(--red-dim);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--red);"><i class="ti ti-alert-circle"></i> ' + e.message + '</div>';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-send"></i> Enviar chamado';
+  }
+}
 
 function toggleResendKey() {
   const input = document.getElementById('cfg-resend-key');

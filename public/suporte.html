@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Suporte — Vaultly</title>
+<meta name="description" content="Central de suporte da Vaultly. Tire dúvidas ou denuncie um produto suspeito."/>
+<link rel="icon" type="image/png" href="/img/logo-icon.png"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Satoshi:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0D0F18; --bg2: #111320; --bg3: #171A2E; --bg4: #1E2440;
+  --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.13);
+  --orange: #FF6B35; --amber: #FF9F1C; --orange-dim: rgba(255,107,53,0.12);
+  --emerald: #22C55E; --red: #EF4444; --yellow: #F59E0B;
+  --text: #F8FAFC; --text2: #94A3B8; --text3: #475569;
+  --radius: 10px; --radius-lg: 14px; --radius-xl: 20px;
+}
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 16px; -webkit-font-smoothing: antialiased; }
+.dot-grid { position: fixed; inset: 0; z-index: 0; pointer-events: none; background-image: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px); background-size: 32px 32px; mask-image: radial-gradient(ellipse 70% 50% at 50% 0%, black 20%, transparent 80%); }
+::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 99px; }
+
+nav { position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; height: 64px; background: rgba(13,15,24,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); }
+.nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.logo-mark { width: 34px; height: 34px; border-radius: 9px; background: var(--orange); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(255,107,53,0.4); }
+.logo-mark i { color: #fff; font-size: 18px; }
+.logo-name { font-family: 'Satoshi', sans-serif; font-size: 19px; font-weight: 800; letter-spacing: -0.5px; color: var(--text); }
+.nav-back { color: var(--text2); text-decoration: none; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; }
+.nav-back:hover { color: var(--text); }
+
+.container { max-width: 760px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+.hero { text-align: center; padding: 72px 24px 40px; position: relative; z-index: 1; }
+.hero h1 { font-family: 'Satoshi', sans-serif; font-size: clamp(32px, 5vw, 48px); font-weight: 900; letter-spacing: -0.03em; margin-bottom: 14px; }
+.hero h1 em { font-style: normal; color: var(--orange); }
+.hero p { font-size: 17px; color: var(--text2); max-width: 480px; margin: 0 auto; line-height: 1.6; }
+
+.section-title { font-family: 'Satoshi', sans-serif; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; margin: 48px 0 18px; display: flex; align-items: center; gap: 9px; }
+.section-title i { color: var(--orange); }
+
+/* FAQ */
+.faq-item { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); margin-bottom: 10px; overflow: hidden; }
+.faq-q { padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; font-size: 15px; font-weight: 600; gap: 12px; user-select: none; }
+.faq-q i { color: var(--text3); transition: transform 0.25s; flex-shrink: 0; }
+.faq-item.open .faq-q i { transform: rotate(180deg); color: var(--orange); }
+.faq-a { display: none; padding: 0 20px 18px; font-size: 14px; color: var(--text2); line-height: 1.7; }
+.faq-item.open .faq-a { display: block; }
+
+/* Form */
+.card { background: var(--bg2); border: 1px solid var(--border2); border-radius: var(--radius-xl); padding: 28px; margin-bottom: 60px; }
+.form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+label { font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; }
+input, select, textarea { background: var(--bg3); border: 1px solid var(--border2); color: var(--text); padding: 11px 14px; border-radius: 9px; font-size: 14px; font-family: inherit; outline: none; transition: border-color 0.2s; width: 100%; }
+input:focus, select:focus, textarea:focus { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(255,107,53,0.15); }
+select option { background: var(--bg2); color: var(--text); }
+textarea { resize: vertical; min-height: 120px; }
+.hint { font-size: 12px; color: var(--text3); }
+.btn-submit { width: 100%; padding: 14px; background: var(--orange); color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s; font-family: inherit; margin-top: 6px; }
+.btn-submit:hover { background: #FF7A4A; transform: translateY(-1px); }
+.btn-submit:disabled { opacity: 0.6; cursor: default; transform: none; }
+.msg { padding: 12px 16px; border-radius: 9px; font-size: 14px; margin-bottom: 16px; display: none; }
+.msg-ok { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: var(--emerald); }
+.msg-err { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: var(--red); }
+
+.prohibited { background: rgba(239,68,68,0.05); border: 1px solid rgba(239,68,68,0.2); border-radius: var(--radius-lg); padding: 18px 20px; margin-bottom: 24px; }
+.prohibited h3 { font-size: 14px; font-weight: 700; color: var(--red); margin-bottom: 10px; display: flex; align-items: center; gap: 7px; }
+.prohibited ul { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 18px; }
+.prohibited li { font-size: 13px; color: var(--text2); display: flex; align-items: center; gap: 7px; }
+.prohibited li::before { content: '✕'; color: var(--red); font-weight: 700; font-size: 11px; }
+
+footer { border-top: 1px solid var(--border); padding: 28px 0; text-align: center; position: relative; z-index: 1; }
+.footer-copy { font-size: 13px; color: var(--text3); }
+
+@media (max-width: 560px) { .form-row { grid-template-columns: 1fr; } .prohibited ul { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="dot-grid"></div>
+
+<nav>
+  <a class="nav-logo" href="/"><div class="logo-mark"><i class="ti ti-package"></i></div><span class="logo-name">Vaultly</span></a>
+  <a class="nav-back" href="/"><i class="ti ti-arrow-left"></i> Voltar ao site</a>
+</nav>
+
+<section class="hero">
+  <h1>Central de <em>Suporte</em></h1>
+  <p>Tire suas dúvidas ou denuncie um produto suspeito. Estamos aqui para manter a plataforma segura.</p>
+</section>
+
+<div class="container">
+
+  <!-- FAQ -->
+  <div class="section-title"><i class="ti ti-help-circle"></i> Perguntas frequentes</div>
+
+  <div class="faq-item">
+    <div class="faq-q" onclick="toggleFaq(this)">Recebi um email da Vaultly, o que é isso? <i class="ti ti-chevron-down"></i></div>
+    <div class="faq-a">A Vaultly é a plataforma que entrega automaticamente o produto digital que você comprou em uma loja (Kiwify, Yampi, etc.). O arquivo do seu produto vem anexado no email de entrega. Nós apenas automatizamos o envio — quem vende o produto é o lojista.</div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-q" onclick="toggleFaq(this)">Não recebi meu arquivo / o anexo não abre <i class="ti ti-chevron-down"></i></div>
+    <div class="faq-a">Confira a caixa de spam e a aba "Promoções" do seu email. O arquivo vem anexado ao email de entrega. Se ainda assim não encontrar, responda o email de entrega ou use o formulário abaixo informando o número do pedido — encaminharemos ao vendedor.</div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-q" onclick="toggleFaq(this)">Quero reembolso do produto que comprei <i class="ti ti-chevron-down"></i></div>
+    <div class="faq-a">Reembolsos são tratados pela plataforma de pagamento onde você comprou (Kiwify, Yampi, etc.) e pelo vendedor do produto. A Vaultly não processa pagamentos nem reembolsos. Entre em contato com o vendedor ou a plataforma de compra.</div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-q" onclick="toggleFaq(this)">Acho que esse produto é um golpe ou conteúdo proibido <i class="ti ti-chevron-down"></i></div>
+    <div class="faq-a">Leve isso a sério e nos ajude. Use o formulário de denúncia abaixo com o máximo de detalhes (número do pedido, nome do produto, o que aconteceu). Toda denúncia é analisada pela nossa equipe e pode levar ao bloqueio do vendedor na plataforma.</div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-q" onclick="toggleFaq(this)">Sou vendedor e tenho dúvidas sobre minha conta <i class="ti ti-chevron-down"></i></div>
+    <div class="faq-a">Se você tem uma conta Vaultly, acesse o painel e use a aba <strong>Suporte</strong> para abrir um chamado diretamente vinculado à sua conta. Você também pode usar o formulário abaixo.</div>
+  </div>
+
+  <!-- Produtos proibidos -->
+  <div class="section-title"><i class="ti ti-ban"></i> O que é proibido comercializar</div>
+  <div class="prohibited">
+    <h3><i class="ti ti-alert-triangle"></i> Denuncie se você identificar qualquer um destes:</h3>
+    <ul>
+      <li>Golpes e esquemas fraudulentos</li>
+      <li>Pirataria e material com direitos autorais</li>
+      <li>Cursos/métodos que prometem enriquecimento garantido</li>
+      <li>Conteúdo adulto envolvendo menores</li>
+      <li>Dados pessoais ou bancários roubados</li>
+      <li>Armas, drogas ou substâncias ilegais</li>
+      <li>Documentos falsos e falsificações</li>
+      <li>Conteúdo que incite violência ou ódio</li>
+      <li>Esquemas de pirâmide ou marketing multinível enganoso</li>
+      <li>Qualquer atividade ilegal pela lei brasileira</li>
+    </ul>
+  </div>
+
+  <!-- Formulário -->
+  <div class="section-title"><i class="ti ti-message-report"></i> Fale com o suporte ou denuncie</div>
+  <div class="card">
+    <div id="msg-ok" class="msg msg-ok"></div>
+    <div id="msg-err" class="msg msg-err"></div>
+    <form id="support-form" onsubmit="return submitReport(event)">
+      <div class="form-group">
+        <label>Motivo do contato</label>
+        <select id="f-subject">
+          <option value="Denúncia de produto">🚨 Denunciar produto suspeito / golpe</option>
+          <option value="Não recebi o produto">📦 Não recebi meu produto</option>
+          <option value="Dúvida geral">💬 Dúvida geral</option>
+          <option value="Outro">Outro assunto</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Seu nome (opcional)</label>
+          <input type="text" id="f-name" placeholder="Como podemos te chamar"/>
+        </div>
+        <div class="form-group">
+          <label>Seu email (opcional)</label>
+          <input type="email" id="f-email" placeholder="para retornarmos o contato"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Número do pedido (se tiver)</label>
+        <input type="text" id="f-order" placeholder="Ex: KW-2847 — ajuda a identificar a venda"/>
+      </div>
+      <div class="form-group">
+        <label>Descreva o ocorrido *</label>
+        <textarea id="f-message" placeholder="Conte com detalhes o que aconteceu, qual o produto e por que está reportando..."></textarea>
+        <span class="hint">Quanto mais detalhes, mais rápido conseguimos analisar.</span>
+      </div>
+      <button type="submit" class="btn-submit" id="f-btn">Enviar para o suporte</button>
+    </form>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-copy">© 2026 Vaultly · Entrega automática de produtos digitais</div>
+</footer>
+
+<script>
+function toggleFaq(el) { el.parentElement.classList.toggle('open'); }
+
+async function submitReport(e) {
+  e.preventDefault();
+  var btn  = document.getElementById('f-btn');
+  var ok   = document.getElementById('msg-ok');
+  var err  = document.getElementById('msg-err');
+  ok.style.display = 'none'; err.style.display = 'none';
+
+  var message = document.getElementById('f-message').value.trim();
+  if (message.length < 10) {
+    err.textContent = 'Descreva o ocorrido com pelo menos 10 caracteres.';
+    err.style.display = 'block';
+    return false;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+
+  try {
+    var res = await fetch('/api/support/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        reporter_name:  document.getElementById('f-name').value.trim(),
+        reporter_email: document.getElementById('f-email').value.trim(),
+        subject:        document.getElementById('f-subject').value,
+        order_ref:      document.getElementById('f-order').value.trim(),
+        message:        message
+      })
+    });
+    var data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Erro ao enviar.');
+    document.getElementById('support-form').reset();
+    ok.innerHTML = '<i class="ti ti-circle-check"></i> Recebemos sua mensagem! Nossa equipe vai analisar. Se você informou um email, retornaremos por lá.';
+    ok.style.display = 'block';
+    window.scrollTo({ top: document.querySelector('.card').offsetTop - 80, behavior: 'smooth' });
+  } catch(ex) {
+    err.textContent = ex.message;
+    err.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Enviar para o suporte';
+  }
+  return false;
+}
+</script>
+</body>
+</html>

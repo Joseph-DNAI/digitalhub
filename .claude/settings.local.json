@@ -49,7 +49,11 @@
       "Bash(grep -c \"#6C63FF\\\\|#38BDF8\" public/index.html public/landing.html)",
       "Bash(grep -c \"\\\\.orb\\\\|\\\\.float-badge\\\\|orbFloat\" public/landing.html)",
       "Bash(git rm *)",
-      "Bash(printf '\\\\npublic/*.bak\\\\nmídia/\\\\n')"
+      "Bash(printf '\\\\npublic/*.bak\\\\nmídia/\\\\n')",
+      "Bash(node -e \"require\\('./src/routes/support.js'\\); require\\('./src/services/emailService.js'\\); console.log\\('OK: rotas e email validos'\\);\")",
+      "Bash(node -e \"require\\('./src/models/database.js'\\); require\\('./src/server.js'\\) \")",
+      "Bash(node --check src/services/deliveryService.js)",
+      "Bash(node --check src/routes/deliveries.js)"
     ],
     "additionalDirectories": [
       "C:\\Users\\jojop\\OneDrive\\Documentos\\Projetos\\Webhook Yampi e Kiwify\\digitalhub-multi\\.git",

@@ -68,6 +68,31 @@ function renderTemplate(template, vars, showBranding) {
     .replace(/{{branding}}/g, brandingHtml);
 }
 
+// Disclaimer legal — anexado a TODOS os emails (padrão ou personalizado).
+// Protege a Vaultly: ela só transporta o arquivo, não responde pelo conteúdo.
+const SUPPORT_URL = (process.env.BASE_URL || 'https://vaultly.digital') + '/suporte';
+const DISCLAIMER = `
+  <div style="max-width:560px;margin:16px auto 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+    <div style="background:#FBFBFC;border:1px solid #ECEEF1;border-radius:12px;padding:16px 18px;">
+      <p style="margin:0 0 8px;font-size:11px;color:#6B7280;line-height:1.6;">
+        <strong style="color:#4B5563;">Aviso:</strong> a <strong>Vaultly</strong> é apenas a plataforma que automatiza a entrega
+        deste arquivo. Não produzimos, revisamos nem nos responsabilizamos pelo conteúdo do produto,
+        que é de responsabilidade exclusiva do vendedor.
+      </p>
+      <p style="margin:0 0 8px;font-size:11px;color:#6B7280;line-height:1.6;">
+        Se você suspeita que este produto envolve <strong>golpe, fraude, pirataria, conteúdo ilegal,
+        material adulto/infantil, dados roubados, armas, drogas, falsificação ou qualquer atividade proibida</strong>,
+        denuncie agora mesmo:
+      </p>
+      <p style="margin:0;text-align:center;">
+        <a href="${SUPPORT_URL}" style="display:inline-block;background:#FF6B35;color:#ffffff;text-decoration:none;font-size:12px;font-weight:700;padding:9px 18px;border-radius:8px;">
+          Denunciar ou pedir ajuda
+        </a>
+      </p>
+    </div>
+  </div>
+`;
+
 async function sendProductEmail({ buyerEmail, buyerName, productName, filePath, fileName, emailTemplate, orderId, resendApiKey, fromName, fromAddress, showBranding }) {
   const apiKey = resendApiKey || process.env.RESEND_API_KEY || process.env.SMTP_PASS;
   const fName  = fromName    || process.env.EMAIL_FROM_NAME    || 'Vaultly';
@@ -76,7 +101,9 @@ async function sendProductEmail({ buyerEmail, buyerName, productName, filePath, 
   if (!apiKey)   throw new Error('RESEND_API_KEY nao configurada');
   if (!filePath) throw new Error('Arquivo nao configurado para este produto');
 
-  const htmlBody   = renderTemplate(emailTemplate, { nome: buyerName||buyerEmail, produto: productName, arquivo: fileName, email: buyerEmail, pedido: orderId }, showBranding);
+  const baseHtml   = renderTemplate(emailTemplate, { nome: buyerName||buyerEmail, produto: productName, arquivo: fileName, email: buyerEmail, pedido: orderId }, showBranding);
+  // Disclaimer legal sempre presente, mesmo em templates personalizados
+  const htmlBody   = baseHtml + DISCLAIMER;
   const fileBuffer = await downloadFileBuffer(filePath);
   const fileBase64 = fileBuffer.toString('base64');
 
