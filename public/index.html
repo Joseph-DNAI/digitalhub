@@ -389,8 +389,11 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
           </div>
         </div>
 
+        <!-- Resultado do import (Kiwify/Yampi) — visível ao clicar em Importar -->
+        <div id="platform-import-list" style="display:none;margin-bottom:16px;"></div>
+
         <!-- Produtos não mapeados (capturados via webhook) -->
-        <div id="unmatched-section" style="background:var(--bg3);border:1px solid var(--yellow);border-radius:var(--radius);padding:16px 20px;margin-bottom:24px;">
+        <div id="unmatched-section" style="display:none;background:var(--bg3);border:1px solid var(--yellow);border-radius:var(--radius);padding:16px 20px;margin-bottom:24px;">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
             <i class="ti ti-alert-triangle" style="color:var(--yellow);font-size:16px;"></i>
             <span style="font-weight:600;font-size:13px;color:var(--yellow);">Produtos Pendentes</span>
@@ -398,7 +401,6 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
             <span style="font-size:12px;color:var(--text2);margin-left:4px;">— chegaram via webhook mas ainda não têm arquivo vinculado</span>
           </div>
           <div id="unmatched-list" style="color:var(--text3);font-size:13px;">Verificando...</div>
-          <div id="platform-import-list" style="margin-top:8px;"></div>
         </div>
 
         <div class="products-grid" id="products-grid">
@@ -2315,60 +2317,80 @@ async function getTenantConfig() {
 }
 
 async function importFromPlatform(platform) {
-  var btn   = document.getElementById('btn-import-' + platform);
+  var btn    = document.getElementById('btn-import-' + platform);
   var listEl = document.getElementById('platform-import-list');
-  if (listEl) listEl.innerHTML = '';
 
-  // Pré-verifica credenciais antes de chamar a API
+  function showImport(html) {
+    if (!listEl) return;
+    listEl.innerHTML = html;
+    listEl.style.display = 'block';
+    listEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  if (listEl) { listEl.innerHTML = ''; listEl.style.display = 'none'; }
+
   var cfg = await getTenantConfig();
 
   if (platform === 'yampi') {
     if (!cfg || !cfg.yampi_store_alias || !cfg.has_yampi_token) {
-      if (listEl) listEl.innerHTML =
-        '<div style="background:var(--bg4);border:1px solid var(--border2);border-radius:var(--radius);padding:16px 18px;margin-top:4px;">' +
-          '<div style="font-size:13px;font-weight:600;color:var(--yellow);margin-bottom:8px;"><i class="ti ti-settings"></i> Configurar integração Yampi</div>' +
-          '<div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:12px;">' +
-            'Para importar produtos da Yampi, você precisa de duas informações:' +
-            '<br><br>' +
-            '<strong style="color:var(--text);">1. Alias da loja</strong> — a parte final da URL da sua loja:<br>' +
-            '<code style="background:var(--bg3);padding:2px 6px;border-radius:4px;font-size:11px;">yampi.com.br/<strong>seu-alias</strong></code>' +
-            '<br><br>' +
-            '<strong style="color:var(--text);">2. Token API</strong> — em Yampi: <em>Configurações → Integrações → API → Gerar token</em>' +
+      showImport(
+        '<div style="background:var(--bg2);border:1px solid rgba(245,158,11,0.35);border-left:3px solid var(--yellow);border-radius:var(--radius-lg);padding:20px 22px;">' +
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">' +
+            '<i class="ti ti-alert-triangle" style="font-size:18px;color:var(--yellow);flex-shrink:0;"></i>' +
+            '<span style="font-family:\'Satoshi\',sans-serif;font-size:15px;font-weight:700;">Configuração necessária para importar da Yampi</span>' +
+            '<button onclick="this.closest(\'#platform-import-list\') && (document.getElementById(\'platform-import-list\').style.display=\'none\')" style="margin-left:auto;background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 6px;" title="Fechar">&#x2715;</button>' +
           '</div>' +
-          '<button class="btn btn-primary btn-sm" onclick="switchTabById(\'config\')">' +
+          '<div style="font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:16px;">' +
+            'Para importar os seus produtos da Yampi automaticamente, você precisa configurar duas informações na aba <strong style="color:var(--text);">Configurações → Webhook</strong>:' +
+            '<div style="background:var(--bg3);border-radius:var(--radius);padding:12px 14px;margin-top:12px;display:flex;flex-direction:column;gap:8px;">' +
+              '<div style="display:flex;gap:10px;align-items:flex-start;">' +
+                '<span style="background:var(--orange-dim);color:var(--orange);font-weight:700;font-size:11px;padding:2px 7px;border-radius:99px;flex-shrink:0;margin-top:1px;">1</span>' +
+                '<div><strong style="color:var(--text);">Alias da loja</strong> — parte final da URL da sua loja Yampi<br>' +
+                '<code style="font-size:11px;color:var(--text3);">yampi.com.br/<strong style="color:var(--amber);">seu-alias</strong></code></div>' +
+              '</div>' +
+              '<div style="display:flex;gap:10px;align-items:flex-start;">' +
+                '<span style="background:var(--orange-dim);color:var(--orange);font-weight:700;font-size:11px;padding:2px 7px;border-radius:99px;flex-shrink:0;margin-top:1px;">2</span>' +
+                '<div><strong style="color:var(--text);">Token da API</strong> — em Yampi: <em>Configurações → Integrações → API → Gerar token</em></div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<button class="btn btn-primary btn-sm" onclick="switchTabById(\'webhook\')">' +
             '<i class="ti ti-settings"></i> Ir para Configurações' +
           '</button>' +
-        '</div>';
+        '</div>'
+      );
       return;
     }
   }
 
   if (platform === 'kiwify') {
-    if (listEl) listEl.innerHTML =
-      '<div style="background:var(--bg4);border:1px solid var(--border2);border-radius:var(--radius);padding:18px 20px;margin-top:4px;">' +
-        '<div style="font-size:13px;font-weight:700;color:var(--cyan);margin-bottom:12px;"><i class="ti ti-brand-google"></i> Pré-cadastrar produto Kiwify pelo ID</div>' +
-        '<div style="font-size:12px;color:var(--text2);line-height:1.8;margin-bottom:16px;">' +
-          'A Kiwify <strong style="color:var(--text);">não tem API pública</strong>, então não é possível listar produtos automaticamente. ' +
-          'Mas você pode pré-cadastrar colando a <strong style="color:var(--text);">URL do produto</strong> abaixo — o sistema extrai o ID automaticamente.' +
-          '<br><br>' +
-          '<span style="color:var(--text3);">Onde encontrar: Kiwify → Seus produtos → clique no produto → copie a URL do navegador.</span>' +
-          '<br><span style="font-size:11px;color:var(--text3);">Exemplo: <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;">kiwify.com.br/products/<strong>xxxxxxxx-xxxx-xxxx</strong>/edit</code></span>' +
+    showImport(
+      '<div style="background:var(--bg2);border:1px solid var(--border2);border-left:3px solid var(--orange);border-radius:var(--radius-lg);padding:20px 22px;">' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">' +
+          '<i class="ti ti-plug" style="font-size:18px;color:var(--orange);flex-shrink:0;"></i>' +
+          '<span style="font-family:\'Satoshi\',sans-serif;font-size:15px;font-weight:700;">Pré-cadastrar produto Kiwify</span>' +
+          '<button onclick="document.getElementById(\'platform-import-list\').style.display=\'none\'" style="margin-left:auto;background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 6px;" title="Fechar">&#x2715;</button>' +
         '</div>' +
-        '<div style="display:flex;gap:8px;margin-bottom:12px;">' +
-          '<input type="text" class="form-input" id="kiwify-url-input" placeholder="Cole a URL do produto ou só o ID..." style="flex:1;font-size:13px;" />' +
+        '<div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:16px;">' +
+          'A Kiwify <strong style="color:var(--text);">não tem API pública</strong> — os produtos aparecem automaticamente aqui após a primeira venda aprovada. ' +
+          'Para adiantar, cole a <strong style="color:var(--text);">URL do produto</strong> abaixo e o sistema extrai o ID sozinho.' +
+          '<br><span style="font-size:11px;color:var(--text3);">Onde achar: Kiwify → Seus produtos → clique no produto → copie a URL. Ex: <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;">kiwify.com.br/products/<strong>xxxxxxxx</strong>/edit</code></span>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;margin-bottom:10px;">' +
+          '<input type="text" class="form-input" id="kiwify-url-input" placeholder="Cole a URL do produto Kiwify..." style="flex:1;" />' +
           '<button class="btn btn-primary btn-sm" onclick="preRegisterKiwify()">' +
             '<i class="ti ti-arrow-right"></i> Pré-cadastrar' +
           '</button>' +
         '</div>' +
-        '<div style="font-size:11px;color:var(--text3);border-top:1px solid var(--border);padding-top:10px;">' +
-          '<i class="ti ti-info-circle" style="color:var(--orange);"></i> Após pré-cadastrar, adicione o arquivo PDF e o produto estará pronto para receber pedidos.' +
+        '<div style="font-size:11px;color:var(--text3);border-top:1px solid var(--border);padding-top:10px;display:flex;align-items:center;gap:5px;">' +
+          '<i class="ti ti-info-circle" style="color:var(--orange);font-size:13px;"></i> Após pré-cadastrar, vincule o arquivo PDF para o produto começar a receber pedidos.' +
         '</div>' +
-      '</div>';
-    // Foca no campo após renderizar
+      '</div>'
+    );
     setTimeout(function() {
       var el = document.getElementById('kiwify-url-input');
       if (el) el.focus();
-    }, 100);
+    }, 120);
     return;
   }
 
@@ -2379,11 +2401,12 @@ async function importFromPlatform(platform) {
     if (!res.success) throw new Error(res.error);
 
     if (!res.data || !res.data.length) {
-      if (listEl) listEl.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:12px 0;">Nenhum produto encontrado na sua loja Yampi.</div>';
+      if (listEl) { listEl.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:12px 0;">Nenhum produto encontrado na sua loja Yampi.</div>'; listEl.style.display = 'block'; }
       return;
     }
 
     if (listEl) {
+      listEl.style.display = 'block';
       listEl.innerHTML =
         '<div style="font-size:12px;color:var(--text2);margin-bottom:10px;padding-top:4px;">' +
           '<i class="ti ti-check" style="color:var(--emerald);"></i> ' + res.data.length + ' produto(s) encontrado(s) na Yampi:' +
