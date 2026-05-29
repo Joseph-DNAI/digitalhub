@@ -1261,10 +1261,10 @@ tbody tr:hover td { background: rgba(255,255,255,0.02); }
         <button id="um-tog-monthly" onclick="setUpgradeBilling('monthly')" style="padding:5px 18px;border-radius:99px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--indigo);color:#fff;transition:all .2s;">Mensal</button>
         <button id="um-tog-annual" onclick="setUpgradeBilling('annual')" style="padding:5px 18px;border-radius:99px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--text2);transition:all .2s;">Anual&nbsp;<span style="color:var(--emerald);font-size:10px;font-weight:700;">-16%</span></button>
       </div>
-      <!-- Grid 4 planos -->
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;">
-        <!-- Starter -->
-        <div style="border:1px solid var(--border);border-radius:10px;padding:13px 10px;text-align:center;position:relative;overflow:hidden;">
+      <!-- Grid de planos (3 visíveis por vez) -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">
+        <!-- Starter — visível apenas no mensal -->
+        <div id="um-card-starter" style="border:1px solid var(--border);border-radius:10px;padding:13px 10px;text-align:center;">
           <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:5px;letter-spacing:.04em;">STARTER</div>
           <div style="font-size:18px;font-weight:800;color:var(--text);line-height:1;"><span id="um-price-starter">R$37</span></div>
           <div id="um-period-starter" style="font-size:10px;color:var(--text3);margin-bottom:8px;">/mês</div>
@@ -1275,13 +1275,6 @@ tbody tr:hover td { background: rgba(255,255,255,0.02); }
             <li><span style="color:var(--emerald);">✓</span> Retry automático</li>
             <li><span style="color:var(--emerald);">✓</span> Sua marca no email</li>
           </ul>
-          <!-- Overlay anual — incentivo -->
-          <div id="um-starter-annual-lock" style="display:none;position:absolute;inset:0;background:rgba(11,16,32,0.93);backdrop-filter:blur(3px);border-radius:9px;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:12px;text-align:center;">
-            <i class="ti ti-trending-up" style="font-size:26px;color:var(--indigo);"></i>
-            <div style="font-size:10.5px;color:var(--text);font-weight:600;line-height:1.5;">Em 1 ano com a Vaultly, o Starter vai ser pequeno demais para você.</div>
-            <div style="font-size:10px;color:var(--text2);line-height:1.4;">Comece direto no Basic e cresça sem limitações.</div>
-            <button onclick="setUpgradeBilling('monthly')" style="margin-top:4px;background:none;border:1px solid var(--border2);color:var(--text2);font-size:10px;padding:4px 10px;border-radius:6px;cursor:pointer;">Ver mensal</button>
-          </div>
         </div>
         <!-- Basic -->
         <div style="border:2px solid var(--indigo);border-radius:10px;padding:13px 10px;text-align:center;position:relative;background:rgba(108,99,255,0.05);">
@@ -1310,11 +1303,11 @@ tbody tr:hover td { background: rgba(255,255,255,0.02); }
             <li><span style="color:var(--emerald);">✓</span> Atend. prioritário</li>
           </ul>
         </div>
-        <!-- Business -->
-        <div style="border:1px solid rgba(168,85,247,0.3);border-radius:10px;padding:13px 10px;text-align:center;background:rgba(168,85,247,0.03);position:relative;overflow:hidden;">
+        <!-- Business — visível apenas no anual -->
+        <div id="um-card-business" style="display:none;border:1px solid rgba(168,85,247,0.3);border-radius:10px;padding:13px 10px;text-align:center;background:rgba(168,85,247,0.03);">
           <div style="font-size:11px;font-weight:700;color:#A855F7;margin-bottom:5px;letter-spacing:.04em;">BUSINESS</div>
           <div style="font-size:18px;font-weight:800;color:var(--text);line-height:1;"><span id="um-price-business">R$247</span></div>
-          <div id="um-period-business" style="font-size:10px;color:var(--text3);margin-bottom:8px;">/mês</div>
+          <div id="um-period-business" style="font-size:10px;color:var(--text3);margin-bottom:8px;">/mês (anual)</div>
           <hr style="border:none;border-top:1px solid var(--border);margin:7px 0;"/>
           <ul style="list-style:none;padding:0;margin:0;text-align:left;font-size:10.5px;color:var(--text2);line-height:2;">
             <li><span style="color:var(--emerald);">✓</span> Ilimitado tudo</li>
@@ -1322,18 +1315,11 @@ tbody tr:hover td { background: rgba(255,255,255,0.02); }
             <li><span style="color:var(--emerald);">✓</span> Multi-usuário</li>
             <li><span style="color:var(--emerald);">✓</span> SLA dedicado</li>
           </ul>
-          <!-- Overlay mensal — Business apenas anual -->
-          <div id="um-business-monthly-lock" style="display:flex;position:absolute;inset:0;background:rgba(11,16,32,0.93);backdrop-filter:blur(3px);border-radius:9px;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:12px;text-align:center;">
-            <i class="ti ti-calendar-repeat" style="font-size:26px;color:#A855F7;"></i>
-            <div style="font-size:10.5px;color:var(--text);font-weight:600;line-height:1.5;">Disponível apenas no plano anual.</div>
-            <div style="font-size:10px;color:var(--text2);line-height:1.4;">Um compromisso com o crescimento sustentável do seu negócio.</div>
-            <button onclick="setUpgradeBilling('annual')" style="margin-top:4px;background:linear-gradient(135deg,#A855F7,#6C63FF);border:none;color:#fff;font-size:10px;font-weight:700;padding:5px 12px;border-radius:6px;cursor:pointer;">Ver plano anual</button>
-          </div>
         </div>
       </div>
       <!-- CTAs -->
       <div id="upgrade-error" style="display:none;padding:10px 14px;background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.3);border-radius:8px;color:var(--red);font-size:12px;margin-bottom:10px;"></div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:10px;">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:10px;" id="um-btn-grid">
         <button onclick="startCheckout('starter')" id="btn-checkout-starter" style="display:flex;align-items:center;justify-content:center;gap:4px;background:rgba(108,99,255,.15);color:var(--indigo);border:1px solid rgba(108,99,255,.3);padding:10px 4px;border-radius:9px;font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">
           <i class="ti ti-rocket"></i> <span id="btn-label-starter">Starter R$37</span>
         </button>
@@ -1343,8 +1329,8 @@ tbody tr:hover td { background: rgba(255,255,255,0.02); }
         <button onclick="startCheckout('pro')" id="btn-checkout-pro" style="display:flex;align-items:center;justify-content:center;gap:4px;background:linear-gradient(135deg,#38BDF8,#10B981);color:#fff;border:none;padding:10px 4px;border-radius:9px;font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">
           <i class="ti ti-crown"></i> <span id="btn-label-pro">Pro R$147</span>
         </button>
-        <button onclick="startCheckout('business')" id="btn-checkout-business" style="display:flex;align-items:center;justify-content:center;gap:4px;background:linear-gradient(135deg,#A855F7,#6C63FF);color:#fff;border:none;padding:10px 4px;border-radius:9px;font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">
-          <i class="ti ti-building"></i> <span id="btn-label-business">Business R$297</span>
+        <button onclick="startCheckout('business')" id="btn-checkout-business" style="display:none;align-items:center;justify-content:center;gap:4px;background:linear-gradient(135deg,#A855F7,#6C63FF);color:#fff;border:none;padding:10px 4px;border-radius:9px;font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">
+          <i class="ti ti-building"></i> <span id="btn-label-business">Business R$247</span>
         </button>
       </div>
       <button onclick="hideUpgradeModal()" style="display:block;width:100%;background:transparent;border:1px solid var(--border2);color:var(--text2);padding:10px;border-radius:10px;cursor:pointer;font-size:13px;">
@@ -1990,7 +1976,7 @@ function setUpgradeBilling(type) {
   var togA = document.getElementById('um-tog-annual');
   if (togM) { togM.style.background = isAnnual ? 'transparent' : 'var(--indigo)'; togM.style.color = isAnnual ? 'var(--text2)' : '#fff'; }
   if (togA) { togA.style.background = isAnnual ? 'var(--indigo)' : 'transparent'; togA.style.color = isAnnual ? '#fff' : 'var(--text2)'; }
-  ['starter','basic','pro','business'].forEach(function(p) {
+  ['basic','pro'].forEach(function(p) {
     var price    = upgradePrices[type][p];
     var priceEl  = document.getElementById('um-price-' + p);
     var periodEl = document.getElementById('um-period-' + p);
@@ -2000,17 +1986,17 @@ function setUpgradeBilling(type) {
     if (labelEl)  labelEl.textContent  = p.charAt(0).toUpperCase() + p.slice(1) + ' R$' + price;
   });
 
-  // Starter sem plano anual — overlay de incentivo
-  var starterLock = document.getElementById('um-starter-annual-lock');
+  // Starter apenas mensal
+  var starterCard = document.getElementById('um-card-starter');
   var starterBtn  = document.getElementById('btn-checkout-starter');
-  if (starterLock) starterLock.style.display = isAnnual ? 'flex' : 'none';
-  if (starterBtn)  { starterBtn.disabled = isAnnual; starterBtn.style.opacity = isAnnual ? '0.35' : '1'; }
+  if (starterCard) starterCard.style.display = isAnnual ? 'none' : 'block';
+  if (starterBtn)  starterBtn.style.display  = isAnnual ? 'none' : 'flex';
 
-  // Business apenas anual — overlay quando mensal
-  var businessLock = document.getElementById('um-business-monthly-lock');
+  // Business apenas anual
+  var businessCard = document.getElementById('um-card-business');
   var businessBtn  = document.getElementById('btn-checkout-business');
-  if (businessLock) businessLock.style.display = isAnnual ? 'none' : 'flex';
-  if (businessBtn)  { businessBtn.disabled = !isAnnual; businessBtn.style.opacity = !isAnnual ? '0.35' : '1'; }
+  if (businessCard) businessCard.style.display = isAnnual ? 'block' : 'none';
+  if (businessBtn)  businessBtn.style.display  = isAnnual ? 'flex'  : 'none';
 }
 
 function showUpgradeModal(plan) {
