@@ -1033,6 +1033,14 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
       <button class="btn btn-ghost btn-sm" onclick="closeModal()"><i class="ti ti-x"></i></button>
     </div>
     <div class="form-grid">
+      <!-- Vincular a produto existente (só aparece ao importar) -->
+      <div class="form-group full" id="m-link-wrap" style="display:none;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.25);border-radius:var(--radius);padding:14px 16px;">
+        <label class="form-label" style="color:var(--orange);"><i class="ti ti-link"></i> Vincular a produto existente</label>
+        <select class="form-select" id="m-link-existing" onchange="onLinkExistingChange()">
+          <option value="">— Criar produto novo —</option>
+        </select>
+        <div class="form-hint">Já tem esse produto cadastrado? Vincule o ID a ele para compartilhar o mesmo arquivo PDF entre Kiwify e Yampi.</div>
+      </div>
       <div class="form-group full">
         <label class="form-label">Nome do produto *</label>
         <input type="text" class="form-input" id="m-name" placeholder="Ex: Ebook Marketing Digital" />
@@ -2203,6 +2211,8 @@ document.addEventListener('change', function(e) {
 });
 
 // ── Modal Produto ────────────────────────────────────────────────
+var _pendingImport = null;
+
 function openModal() {
   document.getElementById('m-name').value             = '';
   document.getElementById('m-desc').value             = '';
@@ -2216,7 +2226,68 @@ function openModal() {
   document.getElementById('upload-sub').textContent   = 'PDF, EPUB até 50MB · armazenado no Cloudflare R2';
   document.getElementById('modal-title').textContent  = 'Novo produto';
   document.getElementById('save-btn').innerHTML       = '<i class="ti ti-device-floppy"></i> Salvar produto';
+  // Esconde o seletor de vinculação por padrão (só importações mostram)
+  _pendingImport = null;
+  var linkWrap = document.getElementById('m-link-wrap');
+  if (linkWrap) linkWrap.style.display = 'none';
   document.getElementById('modal-bg').classList.add('open');
+}
+
+// Popula o dropdown com produtos que ainda não têm o ID dessa plataforma
+function populateLinkDropdown(platform) {
+  var wrap = document.getElementById('m-link-wrap');
+  var sel  = document.getElementById('m-link-existing');
+  if (!wrap || !sel) return;
+  var idField = platform === 'kiwify' ? 'kiwify_id' : 'yampi_id';
+  var candidates = (productsCache || []).filter(function(p) { return !p[idField]; });
+  if (!candidates.length) { wrap.style.display = 'none'; return; }
+  sel.innerHTML = '<option value="">— Criar produto novo —</option>' +
+    candidates.map(function(p) {
+      var tag = p.file_name ? ' · com arquivo' : ' · sem arquivo';
+      return '<option value="' + p.id + '">' + (p.name || 'Sem nome') + tag + '</option>';
+    }).join('');
+  sel.value = '';
+  wrap.style.display = 'block';
+}
+
+// Alterna entre "criar novo" e "vincular a existente" mantendo o ID importado
+function onLinkExistingChange() {
+  var productId = document.getElementById('m-link-existing').value;
+  var imp = _pendingImport || {};
+  var setPlatformIds = function(kiwify, yampi) {
+    document.getElementById('m-kiwify').value = imp.platform === 'kiwify' ? imp.id : (kiwify || '');
+    document.getElementById('m-yampi').value  = imp.platform === 'yampi'  ? imp.id : (yampi  || '');
+  };
+  if (!productId) {
+    // Volta ao modo "criar novo" preservando o ID importado
+    document.getElementById('m-editing-id').value = '';
+    document.getElementById('m-name').value   = imp.name || '';
+    document.getElementById('m-desc').value   = '';
+    document.getElementById('m-price').value  = '';
+    document.getElementById('m-status').value = 'active';
+    setPlatformIds('', '');
+    document.getElementById('upload-title').textContent = 'Clique para selecionar arquivo';
+    document.getElementById('upload-sub').textContent   = 'PDF, EPUB até 50MB · armazenado no Cloudflare R2';
+    document.getElementById('save-btn').innerHTML = '<i class="ti ti-device-floppy"></i> Criar produto';
+    return;
+  }
+  // Carrega o produto existente e injeta o ID importado
+  var p = (productsCache || []).find(function(x) { return x.id === productId; });
+  if (!p) return;
+  document.getElementById('m-editing-id').value = p.id;
+  document.getElementById('m-name').value   = p.name        || '';
+  document.getElementById('m-desc').value   = p.description || '';
+  document.getElementById('m-price').value  = p.price       || '';
+  document.getElementById('m-status').value = p.status      || 'active';
+  setPlatformIds(p.kiwify_id, p.yampi_id);
+  if (p.file_name) {
+    document.getElementById('upload-title').textContent = p.file_name;
+    document.getElementById('upload-sub').textContent   = 'Arquivo atual — será compartilhado com este ID';
+  } else {
+    document.getElementById('upload-title').textContent = 'Clique para selecionar arquivo';
+    document.getElementById('upload-sub').textContent   = 'Este produto ainda não tem arquivo — adicione um';
+  }
+  document.getElementById('save-btn').innerHTML = '<i class="ti ti-link"></i> Vincular ao produto';
 }
 
 function closeModal() {
@@ -2387,6 +2458,7 @@ async function loadUnmatchedProducts() {
 
 function openModalFromUnmatched(unmatchedId, platform, platformProductId) {
   openModal();
+  _pendingImport = { platform: platform, id: platformProductId, name: '' };
   if (platform === 'kiwify') {
     document.getElementById('m-kiwify').value = platformProductId;
   } else {
@@ -2396,6 +2468,7 @@ function openModalFromUnmatched(unmatchedId, platform, platformProductId) {
   document.getElementById('m-name').placeholder = 'Ex: Ebook SEO Completo';
   // guarda o unmatchedId para apagar ao salvar
   document.getElementById('save-btn').dataset.unmatchedId = unmatchedId;
+  populateLinkDropdown(platform);
 }
 
 async function dismissUnmatched(id) {
@@ -2552,6 +2625,7 @@ async function importFromPlatform(platform) {
 
 function openModalFromPlatform(platform, platformProductId, name) {
   openModal();
+  _pendingImport = { platform: platform, id: platformProductId, name: name };
   document.getElementById('m-name').value = name;
   if (platform === 'kiwify') {
     document.getElementById('m-kiwify').value = platformProductId;
@@ -2559,6 +2633,7 @@ function openModalFromPlatform(platform, platformProductId, name) {
     document.getElementById('m-yampi').value = platformProductId;
   }
   document.getElementById('modal-title').textContent = 'Adicionar produto da ' + (platform === 'kiwify' ? 'Kiwify' : 'Yampi');
+  populateLinkDropdown(platform);
 }
 
 function preRegisterKiwify() {
@@ -2580,11 +2655,13 @@ function preRegisterKiwify() {
 
   // Abre modal pre-preenchido
   openModal();
+  _pendingImport = { platform: 'kiwify', id: kiwifyId, name: '' };
   document.getElementById('m-kiwify').value = kiwifyId;
   document.getElementById('modal-title').textContent = 'Pré-cadastrar produto Kiwify';
   document.getElementById('m-name').placeholder = 'Nome do produto (ex: Ebook Marketing Digital)';
+  populateLinkDropdown('kiwify');
   setTimeout(function() { document.getElementById('m-name').focus(); }, 300);
-  showToast('ID extraido: ' + kiwifyId + ' — preencha o nome e o arquivo.', 'info');
+  showToast('ID extraido: ' + kiwifyId + ' — preencha o nome e o arquivo, ou vincule a um produto existente.', 'info');
 }
 
 // ── Auto-login se tiver token salvo ──────────────────────────────
