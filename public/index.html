@@ -990,7 +990,1436 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 </div>
 
 <script>
-// JS added in Task 13
+let authToken = localStorage.getItem('vaultly_token') || null;
+let currentUser = null;
+
+function getApiUrl() {
+  return window.location.origin;
+}
+
+async function apiFetch(path, opts = {}) {
+  const headers = { ...(opts.headers||{}) };
+  if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+  const res = await fetch(getApiUrl() + path, { ...opts, headers });
+  const data = await res.json();
+  if (res.status === 401) { doLogout(); return data; }
+  return data;
+}
+
+// ── Login via API ────────────────────────────────────────────────
+async function doLogin() {
+  const email = document.getElementById('login-user').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  const err   = document.getElementById('login-error');
+
+  if (!email || !pass) { err.textContent = 'Preencha email e senha.'; err.style.display = 'block'; return; }
+
+  try {
+    const res = await fetch(getApiUrl() + '/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass })
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      err.textContent = data.error || 'Credenciais inválidas.';
+      err.style.display = 'block';
+      document.getElementById('login-pass').value = '';
+      return;
+    }
+
+    authToken   = data.token;
+    currentUser = data.user;
+    localStorage.setItem('vaultly_token', authToken);
+    err.style.display = 'none';
+    showApp();
+  } catch(e) {
+    err.textContent = 'Erro de conexão. Tente novamente.';
+    err.style.display = 'block';
+  }
+}
+
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  var uname = currentUser ? (currentUser.name || currentUser.email || 'Usuário') : 'Usuário';
+  document.getElementById('user-name-label').textContent  = uname;
+  document.getElementById('user-avatar').textContent      = uname[0].toUpperCase();
+  // Preenche email do simulador com email do usuario logado
+  var simEmail = document.getElementById('sim-email');
+  if (simEmail && currentUser && currentUser.email) simEmail.value = currentUser.email;
+  // Mostra link admin apenas para admins
+  if (currentUser && currentUser.role === 'admin') {
+    document.getElementById('admin-nav-section').style.display = 'block';
+  }
+  // Card de assinatura na aba Config
+  var planLabels = { free: 'Free', starter: 'Starter', basic: 'Basic', pro: 'Pro', business: 'Business' };
+  var planSubs   = { free: 'Grátis · 1 produto · 50 entregas/mês', starter: 'R$37/mês · 2 produtos · 200 entregas/mês', basic: 'R$77/mês · 5 produtos · 1.000 entregas/mês', pro: 'R$147/mês · produtos ilimitados · 5.000 entregas/mês', business: 'R$247/mês anual · ilimitado' };
+  var userPlan   = currentUser ? (currentUser.plan_id || 'free') : 'free';
+  var cfgName = document.getElementById('cfg-plan-name');
+  var cfgSub  = document.getElementById('cfg-plan-sub');
+  var cfgAct  = document.getElementById('cfg-billing-actions');
+  if (cfgName) cfgName.textContent = planLabels[userPlan] || userPlan;
+  if (cfgSub)  cfgSub.textContent  = planSubs[userPlan]  || '';
+  if (cfgAct && currentUser && currentUser.stripe_customer_id) {
+    cfgAct.innerHTML = '<button class="btn btn-ghost btn-sm" id="btn-manage-sub" onclick="openBillingPortal()"><i class="ti ti-settings"></i> Gerenciar assinatura</button>';
+    if (userPlan !== 'pro') {
+      cfgAct.innerHTML += '<button class="btn btn-primary btn-sm" onclick="showUpgradeModal()"><i class="ti ti-rocket"></i> Fazer upgrade</button>';
+    }
+  }
+
+  // Detecta retorno do Stripe Checkout
+  var urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('upgraded') === '1') {
+    history.replaceState({}, '', '/app');
+    showUpgradeSuccess(urlParams.get('plan'));
+  }
+  initApp();
+}
+
+async function doLogout() {
+  try { await apiFetch('/api/auth/logout', { method:'POST' }); } catch(e){}
+  authToken = null; currentUser = null;
+  localStorage.removeItem('vaultly_token');
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+// ── loadConfig (aba Config — agora so seguranca/senha) ───────────
+async function loadConfig() {
+  // A aba Config agora so tem toggles e alteracao de senha
+  // Dados de email estao em loadEmailTab(), webhook em loadWebhookConfig()
+}
+
+// saveEmailConfig mantida para compatibilidade — delega para saveEmailTab
+async function saveEmailConfig() { return saveEmailTab(); }
+
+function toggleResendKey() {
+  const input = document.getElementById('cfg-resend-key');
+  const icon  = document.querySelector('#btn-toggle-key i');
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.className = 'ti ti-eye-off';
+  } else {
+    input.type = 'password';
+    icon.className = 'ti ti-eye';
+  }
+}
+
+async function changePass() {
+  const np = document.getElementById('new-pass').value;
+  const cp = document.getElementById('confirm-pass').value;
+  if (!np) return alert('Digite a nova senha');
+  if (np !== cp) return alert('As senhas não conferem');
+  if (np.length < 8) return alert('Senha deve ter ao menos 8 caracteres');
+  alert('✅ Para alterar a senha, use a API: PUT /api/admin/users/:id com { "password": "nova_senha" }');
+  document.getElementById('new-pass').value = '';
+  document.getElementById('confirm-pass').value = '';
+}
+
+// ── Init ─────────────────────────────────────────────────────────
+async function initApp() {
+  try {
+    const res = await apiFetch('/api/tenants/me');
+    if (res.success) {
+      document.getElementById('url-kiwify').textContent = res.data.webhook_kiwify;
+      document.getElementById('url-yampi').textContent  = res.data.webhook_yampi;
+
+      // Mostra onboarding se nao foi concluido
+      if (!res.data.onboarding_completed) {
+        setTimeout(showOnboardingModal, 800);
+      }
+    }
+  } catch(e) {
+    const base = getApiUrl();
+    document.getElementById('url-kiwify').textContent = base + '/api/webhook/SEU_TENANT_ID/kiwify';
+    document.getElementById('url-yampi').textContent  = base + '/api/webhook/SEU_TENANT_ID/yampi';
+  }
+  loadDashboard();
+  loadUnmatchedProducts();
+}
+
+// spin keyframe
+const style = document.createElement('style');
+style.textContent = '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
+document.head.appendChild(style);
+
+// ── Tab navigation ───────────────────────────────────────────────
+function switchTab(name, el) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('tab-' + name) && document.getElementById('tab-' + name).classList.add('active');
+  if (el) el.classList.add('active');
+  var btn = document.getElementById('topbar-btn');
+  btn.style.display = name === 'produtos' ? 'flex' : 'none';
+  if (name === 'dashboard') loadDashboard();
+  if (name === 'produtos')  { loadProducts(); loadUnmatchedProducts(); }
+  if (name === 'entregas')  loadDeliveries();
+  if (name === 'webhook')   { loadLogs(); loadWebhookConfig(); loadSimulatorProducts(); startLogPoller(); }
+  else                      stopLogPoller();
+  if (name === 'email')     loadEmailTab();
+  if (name === 'config')    {} // config nao precisa carregar dados dinamicos
+}
+
+// ── Webhook Config ────────────────────────────────────────────────
+async function loadWebhookConfig() {
+  try {
+    const res = await apiFetch('/api/tenants/me');
+    if (!res.success) return;
+    const d = res.data;
+
+    // URLs (ja carregadas no initApp mas atualiza aqui tb)
+    if (d.webhook_kiwify) document.getElementById('url-kiwify').textContent = d.webhook_kiwify;
+    if (d.webhook_yampi)  document.getElementById('url-yampi').textContent  = d.webhook_yampi;
+
+    // Secrets
+    if (document.getElementById('cfg-kiwify-secret'))
+      document.getElementById('cfg-kiwify-secret').value = d.kiwify_webhook_secret ? '••••••••••••••••' : '';
+    if (document.getElementById('cfg-yampi-secret'))
+      document.getElementById('cfg-yampi-secret').value = d.yampi_webhook_secret ? '••••••••••••••••' : '';
+    if (document.getElementById('cfg-yampi-alias'))
+      document.getElementById('cfg-yampi-alias').value = d.yampi_store_alias || '';
+    if (document.getElementById('cfg-yampi-token'))
+      document.getElementById('cfg-yampi-token').value = d.has_yampi_token ? '••••••••••••••••' : '';
+
+    // Atualiza pills de status
+    var platforms = (d.platforms_enabled || '').split(',');
+    updatePlatformPill('kiwify', d.kiwify_webhook_secret);
+    updatePlatformPill('yampi',  d.yampi_webhook_secret || d.yampi_store_alias);
+
+    // Abre acordeões das plataformas ativas
+    platforms.forEach(function(p) {
+      p = p.trim();
+      if (p && document.getElementById('wh-' + p)) {
+        document.getElementById('wh-' + p).classList.add('open');
+      }
+    });
+  } catch(e) { console.error('loadWebhookConfig:', e); }
+}
+
+function updatePlatformPill(platform, hasConfig) {
+  var pill = document.getElementById(platform + '-status-pill');
+  if (!pill) return;
+  if (hasConfig) {
+    pill.textContent = 'Configurado';
+    pill.className = 'status-pill pill-active';
+  } else {
+    pill.textContent = 'Nao configurado';
+    pill.className = 'status-pill pill-inactive';
+  }
+}
+
+function toggleAccordion(platform) {
+  var el = document.getElementById('wh-' + platform);
+  if (el) el.classList.toggle('open');
+}
+
+async function saveWebhookConfig() {
+  var btn = document.getElementById('btn-save-webhook');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i>';
+  try {
+    var body = {};
+    var kiwifySecret = document.getElementById('cfg-kiwify-secret').value.trim();
+    var yampiSecret  = document.getElementById('cfg-yampi-secret').value.trim();
+    var yampiAlias   = document.getElementById('cfg-yampi-alias').value.trim();
+    var yampiToken   = document.getElementById('cfg-yampi-token').value.trim();
+
+    if (kiwifySecret && !kiwifySecret.startsWith('•')) body.kiwify_webhook_secret = kiwifySecret;
+    if (yampiSecret  && !yampiSecret.startsWith('•'))  body.yampi_webhook_secret  = yampiSecret;
+    if (yampiAlias)                                    body.yampi_store_alias      = yampiAlias;
+    if (yampiToken   && !yampiToken.startsWith('•'))   body.yampi_api_token        = yampiToken;
+
+    if (Object.keys(body).length === 0) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar';
+      return;
+    }
+    const res = await apiFetch('/api/tenants/me', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    });
+    if (!res.success) throw new Error(res.error);
+    _tenantConfigCache = null;
+    loadWebhookConfig();
+    btn.innerHTML = '<i class="ti ti-check"></i> Salvo!';
+    setTimeout(() => { btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar'; }, 2000);
+  } catch(e) {
+    alert('Erro ao salvar: ' + e.message);
+    btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Email Tab ─────────────────────────────────────────────────────
+async function loadEmailTab() {
+  try {
+    const res = await apiFetch('/api/tenants/me');
+    if (!res.success) return;
+    const d = res.data;
+    const isFree = currentUser && (currentUser.plan_id === 'free' || !currentUser.plan_id);
+
+    document.getElementById('cfg-from-name').value    = d.email_from_name    || '';
+    document.getElementById('cfg-from-address').value = d.email_from_address || '';
+    document.getElementById('cfg-resend-key').value   = d.has_resend_key ? '••••••••••••••••' : '';
+
+    // Template global
+    var templateEl = document.getElementById('cfg-email-template');
+    if (templateEl) templateEl.value = d.email_template || '';
+
+    // Bloquear template para Free
+    var lockEl  = document.getElementById('email-template-lock');
+    var badgeEl = document.getElementById('email-template-plan-badge');
+    if (lockEl)  lockEl.style.display  = isFree ? 'flex'   : 'none';
+    if (badgeEl) badgeEl.style.display = isFree ? 'inline' : 'none';
+
+    // Bloquear Infraestrutura de Envio para Free e Starter
+    var byokPlans    = ['basic', 'pro', 'business'];
+    var isBasicPlus  = !!(currentUser && byokPlans.includes(currentUser.plan_id));
+    var resendLock   = document.getElementById('resend-infra-lock');
+    var resendBadge  = document.getElementById('resend-infra-badge');
+    if (resendLock)  resendLock.style.display  = isBasicPlus ? 'none'   : 'flex';
+    if (resendBadge) resendBadge.style.display = isBasicPlus ? 'none'   : 'inline';
+
+    // Status card
+    var label = document.getElementById('email-status-label');
+    var dot   = document.getElementById('email-status-dot');
+    if (label && dot) {
+      if (d.using_platform_email) {
+        label.innerHTML = d.effective_from_name + ' &lt;' + d.effective_from_address + '&gt; &nbsp;<span style="font-size:11px;color:var(--text3);">via Vaultly</span>';
+        dot.style.background = 'var(--cyan)';
+      } else {
+        label.innerHTML = d.effective_from_name + ' &lt;' + d.effective_from_address + '&gt; &nbsp;<span style="font-size:11px;color:var(--text3);">conta Resend propria</span>';
+        dot.style.background = 'var(--emerald)';
+      }
+    }
+  } catch(e) { console.error('loadEmailTab:', e); }
+}
+
+async function saveEmailTab() {
+  var btn = document.getElementById('btn-save-email');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i>';
+  try {
+    var body = {};
+    var fromName    = document.getElementById('cfg-from-name').value.trim();
+    var fromAddress = document.getElementById('cfg-from-address').value.trim();
+    var resendKey   = document.getElementById('cfg-resend-key').value.trim();
+    var tmpl        = document.getElementById('cfg-email-template');
+
+    if (fromName)    body.email_from_name    = fromName;
+    if (fromAddress) body.email_from_address = fromAddress;
+    var byokOk = currentUser && ['basic', 'pro', 'business'].includes(currentUser.plan_id);
+    if (resendKey && !resendKey.startsWith('•') && byokOk) body.resend_api_key = resendKey;
+    // Salva template so se usuario nao e free (lock escondido = pode editar)
+    var lockEl = document.getElementById('email-template-lock');
+    if (tmpl && lockEl && lockEl.style.display === 'none') {
+      body.email_template = tmpl.value;
+    }
+
+    if (Object.keys(body).length === 0) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar';
+      return;
+    }
+    const res = await apiFetch('/api/tenants/me', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    });
+    if (!res.success) throw new Error(res.error);
+    loadEmailTab();
+    btn.innerHTML = '<i class="ti ti-check"></i> Salvo!';
+    setTimeout(() => { btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar'; }, 2000);
+  } catch(e) {
+    alert('Erro ao salvar: ' + e.message);
+    btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function insertVar(v) {
+  var ta = document.getElementById('cfg-email-template');
+  if (!ta) return;
+  var start = ta.selectionStart, end = ta.selectionEnd;
+  ta.value = ta.value.substring(0, start) + v + ta.value.substring(end);
+  ta.selectionStart = ta.selectionEnd = start + v.length;
+  ta.focus();
+}
+
+// ── Onboarding ────────────────────────────────────────────────────
+var obStep = 1;
+var obPlatforms = { kiwify: true, yampi: true };
+var obEmailMode = 'vaultly';
+
+function showOnboardingModal() {
+  obStep = 1;
+  obPlatforms = { kiwify: true, yampi: true };
+  obEmailMode = 'vaultly';
+  renderObStep(1);
+  var m = document.getElementById('onboarding-modal');
+  m.style.display = 'flex';
+}
+
+function hideOnboardingModal() {
+  document.getElementById('onboarding-modal').style.display = 'none';
+}
+
+function renderObStep(step) {
+  [1,2,3,4].forEach(function(i) {
+    document.getElementById('ob-step-' + i).style.display = i === step ? 'block' : 'none';
+    document.getElementById('ob-prog-' + i).style.background =
+      i <= step ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.3)';
+  });
+  document.getElementById('ob-btn-back').style.display = step > 1 ? 'inline-flex' : 'none';
+  document.getElementById('ob-btn-skip').style.display = step < 4 ? 'inline-flex' : 'none';
+  document.getElementById('ob-btn-next').innerHTML =
+    step === 4 ? '<i class="ti ti-rocket"></i> Comecar' : 'Continuar <i class="ti ti-arrow-right"></i>';
+
+  var titles = ['Vamos configurar sua conta','Quais plataformas voce usa?','Como enviar os emails?','Tudo pronto!'];
+  var subs   = ['Isso ajuda a personalizar sua experiencia','Voce pode alterar depois','Sem configuracao se preferir Vaultly','Explore o painel e cadastre seu primeiro produto'];
+  document.getElementById('ob-step-title').textContent = titles[step-1];
+  document.getElementById('ob-step-sub').textContent   = subs[step-1];
+
+  if (step === 4) buildObSummary();
+}
+
+function obNext() {
+  if (obStep === 1) {
+    var name = document.getElementById('ob-store-name').value.trim();
+    if (!name) { document.getElementById('ob-store-name').focus(); return; }
+  }
+  if (obStep < 4) { obStep++; renderObStep(obStep); }
+  else finishOnboarding();
+}
+
+function obPrev() { if (obStep > 1) { obStep--; renderObStep(obStep); } }
+
+function togglePlatform(p) {
+  obPlatforms[p] = !obPlatforms[p];
+  var card = document.getElementById('ob-' + p + '-card');
+  var check = document.getElementById('ob-check-' + p);
+  if (obPlatforms[p]) {
+    card.classList.add('ob-selected');
+    check.classList.remove('ob-uncheck');
+  } else {
+    card.classList.remove('ob-selected');
+    check.classList.add('ob-uncheck');
+  }
+}
+
+function selectEmailMode(mode) {
+  obEmailMode = mode;
+  ['vaultly','resend'].forEach(function(m) {
+    var c = document.getElementById('ob-' + m + '-card');
+    var k = document.getElementById('ob-check-' + m);
+    if (m === mode) { c.classList.add('ob-selected'); k.classList.remove('ob-uncheck'); }
+    else            { c.classList.remove('ob-selected'); k.classList.add('ob-uncheck'); }
+  });
+  document.getElementById('ob-resend-key-wrap').style.display = mode === 'resend' ? 'block' : 'none';
+}
+
+function buildObSummary() {
+  var name = document.getElementById('ob-store-name').value.trim();
+  var plats = Object.keys(obPlatforms).filter(function(k){ return obPlatforms[k]; }).join(' + ') || 'Nenhuma';
+  var email = obEmailMode === 'vaultly' ? 'Infraestrutura Vaultly' : 'Conta Resend propria';
+  document.getElementById('ob-summary').innerHTML =
+    '<div style="display:flex;flex-direction:column;gap:10px;">' +
+    '<div style="display:flex;align-items:center;gap:10px;"><i class="ti ti-store" style="color:var(--orange);"></i><span style="color:var(--text2);font-size:13px;">Loja:</span><strong>' + name + '</strong></div>' +
+    '<div style="display:flex;align-items:center;gap:10px;"><i class="ti ti-webhook" style="color:var(--cyan);"></i><span style="color:var(--text2);font-size:13px;">Plataformas:</span><strong>' + plats.charAt(0).toUpperCase() + plats.slice(1) + '</strong></div>' +
+    '<div style="display:flex;align-items:center;gap:10px;"><i class="ti ti-mail" style="color:var(--emerald);"></i><span style="color:var(--text2);font-size:13px;">Email:</span><strong>' + email + '</strong></div>' +
+    '</div>';
+}
+
+async function finishOnboarding() {
+  var name = document.getElementById('ob-store-name').value.trim();
+  var plats = Object.keys(obPlatforms).filter(function(k){ return obPlatforms[k]; }).join(',');
+  var body = {
+    email_from_name:    name,
+    platforms_enabled:  plats,
+    onboarding_completed: true
+  };
+  if (obEmailMode === 'resend') {
+    var key = document.getElementById('ob-resend-key').value.trim();
+    if (key) body.resend_api_key = key;
+  }
+  try {
+    await apiFetch('/api/tenants/me', {
+      method: 'PUT', headers: { 'Content-Type':'application/json' }, body: JSON.stringify(body)
+    });
+  } catch(e) {}
+
+  // Colapsa plataformas nao selecionadas no webhook
+  ['kiwify','yampi'].forEach(function(p) {
+    var el = document.getElementById('wh-' + p);
+    if (el) {
+      if (obPlatforms[p]) el.classList.add('open');
+      else el.classList.remove('open');
+    }
+  });
+
+  hideOnboardingModal();
+}
+
+function skipOnboarding() {
+  apiFetch('/api/tenants/me', {
+    method: 'PUT', headers: { 'Content-Type':'application/json' },
+    body: JSON.stringify({ onboarding_completed: true })
+  }).catch(function(){});
+  hideOnboardingModal();
+}
+
+function switchTabById(name) {
+  var navItem = document.querySelector('.nav-item[onclick*="' + name + '"]');
+  switchTab(name, navItem);
+}
+
+// ── Helpers ──────────────────────────────────────────────────────
+function fmtDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit', year: '2-digit',
+    hour: '2-digit', minute: '2-digit'
+  });
+}
+
+function statusBadge(s) {
+  const map = {
+    delivered: ['emerald', 'Entregue'],
+    pending:   ['yellow',  'Pendente'],
+    failed:    ['red',     'Falhou'],
+  };
+  const [color, label] = map[s] || ['gray', s || 'Desconhecido'];
+  return `<span class="badge badge-${color}">${label}</span>`;
+}
+
+function platformBadge(p) {
+  if (p === 'kiwify') return `<span style="color:var(--emerald);font-size:11px;font-weight:600;">Kiwify</span>`;
+  if (p === 'yampi')  return `<span style="color:var(--cyan);font-size:11px;font-weight:600;">Yampi</span>`;
+  return `<span style="color:var(--text3);font-size:11px;">${p || '—'}</span>`;
+}
+
+// ── Upgrade helpers ──────────────────────────────────────────────
+function upgradeBanner(title, desc) {
+  return `<div style="margin:16px 0;padding:20px 24px;background:linear-gradient(135deg,rgba(255,107,53,0.08),rgba(56,189,248,0.06));border:1px solid rgba(255,107,53,0.2);border-radius:12px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+    <div style="flex:1;min-width:200px;">
+      <div style="font-size:14px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:6px;">
+        <i class="ti ti-lock" style="color:var(--orange);"></i> ${title}
+      </div>
+      <div style="font-size:13px;color:var(--text2);">${desc}</div>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="showUpgradeModal()" style="flex-shrink:0;">
+      <i class="ti ti-rocket"></i> Fazer upgrade
+    </button>
+  </div>`;
+}
+
+function limitWarningBanner(used, max, pct, isCrit) {
+  var color = isCrit ? '#DC2626' : '#D97706';
+  var bg    = isCrit ? 'rgba(220,38,38,0.08)' : 'rgba(217,119,6,0.08)';
+  var bdr   = isCrit ? 'rgba(220,38,38,0.25)' : 'rgba(217,119,6,0.25)';
+  var icon  = isCrit ? 'ti-alert-octagon' : 'ti-alert-triangle';
+  var title = isCrit
+    ? 'Limite critico: ' + pct + '% das entregas deste mes foram utilizadas'
+    : 'Aviso: ' + pct + '% do limite de entregas deste mes';
+  var desc = isCrit
+    ? 'Quando o limite for atingido, novas entregas serao pausadas ate o proximo ciclo. Faca upgrade para nao perder vendas.'
+    : 'Voce usou ' + used + ' de ' + max + ' entregas este mes. Faca upgrade para ampliar sua capacidade.';
+  return '<div style="margin:0 0 16px;padding:18px 22px;background:' + bg + ';border:1px solid ' + bdr + ';border-radius:12px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">' +
+    '<i class="ti ' + icon + '" style="font-size:24px;color:' + color + ';flex-shrink:0;"></i>' +
+    '<div style="flex:1;min-width:200px;">' +
+    '<div style="font-size:14px;font-weight:700;margin-bottom:4px;color:' + color + ';">' + title + '</div>' +
+    '<div style="font-size:13px;color:var(--text2);">' + desc + '</div>' +
+    '</div>' +
+    '<button class="btn btn-sm" style="background:' + color + ';color:#fff;flex-shrink:0;" onclick="showUpgradeModal()">' +
+    '<i class="ti ti-rocket"></i> Fazer upgrade' +
+    '</button>' +
+    '</div>';
+}
+
+var upgradeBilling = 'monthly';
+var upgradePrices = {
+  monthly: { starter: 37,  basic: 77,  pro: 147, business: 297 },
+  annual:  { starter: 31,  basic: 64,  pro: 122, business: 247 }
+};
+
+function setUpgradeBilling(type) {
+  upgradeBilling = type;
+  var isAnnual = type === 'annual';
+  var togM = document.getElementById('um-tog-monthly');
+  var togA = document.getElementById('um-tog-annual');
+  if (togM) { togM.style.background = isAnnual ? 'transparent' : 'var(--orange)'; togM.style.color = isAnnual ? 'var(--text2)' : '#fff'; }
+  if (togA) { togA.style.background = isAnnual ? 'var(--orange)' : 'transparent'; togA.style.color = isAnnual ? '#fff' : 'var(--text2)'; }
+  ['basic','pro'].forEach(function(p) {
+    var price    = upgradePrices[type][p];
+    var priceEl  = document.getElementById('um-price-' + p);
+    var periodEl = document.getElementById('um-period-' + p);
+    var labelEl  = document.getElementById('btn-label-' + p);
+    if (priceEl)  priceEl.textContent  = 'R$' + price;
+    if (periodEl) periodEl.textContent = isAnnual ? '/mês (anual)' : '/mês';
+    if (labelEl)  labelEl.textContent  = p.charAt(0).toUpperCase() + p.slice(1) + ' R$' + price;
+  });
+
+  // Starter apenas mensal
+  var starterCard = document.getElementById('um-card-starter');
+  var starterBtn  = document.getElementById('btn-checkout-starter');
+  if (starterCard) starterCard.style.display = isAnnual ? 'none' : 'block';
+  if (starterBtn)  starterBtn.style.display  = isAnnual ? 'none' : 'flex';
+
+  // Business apenas anual
+  var businessCard = document.getElementById('um-card-business');
+  var businessBtn  = document.getElementById('btn-checkout-business');
+  if (businessCard) businessCard.style.display = isAnnual ? 'block' : 'none';
+  if (businessBtn)  businessBtn.style.display  = isAnnual ? 'flex'  : 'none';
+}
+
+function showUpgradeModal(plan) {
+  var el = document.getElementById('upgrade-modal');
+  if (el) { el.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+  var errEl = document.getElementById('upgrade-error');
+  if (errEl) errEl.style.display = 'none';
+  setUpgradeBilling('monthly');
+}
+function hideUpgradeModal() {
+  var el = document.getElementById('upgrade-modal');
+  if (el) { el.style.display = 'none'; document.body.style.overflow = ''; }
+}
+
+function showUpgradeSuccess(plan) {
+  var names = { starter: 'Starter', basic: 'Basic', pro: 'Pro', business: 'Business' };
+  var planName = names[plan] || 'pago';
+  var toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;bottom:28px;right:28px;z-index:9999;background:linear-gradient(135deg,#10B981,#38BDF8);color:#fff;padding:16px 22px;border-radius:12px;font-size:14px;font-weight:600;display:flex;align-items:center;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,.4);';
+  toast.innerHTML = '<i class="ti ti-circle-check" style="font-size:20px;"></i> Plano ' + planName + ' ativado com sucesso!';
+  document.body.appendChild(toast);
+  setTimeout(function() { toast.remove(); }, 5000);
+}
+
+async function startCheckout(planId) {
+  var btn   = document.getElementById('btn-checkout-' + planId);
+  var errEl = document.getElementById('upgrade-error');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite"></i> Aguarde...'; }
+  if (errEl) errEl.style.display = 'none';
+  try {
+    var res = await apiFetch('/api/billing/create-checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan_id: planId, billing_period: upgradeBilling })
+    });
+    if (!res.success) throw new Error(res.error || 'Erro ao iniciar checkout');
+    window.location.href = res.url;
+  } catch (e) {
+    if (errEl) { errEl.textContent = e.message; errEl.style.display = 'block'; }
+    if (btn) {
+      btn.disabled = false;
+      var price = upgradePrices[upgradeBilling][planId] || '';
+      var icons = { starter: 'ti-rocket', basic: 'ti-rocket', pro: 'ti-crown', business: 'ti-building' };
+      var icon  = icons[planId] || 'ti-rocket';
+      btn.innerHTML = '<i class="ti ' + icon + '"></i> <span>' + planId.charAt(0).toUpperCase() + planId.slice(1) + ' R$' + price + '</span>';
+    }
+  }
+}
+
+async function openBillingPortal() {
+  var btn = document.getElementById('btn-manage-sub');
+  if (btn) { btn.disabled = true; btn.textContent = 'Abrindo...'; }
+  try {
+    var res = await apiFetch('/api/billing/create-portal', { method: 'POST' });
+    if (!res.success) throw new Error(res.error);
+    window.location.href = res.url;
+  } catch (e) {
+    alert('Erro: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = 'Gerenciar assinatura'; }
+  }
+}
+
+// ── Sparkline ────────────────────────────────────────────────────
+function renderSparkline(deliveries, productCount) {
+  var svg = document.getElementById('sparkline-svg');
+  if (!svg) return;
+
+  // Agrupa entregas nas últimas 24h por hora (24 buckets)
+  var now = Date.now();
+  var buckets = new Array(24).fill(0);
+  var msPerHour = 3600000;
+  (deliveries || []).forEach(function(d) {
+    var t = new Date(d.created_at).getTime();
+    var hoursAgo = Math.floor((now - t) / msPerHour);
+    if (hoursAgo >= 0 && hoursAgo < 24) buckets[23 - hoursAgo]++;
+  });
+
+  var isEmpty = productCount === 0;
+  var hasData = buckets.some(function(v) { return v > 0; });
+  var max = Math.max.apply(null, buckets.concat([1]));
+  var W = 80, H = 44, padX = 3, padY = 5;
+
+  // Pontos normalizados
+  var pts = buckets.map(function(v, i) {
+    return [
+      padX + (i / 23) * (W - padX * 2),
+      H - padY - (v / max) * (H - padY * 2)
+    ];
+  });
+
+  // Caminho suave com cubic bezier
+  var pathD = 'M ' + pts[0][0].toFixed(1) + ',' + pts[0][1].toFixed(1);
+  for (var i = 1; i < pts.length; i++) {
+    var p0 = pts[i - 1], p1 = pts[i];
+    var cpx = ((p0[0] + p1[0]) / 2).toFixed(1);
+    pathD += ' C ' + cpx + ',' + p0[1].toFixed(1) + ' ' + cpx + ',' + p1[1].toFixed(1) + ' ' + p1[0].toFixed(1) + ',' + p1[1].toFixed(1);
+  }
+  var last  = pts[pts.length - 1];
+  var first = pts[0];
+  var fillD = pathD + ' L ' + last[0].toFixed(1) + ',' + H + ' L ' + first[0].toFixed(1) + ',' + H + ' Z';
+
+  // Cores: inativo = cinza apagado, ativo = laranja
+  var lineColor = isEmpty ? 'rgba(61,79,110,0.45)' : (hasData ? '#FF6B35' : 'rgba(255,107,53,0.35)');
+  var fillColor = isEmpty ? 'rgba(61,79,110,0.08)' : (hasData ? 'rgba(255,107,53,0.14)' : 'rgba(255,107,53,0.06)');
+
+  var inner =
+    '<path d="' + fillD + '" fill="' + fillColor + '"/>' +
+    '<path d="' + pathD + '" stroke="' + lineColor + '" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>';
+
+  // Ponto ativo na última hora com movimento
+  if (!isEmpty && hasData) {
+    inner += '<circle cx="' + last[0].toFixed(1) + '" cy="' + last[1].toFixed(1) + '" r="2.5" fill="#FF6B35" opacity="0.9"/>';
+    inner += '<circle cx="' + last[0].toFixed(1) + '" cy="' + last[1].toFixed(1) + '" r="2.5" fill="none" stroke="#FF6B35" stroke-width="1" opacity="0.5">' +
+      '<animate attributeName="r" from="2.5" to="6" dur="1.5s" repeatCount="indefinite"/>' +
+      '<animate attributeName="opacity" from="0.5" to="0" dur="1.5s" repeatCount="indefinite"/>' +
+      '</circle>';
+  }
+  svg.innerHTML = inner;
+
+  // Estado do card
+  var card = document.getElementById('stat-products-card');
+  var icon = document.getElementById('products-icon');
+  var sub  = document.getElementById('products-sub');
+  var val  = document.getElementById('s-products');
+  if (isEmpty) {
+    if (card) card.style.borderColor = 'rgba(61,79,110,0.3)';
+    if (icon) { icon.style.background = 'rgba(61,79,110,0.1)'; icon.style.color = 'var(--text3)'; }
+    if (sub)  sub.textContent  = 'sem produtos cadastrados';
+    if (val)  val.style.color  = 'var(--text3)';
+  } else {
+    if (card) card.style.borderColor = '';
+    if (icon) { icon.style.background = ''; icon.style.color = ''; }
+    if (sub)  sub.textContent  = 'cadastrados na plataforma';
+    if (val)  val.style.color  = '';
+  }
+}
+
+// ── Count-up animation ───────────────────────────────────────────
+function countUp(id, target, duration) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('loading');
+  if (target === 0) { el.textContent = '0'; return; }
+  var startTime = null;
+  function step(ts) {
+    if (!startTime) startTime = ts;
+    var progress = Math.min((ts - startTime) / duration, 1);
+    var ease = 1 - Math.pow(1 - progress, 3);
+    el.textContent = Math.round(ease * target);
+    if (progress < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// ── Dashboard ────────────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    const [statsRes, delivRes, prodRes] = await Promise.all([
+      apiFetch('/api/deliveries/stats'),
+      apiFetch('/api/deliveries?limit=100'),
+      apiFetch('/api/products'),
+    ]);
+    if (statsRes.success) {
+      countUp('s-today', statsRes.data.today || 0, 600);
+      if (statsRes.plan_restricted) {
+        const lockHtml = '<span onclick="showUpgradeModal()" style="cursor:pointer;opacity:0.45;font-size:13px;" title="Disponivel no plano Basic"><i class="ti ti-lock"></i> Basic</span>';
+        var elD = document.getElementById('s-delivered'); elD.classList.remove('loading'); elD.innerHTML = lockHtml;
+        var elF = document.getElementById('s-failed');    elF.classList.remove('loading'); elF.innerHTML = lockHtml;
+      } else {
+        countUp('s-delivered', statsRes.data.delivered || 0, 800);
+        var failedCount = statsRes.data.failed || 0;
+        countUp('s-failed', failedCount, 600);
+        var failCard = document.getElementById('stat-failed-card');
+        if (failCard) {
+          failCard.style.borderColor = failedCount > 0 ? 'rgba(244,63,94,0.35)' : '';
+          failCard.style.boxShadow   = failedCount > 0 ? '0 0 24px rgba(244,63,94,0.12)' : '';
+        }
+      }
+      var todayCount = statsRes.data.today || 0;
+      var tbToday = document.getElementById('tb-deliveries-today');
+      document.getElementById('tb-today-count').textContent = todayCount;
+      tbToday.style.display = 'flex';
+
+      // Limit warning banner
+      var limitBanner = document.getElementById('limit-warning-banner');
+      if (limitBanner) {
+        var dMonth = statsRes.data.delivery_month;
+        var dMax   = statsRes.data.max_deliveries_month;
+        if (dMax > 0 && dMonth !== undefined) {
+          var pct = Math.round((dMonth / dMax) * 100);
+          if (pct >= 80) {
+            limitBanner.innerHTML = limitWarningBanner(dMonth, dMax, pct, pct >= 95);
+            limitBanner.style.display = 'block';
+          } else {
+            limitBanner.style.display = 'none';
+          }
+        } else {
+          limitBanner.style.display = 'none';
+        }
+      }
+    }
+    if (prodRes.success) {
+      var productCount = prodRes.data.length;
+      countUp('s-products', productCount, 600);
+      renderSparkline(delivRes.success ? delivRes.data : [], productCount);
+    }
+    const tbody = document.getElementById('recent-deliveries');
+    if (delivRes.success && delivRes.data.length) {
+      tbody.innerHTML = delivRes.data.slice(0,5).map(d => `
+        <tr>
+          <td>
+            <span style="font-weight:500;">${d.buyer_name || '—'}</span><br>
+            <span style="font-size:11px;color:var(--text3);">${d.buyer_email}</span>
+          </td>
+          <td>${d.product_name || d.product_id || '—'}</td>
+          <td>${platformBadge(d.platform)}</td>
+          <td style="font-size:12px;color:var(--text2);">${fmtDate(d.created_at)}</td>
+          <td>${statusBadge(d.status)}</td>
+        </tr>`).join('');
+    } else {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:32px;">Nenhuma entrega ainda</td></tr>`;
+    }
+  } catch(e) {
+    console.error('loadDashboard:', e);
+  }
+}
+
+// ── Products ─────────────────────────────────────────────────────
+let productsCache = [];
+
+async function loadProducts() {
+  const grid = document.getElementById('products-grid');
+  grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--text3);padding:48px;">Carregando...</div>`;
+  try {
+    const res = await apiFetch('/api/products');
+    if (!res.success) throw new Error(res.error);
+    productsCache = res.data;
+    if (!res.data.length) {
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--text3);padding:48px;">
+        <i class="ti ti-packages" style="font-size:32px;display:block;margin-bottom:12px;opacity:0.4;"></i>
+        Nenhum produto cadastrado. Clique em <strong>Novo produto</strong> para começar.
+      </div>`;
+      return;
+    }
+    grid.innerHTML = res.data.map(p => `
+      <div class="product-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div style="width:40px;height:40px;border-radius:10px;background:rgba(255,107,53,0.15);display:flex;align-items:center;justify-content:center;">
+            <i class="ti ti-file-text" style="color:var(--orange);font-size:18px;"></i>
+          </div>
+          <span class="badge badge-${p.status === 'active' ? 'emerald' : 'red'}" style="font-size:10px;">
+            ${p.status === 'active' ? 'Ativo' : 'Inativo'}
+          </span>
+        </div>
+        <div style="font-weight:600;font-size:14px;margin-bottom:6px;line-height:1.3;">${p.name}</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:12px;min-height:32px;">
+          ${p.description || '<span style="color:var(--text3);">Sem descrição</span>'}
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px;">
+          ${p.kiwify_id ? `<span class="badge badge-emerald" style="font-size:10px;">Kiwify</span>` : ''}
+          ${p.yampi_id  ? `<span class="badge badge-indigo"  style="font-size:10px;">Yampi</span>`  : ''}
+          ${p.file_name
+            ? `<span class="badge badge-gray" style="font-size:10px;"><i class="ti ti-paperclip"></i> ${p.file_name}</span>`
+            : `<span style="font-size:10px;color:var(--text3);">Sem arquivo</span>`}
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost btn-xs" style="flex:1;" onclick="editProduct('${p.id}')">
+            <i class="ti ti-pencil"></i> Editar
+          </button>
+          <button class="btn btn-ghost btn-xs" style="color:var(--red);" onclick="deleteProduct('${p.id}','${p.name.replace(/'/g, "\\'")}')">
+            <i class="ti ti-trash"></i>
+          </button>
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--red);padding:48px;">Erro ao carregar: ${e.message}</div>`;
+  }
+}
+
+// ── Deliveries ───────────────────────────────────────────────────
+async function loadDeliveries() {
+  const tbody = document.getElementById('deliveries-table');
+  tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:32px;">Carregando...</td></tr>`;
+  try {
+    const res = await apiFetch('/api/deliveries');
+    if (!res.success) throw new Error(res.error);
+    if (!res.data.length) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:32px;">Nenhuma entrega encontrada</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = res.data.map(d => `
+      <tr>
+        <td>
+          <span style="font-weight:500;">${d.buyer_name || '—'}</span><br>
+          <span style="font-size:11px;color:var(--text3);">${d.buyer_email}</span>
+        </td>
+        <td>${d.product_name || d.product_id || '—'}</td>
+        <td>${platformBadge(d.platform)}</td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);">${d.platform_order_id || '—'}</td>
+        <td style="font-size:12px;color:var(--text2);">${fmtDate(d.created_at)}</td>
+        <td>
+          ${statusBadge(d.status)}
+          ${d.error_message ? `<br><span style="font-size:10px;color:var(--red);" title="${d.error_message}">ver erro</span>` : ''}
+        </td>
+      </tr>`).join('');
+    // Plano Free: banner de upgrade abaixo da tabela
+    if (res.plan_restricted) {
+      const container = document.getElementById('deliveries-table').closest('table').parentElement;
+      if (!document.getElementById('deliveries-upgrade-banner')) {
+        const banner = document.createElement('div');
+        banner.id = 'deliveries-upgrade-banner';
+        banner.innerHTML = upgradeBanner('Historico completo disponivel no plano Basic', 'Vendo apenas as 10 entregas mais recentes.');
+        container.appendChild(banner);
+      }
+    }
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--red);padding:32px;">Erro: ${e.message}</td></tr>`;
+  }
+}
+
+// ── Toast ─────────────────────────────────────────────────────────
+function showToast(msg, type) {
+  type = type || 'info';
+  var colors = { info: 'var(--orange)', success: 'var(--emerald)', error: 'var(--red)', warn: 'var(--yellow)' };
+  var icons  = { info: 'ti-info-circle', success: 'ti-circle-check-filled', error: 'ti-alert-circle', warn: 'ti-alert-triangle' };
+  var t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;background:var(--bg3);border:1px solid ' + colors[type] + ';border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text);box-shadow:0 8px 24px rgba(0,0,0,0.4);max-width:320px;animation:slideIn 0.3s ease;';
+  t.innerHTML = '<i class="ti ' + icons[type] + '" style="color:' + colors[type] + ';font-size:16px;flex-shrink:0;"></i><span>' + msg + '</span>';
+  document.body.appendChild(t);
+  setTimeout(function() { t.style.opacity = '0'; t.style.transition = 'opacity 0.4s'; setTimeout(function() { t.remove(); }, 400); }, 3500);
+}
+
+// ── Webhook Logs — com auto-refresh ──────────────────────────────
+var _logPoller = null;
+var _lastLogId = null;
+var _logPlanRestricted = false;
+
+function startLogPoller() {
+  if (_logPoller) return;
+  _logPoller = setInterval(pollLogs, 5000);
+}
+
+function stopLogPoller() {
+  if (_logPoller) { clearInterval(_logPoller); _logPoller = null; }
+}
+
+async function pollLogs() {
+  if (_logPlanRestricted) return;
+  try {
+    const res = await apiFetch('/api/deliveries/logs?limit=1');
+    if (!res.success || !res.data || !res.data.length) return;
+    var newest = res.data[0];
+    if (_lastLogId && newest.id !== _lastLogId) {
+      // Novo evento detectado
+      var platform = newest.platform || '?';
+      var status   = newest.status   || '?';
+      showToast('Novo evento ' + platform + ' recebido! [' + status.toUpperCase() + ']',
+        status === 'ok' ? 'success' : status === 'error' ? 'error' : 'warn');
+      loadLogs(); // recarrega lista completa
+    }
+    _lastLogId = newest.id;
+  } catch(e) {}
+}
+
+async function loadLogs() {
+  const box = document.getElementById('webhook-log');
+  if (!_logPlanRestricted) box.innerHTML = '<div style="color:var(--text3);">Carregando logs...</div>';
+  try {
+    const res = await apiFetch('/api/deliveries/logs');
+    if (res.plan_restricted) {
+      _logPlanRestricted = true;
+      box.innerHTML = upgradeBanner('Logs de atividade disponiveis no plano Basic', 'Acompanhe cada notificacao de compra em tempo real, com status e detalhes completos.');
+      var dot = document.getElementById('log-live-dot');
+      if (dot) dot.style.display = 'none';
+      return;
+    }
+    if (!res.success) throw new Error(res.error);
+
+    if (!res.data.length) {
+      box.innerHTML = '<div style="color:var(--text3);font-size:13px;"><i class="ti ti-antenna-bars-1" style="font-size:20px;display:block;margin-bottom:8px;color:var(--orange);"></i>Aguardando o primeiro evento...<br><span style="font-size:11px;">Use o simulador abaixo ou configure o webhook na plataforma.</span></div>';
+      _lastLogId = null;
+      return;
+    }
+
+    // Atualiza timestamp do ultimo evento
+    var last = res.data[0];
+    _lastLogId = last.id;
+    var lastEl = document.getElementById('log-last-time');
+    if (lastEl) lastEl.textContent = 'ultimo: ' + fmtDate(last.created_at);
+
+    box.innerHTML = res.data.map(function(l) {
+      var color = l.status === 'ok' ? 'var(--emerald)' : l.status === 'error' ? 'var(--red)' : 'var(--yellow)';
+      var icon  = l.status === 'ok' ? 'ti-circle-check' : l.status === 'error' ? 'ti-circle-x' : 'ti-alert-triangle';
+      return '<div style="margin-bottom:8px;font-size:12px;line-height:1.6;display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;background:rgba(255,255,255,0.02);">' +
+        '<i class="ti ' + icon + '" style="color:' + color + ';font-size:14px;flex-shrink:0;"></i>' +
+        '<span style="color:var(--text3);min-width:130px;">' + fmtDate(l.created_at) + '</span>' +
+        '<span style="color:' + color + ';font-weight:600;min-width:50px;">[' + (l.status || '?').toUpperCase() + ']</span>' +
+        '<span style="color:var(--text2);">' + (l.platform || '?') + ' · ' + (l.event_type || '?') + '</span>' +
+        (l.ip ? '<span style="color:var(--text3);font-size:10px;margin-left:auto;">' + l.ip + '</span>' : '') +
+        '</div>';
+    }).join('');
+  } catch(e) {
+    box.innerHTML = '<div style="color:var(--red);">Erro ao carregar logs: ' + e.message + '</div>';
+  }
+}
+
+// ── Simulador de webhook ──────────────────────────────────────────
+async function loadSimulatorProducts() {
+  try {
+    var res = await apiFetch('/api/products');
+    if (!res.success || !res.data || !res.data.length) return;
+    var sel = document.getElementById('sim-product-select');
+    if (!sel) return;
+    var platform = (document.getElementById('sim-platform') || {}).value || 'kiwify';
+    sel.innerHTML = '<option value="">— digitar manualmente —</option>';
+    res.data.forEach(function(p) {
+      var pid = platform === 'yampi' ? (p.yampi_id || p.kiwify_id) : (p.kiwify_id || p.yampi_id);
+      if (pid) {
+        var opt = document.createElement('option');
+        opt.value = pid;
+        opt.textContent = p.name + ' (' + pid + ')';
+        sel.appendChild(opt);
+      }
+    });
+  } catch(e) {}
+}
+
+function syncSimProductId() {
+  var sel = document.getElementById('sim-product-select');
+  var inp = document.getElementById('sim-product-id');
+  if (sel && inp && sel.value) inp.value = sel.value;
+}
+
+async function runSimulate() {
+  var btn       = document.getElementById('btn-simulate');
+  var resultEl  = document.getElementById('sim-result');
+  var platform  = document.getElementById('sim-platform').value;
+  var email     = document.getElementById('sim-email').value.trim();
+  var productId = document.getElementById('sim-product-id').value.trim();
+
+  if (!email) { showToast('Informe o email do comprador para o teste.', 'warn'); return; }
+  if (!productId) { showToast('Informe o ID do produto para o teste.', 'warn'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i> Simulando...';
+  resultEl.style.display = 'none';
+
+  try {
+    var res = await apiFetch('/api/deliveries/simulate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platform, buyer_email: email, product_id: productId, buyer_name: 'Cliente Teste' })
+    });
+
+    var ok = res.success && res.result && !res.result.ignored;
+    var color = ok ? 'var(--emerald)' : 'var(--yellow)';
+    var icon  = ok ? 'ti-circle-check-filled' : 'ti-alert-triangle';
+    var msg   = ok
+      ? 'Entrega iniciada! Verifique a caixa de entrada de <strong>' + email + '</strong>.'
+      : res.result
+        ? ('Evento processado mas nao resultou em entrega: ' + (res.result.reason || res.error || JSON.stringify(res.result)))
+        : (res.error || 'Erro desconhecido');
+
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = '<div style="padding:12px 14px;border-radius:8px;background:rgba(0,0,0,0.2);border:1px solid ' + color + ';display:flex;align-items:flex-start;gap:10px;font-size:13px;margin-bottom:12px;">' +
+      '<i class="ti ' + icon + '" style="color:' + color + ';font-size:16px;flex-shrink:0;margin-top:1px;"></i>' +
+      '<div style="color:var(--text);">' + msg + '</div></div>';
+
+    showToast(ok ? 'Simulacao OK — email sendo processado' : 'Simulacao processada — verifique o resultado', ok ? 'success' : 'warn');
+    setTimeout(loadLogs, 1500); // recarrega logs para mostrar o evento
+  } catch(e) {
+    showToast('Erro na simulacao: ' + e.message, 'error');
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = '<div style="color:var(--red);font-size:13px;"><i class="ti ti-alert-circle"></i> ' + e.message + '</div>';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-player-play"></i> Simular compra aprovada';
+  }
+}
+
+// Ao mudar plataforma no simulador, recarrega produtos
+document.addEventListener('change', function(e) {
+  if (e.target && e.target.id === 'sim-platform') loadSimulatorProducts();
+});
+
+// ── Modal Produto ────────────────────────────────────────────────
+function openModal() {
+  document.getElementById('m-name').value             = '';
+  document.getElementById('m-desc').value             = '';
+  document.getElementById('m-price').value            = '';
+  document.getElementById('m-status').value           = 'active';
+  document.getElementById('m-kiwify').value           = '';
+  document.getElementById('m-yampi').value            = '';
+  document.getElementById('m-editing-id').value       = '';
+  document.getElementById('m-file').value             = '';
+  document.getElementById('upload-title').textContent = 'Clique para selecionar arquivo';
+  document.getElementById('upload-sub').textContent   = 'PDF, EPUB até 50MB · armazenado no Cloudflare R2';
+  document.getElementById('modal-title').textContent  = 'Novo produto';
+  document.getElementById('save-btn').innerHTML       = '<i class="ti ti-device-floppy"></i> Salvar produto';
+  document.getElementById('modal-bg').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal-bg').classList.remove('open');
+}
+
+function editProduct(id) {
+  const p = productsCache.find(x => x.id === id);
+  if (!p) return;
+  openModal();
+  document.getElementById('m-name').value         = p.name           || '';
+  document.getElementById('m-desc').value         = p.description    || '';
+  document.getElementById('m-price').value        = p.price          || '';
+  document.getElementById('m-status').value       = p.status         || 'active';
+  document.getElementById('m-kiwify').value       = p.kiwify_id      || '';
+  document.getElementById('m-yampi').value        = p.yampi_id       || '';
+  // email_template agora e global — gerenciado na aba Email
+  document.getElementById('m-editing-id').value   = id;
+  if (p.file_name) {
+    document.getElementById('upload-title').textContent = p.file_name;
+    document.getElementById('upload-sub').textContent   = 'Arquivo atual · selecione outro para substituir';
+  }
+  document.getElementById('modal-title').textContent = 'Editar produto';
+  document.getElementById('save-btn').innerHTML      = '<i class="ti ti-device-floppy"></i> Atualizar produto';
+}
+
+function handleFileSelect(input) {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('upload-title').textContent = file.name;
+  document.getElementById('upload-sub').textContent   = (file.size / 1024 / 1024).toFixed(2) + ' MB selecionado';
+}
+
+async function saveProduct() {
+  const btn       = document.getElementById('save-btn');
+  const editingId = document.getElementById('m-editing-id').value;
+  const name      = document.getElementById('m-name').value.trim();
+  const kiwify_id = document.getElementById('m-kiwify').value.trim();
+  const yampi_id  = document.getElementById('m-yampi').value.trim();
+
+  if (!name)                   { alert('Informe o nome do produto'); return; }
+  if (!kiwify_id && !yampi_id) { alert('Informe pelo menos um ID (Kiwify ou Yampi)'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i> Salvando...';
+
+  try {
+    const form = new FormData();
+    form.append('name',           name);
+    form.append('description',    document.getElementById('m-desc').value);
+    form.append('price',          document.getElementById('m-price').value || '0');
+    form.append('status',         document.getElementById('m-status').value);
+    // email_template agora e global por tenant (aba Email) — nao enviado por produto
+    if (kiwify_id) form.append('kiwify_id', kiwify_id);
+    if (yampi_id)  form.append('yampi_id',  yampi_id);
+    const file = document.getElementById('m-file').files[0];
+    if (file) form.append('file', file);
+
+    const url    = editingId ? `/api/products/${editingId}` : '/api/products';
+    const method = editingId ? 'PUT' : 'POST';
+    const headers = authToken ? { 'Authorization': `Bearer ${authToken}` } : {};
+
+    const raw  = await fetch(getApiUrl() + url, { method, headers, body: form });
+    const data = await raw.json();
+    if (!data.success) throw new Error(data.error);
+
+    // Se veio de "Vincular" em Produtos Pendentes, apaga o registro da fila
+    const unmatchedId = btn.dataset.unmatchedId;
+    if (unmatchedId) {
+      try { await apiFetch('/api/products/unmatched/' + unmatchedId, { method: 'DELETE' }); } catch(e) {}
+      delete btn.dataset.unmatchedId;
+    }
+
+    closeModal();
+    loadProducts();
+    loadUnmatchedProducts(); // sempre atualiza a notificacao de pendentes
+    if (document.getElementById('tab-dashboard').classList.contains('active')) loadDashboard();
+  } catch(e) {
+    alert('Erro ao salvar produto: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar produto';
+  }
+}
+
+async function deleteProduct(id, name) {
+  if (!confirm(`Excluir "${name}"?\nEsta ação não pode ser desfeita.`)) return;
+  try {
+    const res = await apiFetch(`/api/products/${id}`, { method: 'DELETE' });
+    if (!res.success) throw new Error(res.error);
+    loadProducts();
+    loadDashboard();
+  } catch(e) {
+    alert('Erro ao excluir: ' + e.message);
+  }
+}
+
+// ── Clipboard ────────────────────────────────────────────────────
+async function copyText(elemId, btn) {
+  const text = document.getElementById(elemId)?.textContent?.trim();
+  if (!text || text === '—') return;
+  try {
+    await navigator.clipboard.writeText(text);
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<i class="ti ti-check"></i>';
+    setTimeout(() => btn.innerHTML = orig, 1500);
+  } catch(e) {
+    prompt('Copie manualmente:', text);
+  }
+}
+
+// ── Testar Email ─────────────────────────────────────────────────
+async function testEmail() {
+  try {
+    const res = await apiFetch('/api/deliveries/test-smtp', { method: 'POST' });
+    alert(res.success ? 'Conexão SMTP OK!' : 'Falha: ' + (res.error || 'desconhecido'));
+  } catch(e) {
+    alert('Erro: ' + e.message);
+  }
+}
+
+// ── Produtos Não Mapeados ─────────────────────────────────────────
+async function loadUnmatchedProducts() {
+  const box = document.getElementById('unmatched-list');
+  if (!box) return;
+  try {
+    const res = await apiFetch('/api/products/unmatched/list');
+    if (!res.success || !res.data.length) {
+      box.innerHTML = '<div style="color:var(--emerald);font-size:13px;padding:8px 0;display:flex;align-items:center;gap:8px;"><i class="ti ti-circle-check" style="font-size:16px;"></i> Nenhum produto pendente — tudo mapeado!</div>';
+      document.getElementById('unmatched-badge').style.display = 'none';
+      document.getElementById('tb-unmatched').style.display = 'none';
+      // Esconde a secao inteira se nao ha pendentes
+      var sec = document.getElementById('unmatched-section');
+      if (sec) sec.style.display = 'none';
+      return;
+    }
+    // Mostra a secao quando ha pendentes
+    var sec = document.getElementById('unmatched-section');
+    if (sec) sec.style.display = 'block';
+    document.getElementById('unmatched-badge').textContent = res.data.length;
+    document.getElementById('unmatched-badge').style.display = 'inline-block';
+    // Topbar pill: produtos pendentes
+    var tbUnmatched = document.getElementById('tb-unmatched');
+    document.getElementById('tb-unmatched-count').textContent = res.data.length;
+    tbUnmatched.style.display = 'flex';
+    box.innerHTML = res.data.map(function(u) {
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">' +
+        '<div>' +
+          '<div style="font-size:13px;font-weight:600;color:var(--text);">' + u.platform_product_id + '</div>' +
+          '<div style="font-size:11px;color:var(--text2);margin-top:2px;">' +
+            platformBadge(u.platform) + ' &nbsp;· Visto ' + u.seen_count + 'x · Último: ' + (u.last_buyer_email || '?') +
+          '</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button class="btn btn-primary btn-xs" onclick="openModalFromUnmatched(\'' + u.id + '\',\'' + u.platform + '\',\'' + u.platform_product_id + '\')">' +
+            '<i class="ti ti-link"></i> Vincular' +
+          '</button>' +
+          '<button class="btn btn-ghost btn-xs" style="color:var(--red);" onclick="dismissUnmatched(\'' + u.id + '\')">' +
+            '<i class="ti ti-x"></i>' +
+          '</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  } catch(e) {
+    if (box) box.innerHTML = '<div style="color:var(--red);font-size:12px;">Erro: ' + e.message + '</div>';
+  }
+}
+
+function openModalFromUnmatched(unmatchedId, platform, platformProductId) {
+  openModal();
+  if (platform === 'kiwify') {
+    document.getElementById('m-kiwify').value = platformProductId;
+  } else {
+    document.getElementById('m-yampi').value = platformProductId;
+  }
+  document.getElementById('modal-title').textContent = 'Vincular produto ao arquivo';
+  document.getElementById('m-name').placeholder = 'Ex: Ebook SEO Completo';
+  // guarda o unmatchedId para apagar ao salvar
+  document.getElementById('save-btn').dataset.unmatchedId = unmatchedId;
+}
+
+async function dismissUnmatched(id) {
+  if (!confirm('Descartar este produto não mapeado?')) return;
+  try {
+    await apiFetch('/api/products/unmatched/' + id, { method: 'DELETE' });
+    loadUnmatchedProducts();
+  } catch(e) {
+    alert('Erro: ' + e.message);
+  }
+}
+
+// ── Importar da Plataforma ────────────────────────────────────────
+var _tenantConfigCache = null;
+
+async function getTenantConfig() {
+  if (_tenantConfigCache) return _tenantConfigCache;
+  var res = await apiFetch('/api/tenants/me');
+  if (res.success) { _tenantConfigCache = res.data; return res.data; }
+  return null;
+}
+
+async function importFromPlatform(platform) {
+  var btn   = document.getElementById('btn-import-' + platform);
+  var listEl = document.getElementById('platform-import-list');
+  if (listEl) listEl.innerHTML = '';
+
+  // Pré-verifica credenciais antes de chamar a API
+  var cfg = await getTenantConfig();
+
+  if (platform === 'yampi') {
+    if (!cfg || !cfg.yampi_store_alias || !cfg.has_yampi_token) {
+      if (listEl) listEl.innerHTML =
+        '<div style="background:var(--bg4);border:1px solid var(--border2);border-radius:var(--radius);padding:16px 18px;margin-top:4px;">' +
+          '<div style="font-size:13px;font-weight:600;color:var(--yellow);margin-bottom:8px;"><i class="ti ti-settings"></i> Configurar integração Yampi</div>' +
+          '<div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:12px;">' +
+            'Para importar produtos da Yampi, você precisa de duas informações:' +
+            '<br><br>' +
+            '<strong style="color:var(--text);">1. Alias da loja</strong> — a parte final da URL da sua loja:<br>' +
+            '<code style="background:var(--bg3);padding:2px 6px;border-radius:4px;font-size:11px;">yampi.com.br/<strong>seu-alias</strong></code>' +
+            '<br><br>' +
+            '<strong style="color:var(--text);">2. Token API</strong> — em Yampi: <em>Configurações → Integrações → API → Gerar token</em>' +
+          '</div>' +
+          '<button class="btn btn-primary btn-sm" onclick="switchTabById(\'config\')">' +
+            '<i class="ti ti-settings"></i> Ir para Configurações' +
+          '</button>' +
+        '</div>';
+      return;
+    }
+  }
+
+  if (platform === 'kiwify') {
+    if (listEl) listEl.innerHTML =
+      '<div style="background:var(--bg4);border:1px solid var(--border2);border-radius:var(--radius);padding:18px 20px;margin-top:4px;">' +
+        '<div style="font-size:13px;font-weight:700;color:var(--cyan);margin-bottom:12px;"><i class="ti ti-brand-google"></i> Pré-cadastrar produto Kiwify pelo ID</div>' +
+        '<div style="font-size:12px;color:var(--text2);line-height:1.8;margin-bottom:16px;">' +
+          'A Kiwify <strong style="color:var(--text);">não tem API pública</strong>, então não é possível listar produtos automaticamente. ' +
+          'Mas você pode pré-cadastrar colando a <strong style="color:var(--text);">URL do produto</strong> abaixo — o sistema extrai o ID automaticamente.' +
+          '<br><br>' +
+          '<span style="color:var(--text3);">Onde encontrar: Kiwify → Seus produtos → clique no produto → copie a URL do navegador.</span>' +
+          '<br><span style="font-size:11px;color:var(--text3);">Exemplo: <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;">kiwify.com.br/products/<strong>xxxxxxxx-xxxx-xxxx</strong>/edit</code></span>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;margin-bottom:12px;">' +
+          '<input type="text" class="form-input" id="kiwify-url-input" placeholder="Cole a URL do produto ou só o ID..." style="flex:1;font-size:13px;" />' +
+          '<button class="btn btn-primary btn-sm" onclick="preRegisterKiwify()">' +
+            '<i class="ti ti-arrow-right"></i> Pré-cadastrar' +
+          '</button>' +
+        '</div>' +
+        '<div style="font-size:11px;color:var(--text3);border-top:1px solid var(--border);padding-top:10px;">' +
+          '<i class="ti ti-info-circle" style="color:var(--orange);"></i> Após pré-cadastrar, adicione o arquivo PDF e o produto estará pronto para receber pedidos.' +
+        '</div>' +
+      '</div>';
+    // Foca no campo após renderizar
+    setTimeout(function() {
+      var el = document.getElementById('kiwify-url-input');
+      if (el) el.focus();
+    }, 100);
+    return;
+  }
+
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i> Buscando...'; }
+
+  try {
+    var res = await apiFetch('/api/products/platform-list/' + platform);
+    if (!res.success) throw new Error(res.error);
+
+    if (!res.data || !res.data.length) {
+      if (listEl) listEl.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:12px 0;">Nenhum produto encontrado na sua loja Yampi.</div>';
+      return;
+    }
+
+    if (listEl) {
+      listEl.innerHTML =
+        '<div style="font-size:12px;color:var(--text2);margin-bottom:10px;padding-top:4px;">' +
+          '<i class="ti ti-check" style="color:var(--emerald);"></i> ' + res.data.length + ' produto(s) encontrado(s) na Yampi:' +
+        '</div>' +
+        res.data.map(function(p) {
+          var safeName = p.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+          return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">' +
+            '<div>' +
+              '<div style="font-size:13px;font-weight:500;">' + p.name + '</div>' +
+              '<div style="font-size:11px;color:var(--text3);">ID: ' + p.platform_product_id +
+                (p.status !== 'active' ? ' · <span style="color:var(--red);">Inativo</span>' : ' · <span style="color:var(--emerald);">Ativo</span>') +
+              '</div>' +
+            '</div>' +
+            '<button class="btn btn-ghost btn-xs" onclick="openModalFromPlatform(\'yampi\',\'' + p.platform_product_id + '\',\'' + safeName + '\')">' +
+              '<i class="ti ti-plus"></i> Adicionar' +
+            '</button>' +
+          '</div>';
+        }).join('');
+    }
+    _tenantConfigCache = null; // limpa cache após operação
+  } catch(e) {
+    var msg = e.message || 'Erro desconhecido';
+    if (listEl) listEl.innerHTML =
+      '<div style="background:var(--red-dim);border:1px solid rgba(244,63,94,0.2);border-radius:var(--radius);padding:14px 16px;margin-top:4px;">' +
+        '<div style="font-size:12px;font-weight:600;color:var(--red);margin-bottom:4px;"><i class="ti ti-alert-circle"></i> Erro ao conectar com a Yampi</div>' +
+        '<div style="font-size:12px;color:var(--text2);">' + msg + '</div>' +
+        '<div style="font-size:11px;color:var(--text3);margin-top:8px;">Verifique o alias e o token em <button class="btn btn-ghost btn-xs" onclick="switchTabById(\'config\')">Configurações</button></div>' +
+      '</div>';
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-download"></i> Importar da Yampi'; }
+  }
+}
+
+function openModalFromPlatform(platform, platformProductId, name) {
+  openModal();
+  document.getElementById('m-name').value = name;
+  if (platform === 'kiwify') {
+    document.getElementById('m-kiwify').value = platformProductId;
+  } else {
+    document.getElementById('m-yampi').value = platformProductId;
+  }
+  document.getElementById('modal-title').textContent = 'Adicionar produto da ' + (platform === 'kiwify' ? 'Kiwify' : 'Yampi');
+}
+
+function preRegisterKiwify() {
+  var raw = (document.getElementById('kiwify-url-input') || {}).value || '';
+  raw = raw.trim();
+  if (!raw) { showToast('Cole a URL ou o ID do produto Kiwify.', 'warn'); return; }
+
+  // Tenta extrair UUID da URL: patterns como /products/UUID/edit ou /UUID
+  var uuidMatch = raw.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+  // Ou hash sem hifens (32 chars hex)
+  var hashMatch = !uuidMatch && raw.match(/\b([0-9a-f]{32})\b/i);
+  // Ou qualquer segmento de path que pareça ser o ID (sem /)
+  var pathMatch = !uuidMatch && !hashMatch && raw.match(/\/([^\/\?]+)\/?(?:\?|$|\/edit)/);
+
+  var kiwifyId = uuidMatch ? uuidMatch[1]
+               : hashMatch ? hashMatch[1]
+               : pathMatch ? pathMatch[1]
+               : raw; // se nao encontrou padrao, usa o valor bruto como ID
+
+  // Abre modal pre-preenchido
+  openModal();
+  document.getElementById('m-kiwify').value = kiwifyId;
+  document.getElementById('modal-title').textContent = 'Pré-cadastrar produto Kiwify';
+  document.getElementById('m-name').placeholder = 'Nome do produto (ex: Ebook Marketing Digital)';
+  setTimeout(function() { document.getElementById('m-name').focus(); }, 300);
+  showToast('ID extraido: ' + kiwifyId + ' — preencha o nome e o arquivo.', 'info');
+}
+
+// ── Auto-login se tiver token salvo ──────────────────────────────
+(async function() {
+  if (authToken) {
+    const me = await apiFetch('/api/auth/me');
+    if (me.success) { currentUser = me.user; showApp(); }
+    else { authToken = null; localStorage.removeItem('vaultly_token'); }
+  }
+})();
 </script>
 </body>
 </html>
