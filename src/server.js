@@ -96,6 +96,7 @@ app.use('/api/tenants',    require('./routes/tenants'));
 app.use('/api/billing',    require('./routes/billing'));
 app.use('/api/support',    require('./routes/support'));
 app.use('/api/seller',     require('./routes/seller'));
+app.use('/api/checkout',   require('./routes/checkout'));
 
 app.get('/health', (req, res) => res.json({ status: 'ok', version: '2.0.0', uptime: process.uptime(), timestamp: new Date().toISOString() }));
 
