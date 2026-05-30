@@ -448,6 +448,10 @@ const products = {
     return queryOne('SELECT * FROM products WHERE tenant_id = $1 AND (kiwify_id = $2 OR yampi_id = $2)', [tenantId, platformId]);
   },
 
+  async findBySlug(slug) {
+    return queryOne("SELECT * FROM products WHERE slug = $1 AND sellable = TRUE AND status = 'active'", [slug]);
+  },
+
   async findAll(tenantId) {
     return query(`
       SELECT p.*,
@@ -691,4 +695,71 @@ const supportTickets = {
   }
 };
 
-module.exports = { initDatabase, pool, query, queryOne, users, sessions, tenants, products, deliveries, webhookLogs, plans, unmatchedProducts, supportTickets, productFiles };
+// ─── Seller Accounts (conta de recebimento Asaas) ───────────────────────────────
+const sellerAccounts = {
+  async upsert(tenantId, data) {
+    const existing = await this.findByTenant(tenantId);
+    if (existing) {
+      const fields = Object.keys(data).map((k, i) => `${k} = $${i + 1}`).join(', ');
+      await query(
+        `UPDATE seller_accounts SET ${fields}, updated_at = NOW() WHERE tenant_id = $${Object.keys(data).length + 1}`,
+        [...Object.values(data), tenantId]
+      );
+      return this.findByTenant(tenantId);
+    }
+    const id = uuidv4();
+    await query(
+      `INSERT INTO seller_accounts (id, tenant_id, asaas_account_id, asaas_wallet_id, status, kyc_status, accept_pix, accept_card)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [id, tenantId, data.asaas_account_id || null, data.asaas_wallet_id || null,
+       data.status || 'pending', data.kyc_status || null,
+       data.accept_pix !== false, data.accept_card !== false]
+    );
+    return this.findByTenant(tenantId);
+  },
+  async findByTenant(tenantId) {
+    return queryOne('SELECT * FROM seller_accounts WHERE tenant_id = $1', [tenantId]);
+  }
+};
+
+// ─── Orders (vendas diretas) ────────────────────────────────────────────────────
+const orders = {
+  async create(tenantId, data) {
+    const id = uuidv4();
+    await query(
+      `INSERT INTO orders (id, tenant_id, product_id, buyer_name, buyer_email, buyer_doc,
+         amount_cents, payment_method, asaas_payment_id, status, platform_fee_cents, gateway_fee_cents, net_cents)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+      [id, tenantId, data.product_id, data.buyer_name || null, data.buyer_email, data.buyer_doc || null,
+       data.amount_cents, data.payment_method || null, data.asaas_payment_id || null,
+       data.status || 'pending', data.platform_fee_cents || null, data.gateway_fee_cents || null, data.net_cents || null]);
+    return id;
+  },
+  async findById(id) {
+    return queryOne('SELECT * FROM orders WHERE id = $1', [id]);
+  },
+  async findByAsaasPaymentId(asaasPaymentId) {
+    return queryOne('SELECT * FROM orders WHERE asaas_payment_id = $1', [asaasPaymentId]);
+  },
+  async setAsaasPaymentId(id, asaasPaymentId) {
+    await query('UPDATE orders SET asaas_payment_id = $1 WHERE id = $2', [asaasPaymentId, id]);
+  },
+  async markPaid(id, deliveryId) {
+    await query(
+      `UPDATE orders SET status = 'paid', paid_at = NOW(), delivery_id = $2 WHERE id = $1`,
+      [id, deliveryId || null]);
+  },
+  async updateStatus(id, status) {
+    const refundedAt = (status === 'refunded' || status === 'chargeback') ? 'NOW()' : 'refunded_at';
+    await query(`UPDATE orders SET status = $1, refunded_at = ${refundedAt} WHERE id = $2`, [status, id]);
+  },
+  async findAll(tenantId, limit = 100) {
+    return query(
+      `SELECT o.*, p.name AS product_name FROM orders o
+       LEFT JOIN products p ON o.product_id = p.id
+       WHERE o.tenant_id = $1 ORDER BY o.created_at DESC LIMIT $2`,
+      [tenantId, limit]);
+  }
+};
+
+module.exports = { initDatabase, pool, query, queryOne, users, sessions, tenants, products, deliveries, webhookLogs, plans, unmatchedProducts, supportTickets, productFiles, sellerAccounts, orders };
