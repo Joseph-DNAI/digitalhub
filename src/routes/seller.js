@@ -20,7 +20,8 @@ router.get('/account', requireAuth, async (req, res) => {
 // POST /api/seller/onboarding — cria a subconta no Asaas (white-label)
 router.post('/onboarding', requireAuth, async (req, res) => {
   try {
-    const { name, email, cpfCnpj, mobilePhone, birthDate, incomeValue, accept_pix, accept_card } = req.body;
+    const { name, email, cpfCnpj, mobilePhone, birthDate, incomeValue,
+            postalCode, address, addressNumber, province, accept_pix, accept_card } = req.body;
     if (!name || !email || !cpfCnpj) {
       return res.status(400).json({ success: false, error: 'name, email e cpfCnpj sao obrigatorios.' });
     }
@@ -29,7 +30,8 @@ router.post('/onboarding', requireAuth, async (req, res) => {
       return res.status(409).json({ success: false, error: 'Conta de recebimento ja ativa.' });
     }
 
-    const created = await asaas.createSubaccount({ name, email, cpfCnpj, mobilePhone, birthDate, incomeValue });
+    const created = await asaas.createSubaccount({ name, email, cpfCnpj, mobilePhone, birthDate, incomeValue,
+                                                   postalCode, address, addressNumber, province });
     const acc = await sellerAccounts.upsert(req.tenantId, {
       asaas_account_id: created.accountId,
       asaas_wallet_id:  created.walletId,

@@ -47,6 +47,10 @@ function buildSubaccountPayload(d) {
     mobilePhone: d.mobilePhone ? String(d.mobilePhone).replace(/\D/g, '') : undefined,
     birthDate: d.birthDate || undefined,
     incomeValue: d.incomeValue || 1000,
+    postalCode: d.postalCode ? String(d.postalCode).replace(/\D/g, '') : undefined,
+    address: d.address || undefined,
+    addressNumber: d.addressNumber ? String(d.addressNumber) : undefined,
+    province: d.province || undefined,
     companyType: d.companyType || undefined
   };
 }
