@@ -248,4 +248,51 @@ router.get('/platform-list/:platform', async (req, res) => {
   }
 });
 
+const { sellerAccounts } = require('../models/database');
+
+function makeSlug(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+}
+
+// PUT /api/products/:id/selling — configura venda direta do produto
+router.put('/:id/selling', requireAuth, async (req, res) => {
+  try {
+    const MIN = parseInt(process.env.DIRECT_MIN_PRICE_CENTS || '900', 10);
+    const { sellable, price_cents, slug, checkout_title, checkout_description, accept_pix, accept_card } = req.body;
+
+    const product = await products.findById(req.tenantId, req.params.id);
+    if (!product) return res.status(404).json({ success: false, error: 'Produto nao encontrado.' });
+
+    if (sellable) {
+      const acc = await sellerAccounts.findByTenant(req.tenantId);
+      if (!acc || acc.status !== 'active') {
+        return res.status(403).json({ success: false, error: 'Ative sua conta de recebimento antes de vender direto.', needs_onboarding: true });
+      }
+      if (!price_cents || price_cents < MIN) {
+        return res.status(400).json({ success: false, error: 'Preco minimo para venda direta e R$' + (MIN / 100).toFixed(2).replace('.', ',') + '.' });
+      }
+    }
+
+    let finalSlug = slug ? makeSlug(slug) : makeSlug(product.name) + '-' + req.params.id.slice(0, 6);
+    const clash = await require('../models/database').queryOne(
+      'SELECT id FROM products WHERE slug = $1 AND id <> $2', [finalSlug, req.params.id]);
+    if (clash) finalSlug = finalSlug + '-' + req.params.id.slice(0, 4);
+
+    const updated = await products.update(req.tenantId, req.params.id, {
+      sellable: !!sellable,
+      price_cents: price_cents || null,
+      slug: finalSlug,
+      checkout_title: checkout_title || product.name,
+      checkout_description: checkout_description || null,
+      accept_pix: accept_pix !== false,
+      accept_card: accept_card !== false
+    });
+    res.json({ success: true, product: updated });
+  } catch (err) {
+    logger.error('products/selling: ' + err.message);
+    res.status(500).json({ success: false, error: 'Erro interno.' });
+  }
+});
+
 module.exports = router;
