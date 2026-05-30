@@ -28,7 +28,8 @@ async function request(method, path, body) {
   let json;
   try { json = text ? JSON.parse(text) : {}; } catch { json = { raw: text }; }
   if (!res.ok) {
-    const msg = json && json.errors ? JSON.stringify(json.errors) : ('HTTP ' + res.status);
+    const detail = json && json.errors ? JSON.stringify(json.errors) : (text ? String(text).slice(0, 300) : '');
+    const msg = 'HTTP ' + res.status + (detail ? ' — ' + detail : '');
     logger.error('Asaas ' + method + ' ' + path + ' falhou: ' + msg);
     const err = new Error('Asaas: ' + msg);
     err.status = res.status;
