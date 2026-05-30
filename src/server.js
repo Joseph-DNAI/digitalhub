@@ -133,6 +133,13 @@ app.get('/termos', (req, res) => {
   res.redirect('/');
 });
 
+// Página pública de checkout de venda direta
+app.get('/c/:slug', (req, res) => {
+  const co = path.join(publicPath, 'checkout.html');
+  if (fs.existsSync(co)) return res.sendFile(co);
+  res.redirect('/');
+});
+
 app.use((err, req, res, next) => {
   logger.error('Erro global: ' + err.message);
   res.status(500).json({ success: false, error: 'Erro interno do servidor' });
