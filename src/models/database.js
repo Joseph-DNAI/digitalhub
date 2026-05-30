@@ -133,6 +133,16 @@ async function initDatabase() {
         created_at TIMESTAMP DEFAULT NOW()
       );
 
+      -- Arquivos adicionais de um produto (combo) — disponível no plano Pro+
+      CREATE TABLE IF NOT EXISTS product_files (
+        id         TEXT PRIMARY KEY,
+        product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        tenant_id  TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        file_path  TEXT NOT NULL,
+        file_name  TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+
       -- Produtos vistos em webhooks mas sem cadastro no sistema
       CREATE TABLE IF NOT EXISTS unmatched_products (
         id                  TEXT PRIMARY KEY,
@@ -395,7 +405,11 @@ const products = {
   },
 
   async findAll(tenantId) {
-    return query('SELECT * FROM products WHERE tenant_id = $1 ORDER BY created_at DESC', [tenantId]);
+    return query(`
+      SELECT p.*,
+        (SELECT COUNT(*) FROM product_files pf WHERE pf.product_id = p.id)::int AS extra_files_count
+      FROM products p WHERE p.tenant_id = $1 ORDER BY p.created_at DESC
+    `, [tenantId]);
   },
 
   async count(tenantId) {
@@ -555,6 +569,39 @@ const unmatchedProducts = {
   }
 };
 
+// ─── Product Files (arquivos extras de combo — Pro+) ────────────────────────────
+
+const productFiles = {
+  async create(tenantId, productId, filePath, fileName) {
+    const id = uuidv4();
+    await query(
+      'INSERT INTO product_files (id, product_id, tenant_id, file_path, file_name) VALUES ($1,$2,$3,$4,$5)',
+      [id, productId, tenantId, filePath, fileName]
+    );
+    return id;
+  },
+
+  async findByProduct(tenantId, productId) {
+    return query(
+      'SELECT * FROM product_files WHERE tenant_id=$1 AND product_id=$2 ORDER BY created_at ASC',
+      [tenantId, productId]
+    );
+  },
+
+  async findById(tenantId, id) {
+    return queryOne('SELECT * FROM product_files WHERE tenant_id=$1 AND id=$2', [tenantId, id]);
+  },
+
+  async count(tenantId, productId) {
+    const r = await queryOne('SELECT COUNT(*) as n FROM product_files WHERE tenant_id=$1 AND product_id=$2', [tenantId, productId]);
+    return parseInt(r.n);
+  },
+
+  async delete(tenantId, id) {
+    await query('DELETE FROM product_files WHERE tenant_id=$1 AND id=$2', [tenantId, id]);
+  }
+};
+
 // ─── Support Tickets (denúncias + chamados) ─────────────────────────────────────
 
 const supportTickets = {
@@ -600,4 +647,4 @@ const supportTickets = {
   }
 };
 
-module.exports = { initDatabase, pool, query, queryOne, users, sessions, tenants, products, deliveries, webhookLogs, plans, unmatchedProducts, supportTickets };
+module.exports = { initDatabase, pool, query, queryOne, users, sessions, tenants, products, deliveries, webhookLogs, plans, unmatchedProducts, supportTickets, productFiles };

@@ -54,7 +54,9 @@
       "Bash(node -e \"require\\('./src/models/database.js'\\); require\\('./src/server.js'\\) \")",
       "Bash(node --check src/services/deliveryService.js)",
       "Bash(node --check src/routes/deliveries.js)",
-      "Bash(node --check src/routes/auth.js)"
+      "Bash(node --check src/routes/auth.js)",
+      "Bash(node --check src/services/emailService.js)",
+      "Bash(node --check src/routes/products.js)"
     ],
     "additionalDirectories": [
       "C:\\Users\\jojop\\OneDrive\\Documentos\\Projetos\\Webhook Yampi e Kiwify\\digitalhub-multi\\.git",

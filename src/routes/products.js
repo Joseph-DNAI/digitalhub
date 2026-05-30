@@ -4,7 +4,7 @@ const router   = express.Router();
 const multer   = require('multer');
 const path     = require('path');
 const fs       = require('fs');
-const { products, unmatchedProducts, tenants } = require('../models/database');
+const { products, unmatchedProducts, tenants, productFiles } = require('../models/database');
 const { uploadFile, deleteFile } = require('../services/storageService');
 const { requireAuth, requirePlanLimit } = require('../middleware/auth');
 const { fetchYampiProducts, fetchKiwifyProducts } = require('../services/platformApiService');
@@ -71,6 +71,9 @@ router.get('/:id', async (req, res) => {
     const p = await products.findById(req.tenantId, req.params.id);
     if (!p) return res.status(404).json({ success: false, error: 'Produto não encontrado' });
     const { file_path, ...safe } = p;
+    // Inclui arquivos extras do combo (sem expor o file_path interno)
+    const extras = await productFiles.findByProduct(req.tenantId, req.params.id);
+    safe.extra_files = (extras || []).map(f => ({ id: f.id, file_name: f.file_name, created_at: f.created_at }));
     res.json({ success: true, data: safe });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -145,8 +148,57 @@ router.delete('/:id', async (req, res) => {
     const existing = await products.findById(req.tenantId, req.params.id);
     if (!existing) return res.status(404).json({ success: false, error: 'Produto nao encontrado' });
     if (existing.file_path) { try { await deleteFile(existing.file_path); } catch(e){} }
+    // Remove tambem os arquivos extras do combo do storage
+    const extras = await productFiles.findByProduct(req.tenantId, req.params.id);
+    for (const f of (extras || [])) { try { await deleteFile(f.file_path); } catch(e){} }
     await products.delete(req.tenantId, req.params.id);
     res.json({ success: true, message: 'Produto removido' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ─── Combo: arquivos extras (Pro+) ────────────────────────────────────────────
+
+const COMBO_PLANS  = ['pro', 'business'];
+const MAX_EXTRA_FILES = 8; // até 8 extras (9 arquivos no total) — protege o limite de tamanho do email
+
+function requireComboPlan(req, res, next) {
+  if (!COMBO_PLANS.includes(req.user.plan_id)) {
+    return res.status(403).json({ success: false, error: 'Combo de arquivos disponível a partir do plano Pro. Faça upgrade para anexar mais de um arquivo por produto.' });
+  }
+  next();
+}
+
+// POST /:id/files — adiciona um arquivo extra ao produto
+router.post('/:id/files', requireComboPlan, uploadMw, async (req, res) => {
+  try {
+    const product = await products.findById(req.tenantId, req.params.id);
+    if (!product) return res.status(404).json({ success: false, error: 'Produto não encontrado' });
+    if (!req.file) return res.status(400).json({ success: false, error: 'Nenhum arquivo enviado' });
+
+    const count = await productFiles.count(req.tenantId, req.params.id);
+    if (count >= MAX_EXTRA_FILES) {
+      return res.status(400).json({ success: false, error: 'Limite de ' + MAX_EXTRA_FILES + ' arquivos extras atingido para este produto.' });
+    }
+
+    const r2Key = await uploadFile(req.file.path, req.file.originalname);
+    const id = await productFiles.create(req.tenantId, req.params.id, r2Key, req.file.originalname);
+    res.status(201).json({ success: true, data: { id, file_name: req.file.originalname } });
+  } catch (err) {
+    logger.error('Erro ao adicionar arquivo extra: ' + err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// DELETE /:id/files/:fileId — remove um arquivo extra
+router.delete('/:id/files/:fileId', async (req, res) => {
+  try {
+    const f = await productFiles.findById(req.tenantId, req.params.fileId);
+    if (!f) return res.status(404).json({ success: false, error: 'Arquivo não encontrado' });
+    try { await deleteFile(f.file_path); } catch(e){}
+    await productFiles.delete(req.tenantId, req.params.fileId);
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

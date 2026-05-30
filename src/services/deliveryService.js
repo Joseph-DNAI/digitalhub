@@ -1,5 +1,5 @@
 // src/services/deliveryService.js — multi-tenant
-const { products, deliveries, tenants, unmatchedProducts, users, queryOne } = require('../models/database');
+const { products, deliveries, tenants, unmatchedProducts, users, productFiles, queryOne } = require('../models/database');
 const { sendProductEmail, sendLimitWarningEmail } = require('./emailService');
 const { normalizePayload, isApprovedEvent } = require('./platformAdapter');
 const logger = require('../config/logger');
@@ -82,10 +82,19 @@ async function processWebhookEvent(tenantId, platform, rawPayload, options) {
 
 async function attemptDelivery(deliveryId, product, normalized, tenant, showBranding, user) {
   try {
+    // Monta a lista de anexos: arquivo principal + extras do combo (Pro+)
+    var attachments = [];
+    if (product.file_path) attachments.push({ filePath: product.file_path, fileName: product.file_name });
+    try {
+      var extras = await productFiles.findByProduct(product.tenant_id || (tenant && tenant.id), product.id);
+      (extras || []).forEach(function(f) { attachments.push({ filePath: f.file_path, fileName: f.file_name }); });
+    } catch (e) { logger.warn('Falha ao buscar arquivos extras: ' + e.message); }
+
     await sendProductEmail({
       buyerEmail:    normalized.buyerEmail,
       buyerName:     normalized.buyerName,
       productName:   product.name,
+      attachments:   attachments,
       filePath:      product.file_path,
       fileName:      product.file_name,
       emailTemplate: product.email_template || (tenant && tenant.email_template) || null,

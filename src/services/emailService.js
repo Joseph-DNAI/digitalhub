@@ -93,21 +93,36 @@ const DISCLAIMER = `
   </div>
 `;
 
-async function sendProductEmail({ buyerEmail, buyerName, productName, filePath, fileName, emailTemplate, orderId, resendApiKey, fromName, fromAddress, showBranding }) {
+async function sendProductEmail({ buyerEmail, buyerName, productName, filePath, fileName, attachments, emailTemplate, orderId, resendApiKey, fromName, fromAddress, showBranding }) {
   const apiKey = resendApiKey || process.env.RESEND_API_KEY || process.env.SMTP_PASS;
   const fName  = fromName    || process.env.EMAIL_FROM_NAME    || 'Vaultly';
   const fAddr  = fromAddress || process.env.EMAIL_FROM_ADDRESS || 'onboarding@resend.dev';
 
-  if (!apiKey)   throw new Error('RESEND_API_KEY nao configurada');
-  if (!filePath) throw new Error('Arquivo nao configurado para este produto');
+  if (!apiKey) throw new Error('RESEND_API_KEY nao configurada');
 
-  const baseHtml   = renderTemplate(emailTemplate, { nome: buyerName||buyerEmail, produto: productName, arquivo: fileName, email: buyerEmail, pedido: orderId }, showBranding);
+  // Lista unificada de arquivos: usa `attachments` (combo) ou cai no arquivo único
+  const fileList = (Array.isArray(attachments) && attachments.length)
+    ? attachments
+    : (filePath ? [{ filePath, fileName }] : []);
+  if (!fileList.length) throw new Error('Arquivo nao configurado para este produto');
+
+  // Texto do anexo no template: 1 arquivo mostra o nome; combo mostra a contagem
+  const arquivoLabel = fileList.length === 1
+    ? (fileList[0].fileName || 'arquivo.pdf')
+    : (fileList.length + ' arquivos em anexo');
+
+  const baseHtml = renderTemplate(emailTemplate, { nome: buyerName||buyerEmail, produto: productName, arquivo: arquivoLabel, email: buyerEmail, pedido: orderId }, showBranding);
   // Disclaimer legal sempre presente, mesmo em templates personalizados
-  const htmlBody   = baseHtml + DISCLAIMER;
-  const fileBuffer = await downloadFileBuffer(filePath);
-  const fileBase64 = fileBuffer.toString('base64');
+  const htmlBody = baseHtml + DISCLAIMER;
 
-  logger.info('Enviando email via Resend para ' + buyerEmail + ' — ' + productName + (showBranding ? ' [Free/branding]' : ''));
+  // Baixa todos os arquivos e converte para base64
+  const resendAttachments = [];
+  for (const f of fileList) {
+    const buf = await downloadFileBuffer(f.filePath);
+    resendAttachments.push({ filename: f.fileName || 'arquivo', content: buf.toString('base64') });
+  }
+
+  logger.info('Enviando email via Resend para ' + buyerEmail + ' — ' + productName + ' (' + resendAttachments.length + ' anexo(s))' + (showBranding ? ' [Free/branding]' : ''));
 
   const response = await fetch('https://api.resend.com/emails', {
     method:  'POST',
@@ -117,7 +132,7 @@ async function sendProductEmail({ buyerEmail, buyerName, productName, filePath, 
       to:          [buyerEmail],
       subject:     '🎉 Seu produto chegou: ' + productName,
       html:        htmlBody,
-      attachments: [{ filename: fileName, content: fileBase64 }]
+      attachments: resendAttachments
     })
   });
 
