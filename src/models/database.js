@@ -182,6 +182,41 @@ async function initDatabase() {
         created_at     TIMESTAMP DEFAULT NOW(),
         resolved_at    TIMESTAMP
       );
+
+      -- Conta de recebimento do vendedor no Asaas (1 por tenant)
+      CREATE TABLE IF NOT EXISTS seller_accounts (
+        id               TEXT PRIMARY KEY,
+        tenant_id        TEXT UNIQUE NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        asaas_account_id TEXT,
+        asaas_wallet_id  TEXT,
+        status           TEXT NOT NULL DEFAULT 'pending',
+        kyc_status       TEXT,
+        accept_pix       BOOLEAN DEFAULT TRUE,
+        accept_card      BOOLEAN DEFAULT TRUE,
+        created_at       TIMESTAMP DEFAULT NOW(),
+        updated_at       TIMESTAMP DEFAULT NOW()
+      );
+
+      -- Pedidos de venda direta (porta de entrada do modo venda direta)
+      CREATE TABLE IF NOT EXISTS orders (
+        id                TEXT PRIMARY KEY,
+        tenant_id         TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        product_id        TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        buyer_name        TEXT,
+        buyer_email       TEXT NOT NULL,
+        buyer_doc         TEXT,
+        amount_cents      INTEGER NOT NULL,
+        payment_method    TEXT,
+        asaas_payment_id  TEXT UNIQUE,
+        status            TEXT NOT NULL DEFAULT 'pending',
+        platform_fee_cents INTEGER,
+        gateway_fee_cents  INTEGER,
+        net_cents          INTEGER,
+        delivery_id        TEXT,
+        created_at        TIMESTAMP DEFAULT NOW(),
+        paid_at           TIMESTAMP,
+        refunded_at       TIMESTAMP
+      );
     `);
 
     // Migracoes incrementais — adiciona colunas novas se nao existirem
@@ -202,6 +237,15 @@ async function initDatabase() {
       ALTER TABLE users   ADD COLUMN IF NOT EXISTS current_period_end      TIMESTAMP;
       ALTER TABLE users   ADD COLUMN IF NOT EXISTS terms_accepted_at       TIMESTAMP;
       ALTER TABLE users   ADD COLUMN IF NOT EXISTS terms_version           TEXT;
+      ALTER TABLE users    ADD COLUMN IF NOT EXISTS usage_mode          TEXT DEFAULT 'automation';
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS sellable            BOOLEAN DEFAULT FALSE;
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS price_cents         INTEGER;
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS slug                TEXT;
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS checkout_title      TEXT;
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS checkout_description TEXT;
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS accept_pix          BOOLEAN DEFAULT TRUE;
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS accept_card         BOOLEAN DEFAULT TRUE;
+      CREATE UNIQUE INDEX IF NOT EXISTS products_slug_unique ON products (slug) WHERE slug IS NOT NULL;
     `);
 
     // Planos — DO UPDATE garante que mudancas de preco/limite sejam aplicadas no restart
