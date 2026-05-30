@@ -16,18 +16,18 @@ test('buildSubaccountPayload mapeia os campos do formulário', () => {
 test('buildChargePayload Pix inclui billingType e split', () => {
   const p = buildChargePayload({
     customerId: 'cus_1', method: 'pix', amountCents: 2700,
-    description: 'Ebook', vaultlyWalletId: 'w_v', dueDate: '2026-06-01'
+    description: 'Ebook', sellerWalletId: 'w_s', dueDate: '2026-06-01'
   });
   assert.strictEqual(p.billingType, 'PIX');
   assert.strictEqual(p.customer, 'cus_1');
   assert.strictEqual(p.value, 27);
-  assert.deepStrictEqual(p.split, [{ walletId: 'w_v', fixedValue: 0.5 }]);
+  assert.deepStrictEqual(p.split, [{ walletId: 'w_s', fixedValue: 26.5 }]);
 });
 
 test('buildChargePayload cartão usa CREDIT_CARD', () => {
   const p = buildChargePayload({
     customerId: 'cus_1', method: 'card', amountCents: 2700,
-    description: 'Ebook', vaultlyWalletId: 'w_v', dueDate: '2026-06-01'
+    description: 'Ebook', sellerWalletId: 'w_s', dueDate: '2026-06-01'
   });
   assert.strictEqual(p.billingType, 'CREDIT_CARD');
 });

@@ -27,12 +27,13 @@ function centsToReais(cents) {
   return Math.round(cents) / 100;
 }
 
-// Monta o array de split do Asaas: manda a taxa da Vaultly para a wallet master.
-// O restante fica automaticamente com o recebedor principal (subconta do vendedor),
-// pois a cobrança é criada NA subconta do vendedor com split para a Vaultly.
-function buildSplit({ amountCents, vaultlyWalletId, overrides }) {
+// Monta o array de split do Asaas. A cobrança é criada na conta MASTER da Vaultly,
+// que retém a taxa como recebedora principal; o split envia o LÍQUIDO do vendedor
+// (valor da venda menos a taxa da Vaultly) para a wallet dele.
+function buildSplit({ amountCents, sellerWalletId, overrides }) {
   const feeCents = vaultlyFeeCents(amountCents, overrides);
-  return [{ walletId: vaultlyWalletId, fixedValue: centsToReais(feeCents) }];
+  const sellerCents = amountCents - feeCents;
+  return [{ walletId: sellerWalletId, fixedValue: centsToReais(sellerCents) }];
 }
 
 module.exports = { vaultlyFeeCents, centsToReais, buildSplit };

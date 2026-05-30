@@ -44,12 +44,6 @@ router.post('/:slug', async (req, res) => {
       return res.status(409).json({ success: false, error: 'Produto indisponivel para compra.' });
     }
 
-    const vaultlyWalletId = process.env.ASAAS_VAULTLY_WALLET_ID;
-    if (!vaultlyWalletId) {
-      logger.error('ASAAS_VAULTLY_WALLET_ID nao configurado');
-      return res.status(500).json({ success: false, error: 'Configuracao de pagamento indisponivel.' });
-    }
-
     const pm = method === 'card' ? 'card' : 'pix';
     if (pm === 'pix' && !product.accept_pix) return res.status(400).json({ success: false, error: 'Pix indisponivel para este produto.' });
     if (pm === 'card' && !product.accept_card) return res.status(400).json({ success: false, error: 'Cartao indisponivel para este produto.' });
@@ -74,7 +68,7 @@ router.post('/:slug', async (req, res) => {
     const charge = await asaas.createCharge({
       customerId, method: pm, amountCents,
       description: product.checkout_title || product.name,
-      vaultlyWalletId,
+      sellerWalletId: acc.asaas_wallet_id,
       dueDate, orderId,
       card: pm === 'card' ? card : undefined,
       remoteIp: req.headers['x-forwarded-for'] || req.ip

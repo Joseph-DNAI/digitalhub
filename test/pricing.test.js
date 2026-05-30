@@ -16,11 +16,11 @@ test('taxa Vaultly respeita overrides via env', () => {
   );
 });
 
-test('buildSplit devolve valor da Vaultly em reais p/ o walletId master-less', () => {
-  // amount 2700c, fee 50c -> split fixedValue 0.50 para a wallet da Vaultly
-  const split = buildSplit({ amountCents: 2700, vaultlyWalletId: 'w_vaultly' });
+test('buildSplit envia o liquido do vendedor para a wallet dele', () => {
+  // amount 2700c, fee 50c -> vendedor recebe 2650c = R$26,50
+  const split = buildSplit({ amountCents: 2700, sellerWalletId: 'w_seller' });
   assert.deepStrictEqual(split, [
-    { walletId: 'w_vaultly', fixedValue: 0.5 }
+    { walletId: 'w_seller', fixedValue: 26.5 }
   ]);
 });
 
