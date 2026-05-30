@@ -30,6 +30,7 @@ router.get('/:slug', async (req, res) => {
 
 // POST /api/checkout/:slug — cria a cobrança no Asaas + a order (pending)
 router.post('/:slug', async (req, res) => {
+  let orderId = null;
   try {
     const { buyer_name, buyer_email, buyer_doc, method, card } = req.body;
     if (!buyer_email || !buyer_doc) {
@@ -37,6 +38,17 @@ router.post('/:slug', async (req, res) => {
     }
     const product = await products.findBySlug(req.params.slug);
     if (!product) return res.status(404).json({ success: false, error: 'Produto nao encontrado.' });
+
+    const MIN = parseInt(process.env.DIRECT_MIN_PRICE_CENTS || '900', 10);
+    if (!Number.isInteger(product.price_cents) || product.price_cents < MIN) {
+      return res.status(409).json({ success: false, error: 'Produto indisponivel para compra.' });
+    }
+
+    const vaultlyWalletId = process.env.ASAAS_VAULTLY_WALLET_ID;
+    if (!vaultlyWalletId) {
+      logger.error('ASAAS_VAULTLY_WALLET_ID nao configurado');
+      return res.status(500).json({ success: false, error: 'Configuracao de pagamento indisponivel.' });
+    }
 
     const pm = method === 'card' ? 'card' : 'pix';
     if (pm === 'pix' && !product.accept_pix) return res.status(400).json({ success: false, error: 'Pix indisponivel para este produto.' });
@@ -50,7 +62,7 @@ router.post('/:slug', async (req, res) => {
     const amountCents = product.price_cents;
     const feeCents = vaultlyFeeCents(amountCents);
 
-    const orderId = await orders.create(product.tenant_id, {
+    orderId = await orders.create(product.tenant_id, {
       product_id: product.id, buyer_name, buyer_email, buyer_doc,
       amount_cents: amountCents, payment_method: pm,
       platform_fee_cents: feeCents
@@ -62,7 +74,7 @@ router.post('/:slug', async (req, res) => {
     const charge = await asaas.createCharge({
       customerId, method: pm, amountCents,
       description: product.checkout_title || product.name,
-      vaultlyWalletId: process.env.ASAAS_VAULTLY_WALLET_ID,
+      vaultlyWalletId,
       dueDate, orderId,
       card: pm === 'card' ? card : undefined,
       remoteIp: req.headers['x-forwarded-for'] || req.ip
@@ -78,6 +90,7 @@ router.post('/:slug', async (req, res) => {
     return res.json({ success: true, orderId, method: 'card', payment_id: charge.id, status: charge.status });
   } catch (err) {
     logger.error('checkout/post: ' + err.message);
+    if (orderId) { try { await orders.updateStatus(orderId, 'failed'); } catch (_) {} }
     res.status(502).json({ success: false, error: 'Falha ao processar pagamento. ' + err.message });
   }
 });

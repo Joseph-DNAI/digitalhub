@@ -449,7 +449,7 @@ const products = {
   },
 
   async findBySlug(slug) {
-    return queryOne("SELECT * FROM products WHERE slug = $1 AND sellable = TRUE AND status = 'active'", [slug]);
+    return queryOne("SELECT * FROM products WHERE slug = $1 AND sellable = TRUE AND status = 'active' AND price_cents IS NOT NULL", [slug]);
   },
 
   async findAll(tenantId) {
@@ -744,10 +744,15 @@ const orders = {
   async setAsaasPaymentId(id, asaasPaymentId) {
     await query('UPDATE orders SET asaas_payment_id = $1 WHERE id = $2', [asaasPaymentId, id]);
   },
-  async markPaid(id, deliveryId) {
-    await query(
-      `UPDATE orders SET status = 'paid', paid_at = NOW(), delivery_id = $2 WHERE id = $1`,
-      [id, deliveryId || null]);
+  // Transição atômica pending->paid. Retorna true só p/ quem venceu a corrida (evita entrega dupla).
+  async claimForDelivery(id) {
+    const rows = await query(
+      "UPDATE orders SET status = 'paid', paid_at = NOW() WHERE id = $1 AND status = 'pending' RETURNING id",
+      [id]);
+    return rows.length === 1;
+  },
+  async setDeliveryId(id, deliveryId) {
+    await query('UPDATE orders SET delivery_id = $1 WHERE id = $2', [deliveryId, id]);
   },
   async updateStatus(id, status) {
     const refundedAt = (status === 'refunded' || status === 'chargeback') ? 'NOW()' : 'refunded_at';

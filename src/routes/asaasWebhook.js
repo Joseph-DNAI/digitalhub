@@ -22,14 +22,20 @@ router.post('/webhook', async (req, res) => {
 
   setImmediate(async () => {
     try {
+      if (!payment.id) { logger.warn('Asaas webhook sem payment.id'); return; }
       const order = await orders.findByAsaasPaymentId(payment.id);
       if (!order) { logger.warn('Asaas webhook: order nao encontrada p/ payment ' + payment.id); return; }
 
       if (PAID_EVENTS.includes(event)) {
-        if (order.status === 'paid') { logger.debug('Order ja paga (idempotente): ' + order.id); return; }
-        const deliveryId = await processDirectOrder(order);
-        await orders.markPaid(order.id, deliveryId);
-        logger.info('Venda direta paga e entregue — order ' + order.id + ', delivery ' + deliveryId);
+        const claimed = await orders.claimForDelivery(order.id);
+        if (!claimed) { logger.debug('Order ja processada (idempotente): ' + order.id); return; }
+        try {
+          const deliveryId = await processDirectOrder(order);
+          await orders.setDeliveryId(order.id, deliveryId);
+          logger.info('Venda direta paga e entregue — order ' + order.id + ', delivery ' + deliveryId);
+        } catch (e) {
+          logger.error('Entrega da order ' + order.id + ' falhou; sera reprocessada pelo job de retry: ' + e.message);
+        }
       } else if (REFUND_EVENTS.includes(event)) {
         const newStatus = event === 'PAYMENT_REFUNDED' ? 'refunded' : 'chargeback';
         await orders.updateStatus(order.id, newStatus);

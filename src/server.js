@@ -33,6 +33,7 @@ const authLimiter = rateLimit({
 });
 
 const webhookLimiter = rateLimit({ windowMs: 60*1000, max: 60 });
+const checkoutLimiter = rateLimit({ windowMs: 60*1000, max: 20 });
 
 // CORS restrito à origem do app
 const allowedOrigins = [
@@ -97,7 +98,7 @@ app.use('/api/tenants',    require('./routes/tenants'));
 app.use('/api/billing',    require('./routes/billing'));
 app.use('/api/support',    require('./routes/support'));
 app.use('/api/seller',     require('./routes/seller'));
-app.use('/api/checkout',   require('./routes/checkout'));
+app.use('/api/checkout',   checkoutLimiter, require('./routes/checkout'));
 app.use('/api/asaas',      require('./routes/asaasWebhook'));
 
 app.get('/health', (req, res) => res.json({ status: 'ok', version: '2.0.0', uptime: process.uptime(), timestamp: new Date().toISOString() }));
