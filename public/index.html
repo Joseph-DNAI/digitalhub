@@ -1473,6 +1473,10 @@ function renderSellerForm(prefill) {
     '<div class="form-group"><label class="form-label">Celular</label><input type="text" class="form-input" id="seller-phone" placeholder="(11) 91234-5678" /></div>' +
     '<div class="form-group"><label class="form-label">Data de nascimento</label><input type="date" class="form-input" id="seller-birthdate" /></div>' +
     '<div class="form-group"><label class="form-label">Renda / faturamento mensal aprox. (R$)</label><input type="number" class="form-input" id="seller-income" placeholder="3000" min="0" /></div>' +
+    '<div class="form-group"><label class="form-label">CEP</label><input type="text" class="form-input" id="seller-cep" placeholder="00000-000" /></div>' +
+    '<div class="form-group"><label class="form-label">Endereco (rua)</label><input type="text" class="form-input" id="seller-address" placeholder="Rua Exemplo" /></div>' +
+    '<div class="form-group"><label class="form-label">Numero</label><input type="text" class="form-input" id="seller-address-number" placeholder="123" /></div>' +
+    '<div class="form-group"><label class="form-label">Bairro</label><input type="text" class="form-input" id="seller-province" placeholder="Centro" /></div>' +
     '<div class="form-group full">' +
       '<label class="form-label">Metodos de pagamento aceitos</label>' +
       '<div style="display:flex;gap:20px;padding:8px 0;">' +
@@ -1520,11 +1524,15 @@ async function submitSellerOnboarding() {
   var mobilePhone= (document.getElementById('seller-phone') || {}).value || '';
   var birthDate  = (document.getElementById('seller-birthdate') || {}).value || '';
   var incomeValue= parseFloat((document.getElementById('seller-income') || {}).value || '0') || 0;
+  var postalCode = (document.getElementById('seller-cep') || {}).value || '';
+  var address    = (document.getElementById('seller-address') || {}).value || '';
+  var addressNumber = (document.getElementById('seller-address-number') || {}).value || '';
+  var province   = (document.getElementById('seller-province') || {}).value || '';
   var acceptPix  = !!(document.getElementById('seller-pix') || {}).checked;
   var acceptCard = !!(document.getElementById('seller-card') || {}).checked;
 
-  if (!name || !email || !cpfCnpj || !mobilePhone || !birthDate) {
-    showToast('Preencha todos os campos obrigatorios.', 'warn');
+  if (!name || !email || !cpfCnpj || !mobilePhone || !birthDate || !postalCode || !address || !addressNumber || !province) {
+    showToast('Preencha todos os campos obrigatorios (incluindo endereco).', 'warn');
     return;
   }
 
@@ -1534,7 +1542,7 @@ async function submitSellerOnboarding() {
     var res = await apiFetch('/api/seller/onboarding', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name, email: email, cpfCnpj: cpfCnpj, mobilePhone: mobilePhone, birthDate: birthDate, incomeValue: incomeValue, accept_pix: acceptPix, accept_card: acceptCard })
+      body: JSON.stringify({ name: name, email: email, cpfCnpj: cpfCnpj, mobilePhone: mobilePhone, birthDate: birthDate, incomeValue: incomeValue, postalCode: postalCode, address: address, addressNumber: addressNumber, province: province, accept_pix: acceptPix, accept_card: acceptCard })
     });
     if (!res.success) throw new Error(res.error || 'Erro desconhecido');
     showToast('Conta de recebimento ativada!', 'success');
