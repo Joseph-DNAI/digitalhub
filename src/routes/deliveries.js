@@ -72,9 +72,12 @@ router.post('/retry', async (req, res) => {
 
 router.post('/test-smtp', async (req, res) => {
   try {
-    const { testSmtpConnection } = require('../services/emailService');
-    await testSmtpConnection();
-    res.json({ success: true, message: 'Conexao OK!' });
+    const { sendTestEmail } = require('../services/emailService');
+    const { tenants } = require('../models/database');
+    const tenant  = await tenants.findById(req.tenantId);
+    const toEmail = (req.body && req.body.email) || req.user.email;
+    const info = await sendTestEmail({ toEmail, tenant });
+    res.json({ success: true, to: toEmail, from: info.from, usingOwn: info.usingOwn });
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });
   }

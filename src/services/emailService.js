@@ -175,16 +175,54 @@ async function sendLimitWarningEmail({ userEmail, userName, planName, used, limi
   return result;
 }
 
+// Envia um email de teste REAL para o endereço informado, usando as credenciais
+// e o remetente do tenant (ou os padrões da Vaultly). Retorna o remetente usado.
+async function sendTestEmail({ toEmail, tenant }) {
+  const apiKey = (tenant && tenant.resend_api_key) || process.env.RESEND_API_KEY || process.env.SMTP_PASS;
+  if (!apiKey)  throw new Error('Nenhuma chave de envio configurada. Configure sua API Key do Resend na aba Email (planos Basic+) ou aguarde o suporte habilitar o envio padrão.');
+  if (!toEmail) throw new Error('Email de destino não informado.');
+
+  const fName = (tenant && tenant.email_from_name)    || process.env.EMAIL_FROM_NAME    || 'Vaultly';
+  const fAddr = (tenant && tenant.email_from_address) || process.env.EMAIL_FROM_ADDRESS || 'onboarding@resend.dev';
+  const usingOwn = !!(tenant && tenant.resend_api_key);
+
+  const html =
+    '<div style="background:#F4F5F7;padding:32px 16px;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Arial,sans-serif;">' +
+      '<div style="max-width:520px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.06);">' +
+        '<div style="background:linear-gradient(135deg,#FF6B35 0%,#FF9F1C 100%);padding:32px;text-align:center;">' +
+          '<div style="display:inline-block;width:52px;height:52px;line-height:52px;background:rgba(255,255,255,0.18);border-radius:50%;margin-bottom:12px;font-size:26px;">✅</div>' +
+          '<h1 style="color:#fff;margin:0;font-size:22px;font-weight:800;">Envio configurado com sucesso!</h1>' +
+        '</div>' +
+        '<div style="padding:28px 32px;">' +
+          '<p style="font-size:15px;color:#1F2937;margin:0 0 14px;">Este é um <strong>email de teste</strong> da sua conta Vaultly.</p>' +
+          '<p style="font-size:14px;color:#4B5563;line-height:1.7;margin:0 0 16px;">Se você está lendo isto, seu sistema de entrega está funcionando — seus clientes vão receber os produtos exatamente assim.</p>' +
+          '<div style="background:#FFF4EE;border:1px solid #FFD9C7;border-radius:10px;padding:14px 16px;font-size:13px;color:#9A5B3B;">' +
+            'Remetente: <strong style="color:#C2410C;">' + fName + ' &lt;' + fAddr + '&gt;</strong><br>' +
+            'Infraestrutura: <strong style="color:#C2410C;">' + (usingOwn ? 'sua conta Resend' : 'infraestrutura Vaultly') + '</strong>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method:  'POST',
+    headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: fName + ' <' + fAddr + '>', to: [toEmail], subject: '✅ Teste de envio — Vaultly', html: html })
+  });
+  const result = await response.json();
+  if (!response.ok) {
+    const detail = (result && result.message) ? result.message : JSON.stringify(result);
+    throw new Error(detail);
+  }
+  logger.info('Email de teste enviado para ' + toEmail + ' (remetente: ' + fAddr + ')');
+  return { from: fName + ' <' + fAddr + '>', usingOwn: usingOwn };
+}
+
+// Mantida por compatibilidade — agora envia teste real via sendTestEmail
 async function testSmtpConnection() {
   const apiKey = process.env.RESEND_API_KEY || process.env.SMTP_PASS;
   if (!apiKey) throw new Error('RESEND_API_KEY nao configurada');
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: 'Vaultly <onboarding@resend.dev>', to: [process.env.SMTP_USER||'test@test.com'], subject: 'Teste Vaultly', html: '<p>Funcionando!</p>' })
-  });
-  if (!response.ok) { const e = await response.json(); throw new Error(JSON.stringify(e)); }
   return true;
 }
 
-module.exports = { sendProductEmail, sendLimitWarningEmail, testSmtpConnection };
+module.exports = { sendProductEmail, sendLimitWarningEmail, testSmtpConnection, sendTestEmail };

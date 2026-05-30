@@ -644,8 +644,8 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
             <div class="page-sub">remetente e template de entrega</div>
           </div>
           <div style="display:flex;gap:8px;">
-            <button class="btn btn-ghost btn-sm" onclick="testEmail()">
-              <i class="ti ti-send"></i> Testar envio
+            <button class="btn btn-ghost btn-sm" id="btn-test-email" onclick="testEmail()">
+              <i class="ti ti-send"></i> Enviar email de teste
             </button>
             <button class="btn btn-primary btn-sm" onclick="saveEmailTab()" id="btn-save-email">
               <i class="ti ti-device-floppy"></i> Salvar
@@ -2597,11 +2597,21 @@ async function copyText(elemId, btn) {
 
 // ── Testar Email ─────────────────────────────────────────────────
 async function testEmail() {
+  var btn = document.getElementById('btn-test-email');
+  var dest = (currentUser && currentUser.email) ? currentUser.email : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i> Enviando...'; }
   try {
-    const res = await apiFetch('/api/deliveries/test-smtp', { method: 'POST' });
-    alert(res.success ? 'Conexão SMTP OK!' : 'Falha: ' + (res.error || 'desconhecido'));
+    const res = await apiFetch('/api/deliveries/test-smtp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: dest })
+    });
+    if (!res.success) throw new Error(res.error || 'Falha desconhecida');
+    showToast('Email de teste enviado para ' + (res.to || dest) + ' — confira sua caixa de entrada (e o spam).', 'success');
   } catch(e) {
-    alert('Erro: ' + e.message);
+    showToast('Não foi possível enviar: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-send"></i> Enviar email de teste'; }
   }
 }
 
