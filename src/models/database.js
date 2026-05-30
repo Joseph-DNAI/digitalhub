@@ -182,6 +182,41 @@ async function initDatabase() {
         created_at     TIMESTAMP DEFAULT NOW(),
         resolved_at    TIMESTAMP
       );
+
+      -- Conta de recebimento do vendedor no Asaas (1 por tenant)
+      CREATE TABLE IF NOT EXISTS seller_accounts (
+        id               TEXT PRIMARY KEY,
+        tenant_id        TEXT UNIQUE NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        asaas_account_id TEXT,
+        asaas_wallet_id  TEXT,
+        status           TEXT NOT NULL DEFAULT 'pending',
+        kyc_status       TEXT,
+        accept_pix       BOOLEAN DEFAULT TRUE,
+        accept_card      BOOLEAN DEFAULT TRUE,
+        created_at       TIMESTAMP DEFAULT NOW(),
+        updated_at       TIMESTAMP DEFAULT NOW()
+      );
+
+      -- Pedidos de venda direta (porta de entrada do modo venda direta)
+      CREATE TABLE IF NOT EXISTS orders (
+        id                TEXT PRIMARY KEY,
+        tenant_id         TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        product_id        TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        buyer_name        TEXT,
+        buyer_email       TEXT NOT NULL,
+        buyer_doc         TEXT,
+        amount_cents      INTEGER NOT NULL,
+        payment_method    TEXT,
+        asaas_payment_id  TEXT UNIQUE,
+        status            TEXT NOT NULL DEFAULT 'pending',
+        platform_fee_cents INTEGER,
+        gateway_fee_cents  INTEGER,
+        net_cents          INTEGER,
+        delivery_id        TEXT,
+        created_at        TIMESTAMP DEFAULT NOW(),
+        paid_at           TIMESTAMP,
+        refunded_at       TIMESTAMP
+      );
     `);
 
     // Migracoes incrementais — adiciona colunas novas se nao existirem
@@ -202,6 +237,15 @@ async function initDatabase() {
       ALTER TABLE users   ADD COLUMN IF NOT EXISTS current_period_end      TIMESTAMP;
       ALTER TABLE users   ADD COLUMN IF NOT EXISTS terms_accepted_at       TIMESTAMP;
       ALTER TABLE users   ADD COLUMN IF NOT EXISTS terms_version           TEXT;
+      ALTER TABLE users    ADD COLUMN IF NOT EXISTS usage_mode          TEXT DEFAULT 'automation';
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS sellable            BOOLEAN DEFAULT FALSE;
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS price_cents         INTEGER;
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS slug                TEXT;
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS checkout_title      TEXT;
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS checkout_description TEXT;
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS accept_pix          BOOLEAN DEFAULT TRUE;
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS accept_card         BOOLEAN DEFAULT TRUE;
+      CREATE UNIQUE INDEX IF NOT EXISTS products_slug_unique ON products (slug) WHERE slug IS NOT NULL;
     `);
 
     // Planos — DO UPDATE garante que mudancas de preco/limite sejam aplicadas no restart
@@ -270,10 +314,10 @@ const users = {
     const hash = await bcrypt.hash(data.password);
 
     await query(`
-      INSERT INTO users (id, name, email, password_hash, role, plan_id, is_active, email_verified, terms_accepted_at, terms_version)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+      INSERT INTO users (id, name, email, password_hash, role, plan_id, is_active, email_verified, terms_accepted_at, terms_version, usage_mode)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
     `, [id, data.name, data.email, hash, data.role||'client', data.plan_id||'free', data.is_active!==false, data.email_verified||false,
-        data.terms_version ? new Date() : null, data.terms_version || null]);
+        data.terms_version ? new Date() : null, data.terms_version || null, data.usage_mode || 'automation']);
 
     await query(`INSERT INTO tenants (id, user_id) VALUES ($1,$2)`, [tenantId, id]);
 
@@ -402,6 +446,10 @@ const products = {
     if (platform === 'kiwify') return queryOne("SELECT * FROM products WHERE tenant_id = $1 AND kiwify_id = $2 AND status = 'active'", [tenantId, platformId]);
     if (platform === 'yampi')  return queryOne("SELECT * FROM products WHERE tenant_id = $1 AND yampi_id = $2 AND status = 'active'", [tenantId, platformId]);
     return queryOne('SELECT * FROM products WHERE tenant_id = $1 AND (kiwify_id = $2 OR yampi_id = $2)', [tenantId, platformId]);
+  },
+
+  async findBySlug(slug) {
+    return queryOne("SELECT * FROM products WHERE slug = $1 AND sellable = TRUE AND status = 'active' AND price_cents IS NOT NULL", [slug]);
   },
 
   async findAll(tenantId) {
@@ -647,4 +695,76 @@ const supportTickets = {
   }
 };
 
-module.exports = { initDatabase, pool, query, queryOne, users, sessions, tenants, products, deliveries, webhookLogs, plans, unmatchedProducts, supportTickets, productFiles };
+// ─── Seller Accounts (conta de recebimento Asaas) ───────────────────────────────
+const sellerAccounts = {
+  async upsert(tenantId, data) {
+    const existing = await this.findByTenant(tenantId);
+    if (existing) {
+      const fields = Object.keys(data).map((k, i) => `${k} = $${i + 1}`).join(', ');
+      await query(
+        `UPDATE seller_accounts SET ${fields}, updated_at = NOW() WHERE tenant_id = $${Object.keys(data).length + 1}`,
+        [...Object.values(data), tenantId]
+      );
+      return this.findByTenant(tenantId);
+    }
+    const id = uuidv4();
+    await query(
+      `INSERT INTO seller_accounts (id, tenant_id, asaas_account_id, asaas_wallet_id, status, kyc_status, accept_pix, accept_card)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [id, tenantId, data.asaas_account_id || null, data.asaas_wallet_id || null,
+       data.status || 'pending', data.kyc_status || null,
+       data.accept_pix !== false, data.accept_card !== false]
+    );
+    return this.findByTenant(tenantId);
+  },
+  async findByTenant(tenantId) {
+    return queryOne('SELECT * FROM seller_accounts WHERE tenant_id = $1', [tenantId]);
+  }
+};
+
+// ─── Orders (vendas diretas) ────────────────────────────────────────────────────
+const orders = {
+  async create(tenantId, data) {
+    const id = uuidv4();
+    await query(
+      `INSERT INTO orders (id, tenant_id, product_id, buyer_name, buyer_email, buyer_doc,
+         amount_cents, payment_method, asaas_payment_id, status, platform_fee_cents, gateway_fee_cents, net_cents)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+      [id, tenantId, data.product_id, data.buyer_name || null, data.buyer_email, data.buyer_doc || null,
+       data.amount_cents, data.payment_method || null, data.asaas_payment_id || null,
+       data.status || 'pending', data.platform_fee_cents || null, data.gateway_fee_cents || null, data.net_cents || null]);
+    return id;
+  },
+  async findById(id) {
+    return queryOne('SELECT * FROM orders WHERE id = $1', [id]);
+  },
+  async findByAsaasPaymentId(asaasPaymentId) {
+    return queryOne('SELECT * FROM orders WHERE asaas_payment_id = $1', [asaasPaymentId]);
+  },
+  async setAsaasPaymentId(id, asaasPaymentId) {
+    await query('UPDATE orders SET asaas_payment_id = $1 WHERE id = $2', [asaasPaymentId, id]);
+  },
+  // Transição atômica pending->paid. Retorna true só p/ quem venceu a corrida (evita entrega dupla).
+  async claimForDelivery(id) {
+    const rows = await query(
+      "UPDATE orders SET status = 'paid', paid_at = NOW() WHERE id = $1 AND status = 'pending' RETURNING id",
+      [id]);
+    return rows.length === 1;
+  },
+  async setDeliveryId(id, deliveryId) {
+    await query('UPDATE orders SET delivery_id = $1 WHERE id = $2', [deliveryId, id]);
+  },
+  async updateStatus(id, status) {
+    const refundedAt = (status === 'refunded' || status === 'chargeback') ? 'NOW()' : 'refunded_at';
+    await query(`UPDATE orders SET status = $1, refunded_at = ${refundedAt} WHERE id = $2`, [status, id]);
+  },
+  async findAll(tenantId, limit = 100) {
+    return query(
+      `SELECT o.*, p.name AS product_name FROM orders o
+       LEFT JOIN products p ON o.product_id = p.id
+       WHERE o.tenant_id = $1 ORDER BY o.created_at DESC LIMIT $2`,
+      [tenantId, limit]);
+  }
+};
+
+module.exports = { initDatabase, pool, query, queryOne, users, sessions, tenants, products, deliveries, webhookLogs, plans, unmatchedProducts, supportTickets, productFiles, sellerAccounts, orders };

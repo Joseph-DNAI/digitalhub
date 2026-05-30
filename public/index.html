@@ -849,6 +849,16 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
             </div>
           </div>
         </div>
+
+        <!-- Venda Direta -->
+        <div class="card" id="cfg-venda-direta-card">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-shopping-cart" style="color:var(--orange);"></i> Venda Direta</div>
+          </div>
+          <div class="card-body" id="cfg-venda-direta-body">
+            <div style="color:var(--text3);font-size:13px;">Carregando...</div>
+          </div>
+        </div>
       </div>
 
       <!-- ── SUPORTE ── -->
@@ -1037,6 +1047,77 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
         <button id="ob-btn-skip" class="btn btn-ghost btn-sm" style="margin-right:10px;color:var(--text3);" onclick="skipOnboarding()">Pular</button>
         <button id="ob-btn-next" class="btn btn-primary btn-sm" onclick="obNext()">Continuar <i class="ti ti-arrow-right"></i></button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL VENDA DIRETA ── -->
+<div class="modal-bg" id="sellingModal" onclick="if(event.target===this)closeSelling()">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <div class="modal-title" id="selling-modal-title">Vender direto</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeSelling()"><i class="ti ti-x"></i></button>
+    </div>
+    <div style="margin-bottom:18px;">
+      <!-- Toggle principal -->
+      <div class="toggle-row" style="border-bottom:none;padding-bottom:0;">
+        <div class="toggle-info">
+          <div class="t-title">Vender direto pela Vaultly</div>
+          <div class="t-desc">Ative para gerar um link de checkout para este produto</div>
+        </div>
+        <button class="toggle" id="selling-toggle-sellable" onclick="this.classList.toggle('on');toggleSellingFields()"></button>
+      </div>
+    </div>
+    <div id="selling-fields" style="display:none;">
+      <div class="grad-line" style="margin-bottom:18px;"></div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Preco (R$) <span style="color:var(--red);font-size:10px;">minimo R$9,00</span></label>
+          <input type="number" class="form-input" id="selling-price" placeholder="27.00" step="0.01" min="9" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Slug da pagina</label>
+          <input type="text" class="form-input" id="selling-slug" placeholder="meu-ebook" />
+          <div class="form-hint">Parte final do link: /c/meu-ebook</div>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Titulo do checkout</label>
+          <input type="text" class="form-input" id="selling-checkout-title" placeholder="Ebook Marketing Digital" />
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Descricao do checkout</label>
+          <textarea class="form-textarea" id="selling-checkout-desc" rows="3" placeholder="Descreva o que o cliente vai receber..."></textarea>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Metodos de pagamento</label>
+          <div style="display:flex;gap:16px;align-items:center;padding:6px 0;">
+            <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;">
+              <input type="checkbox" id="selling-pix" style="width:16px;height:16px;accent-color:var(--orange);cursor:pointer;" />
+              <i class="ti ti-qrcode" style="color:var(--emerald);font-size:16px;"></i> Pix
+            </label>
+            <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;">
+              <input type="checkbox" id="selling-card" style="width:16px;height:16px;accent-color:var(--orange);cursor:pointer;" />
+              <i class="ti ti-credit-card" style="color:var(--orange);font-size:16px;"></i> Cartao de credito
+            </label>
+          </div>
+        </div>
+        <!-- Link de checkout (aparece quando ja tem slug) -->
+        <div class="form-group full" id="selling-link-wrap" style="display:none;">
+          <label class="form-label">Link de checkout</label>
+          <div style="display:flex;gap:8px;">
+            <code id="selling-link-text" class="form-input" style="font-family:'JetBrains Mono',monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:rgba(255,255,255,0.03);color:var(--emerald);"></code>
+            <button class="btn btn-ghost btn-sm" onclick="copySelling()" title="Copiar link"><i class="ti ti-copy"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <input type="hidden" id="selling-product-id" value="" />
+    <div class="grad-line" style="margin-top:18px;"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+      <button class="btn btn-ghost" onclick="closeSelling()">Cancelar</button>
+      <button class="btn btn-primary" id="selling-save-btn" onclick="saveSelling()">
+        <i class="ti ti-device-floppy"></i> Salvar
+      </button>
     </div>
   </div>
 </div>
@@ -1341,10 +1422,146 @@ async function doLogout() {
   document.getElementById('app').style.display = 'none';
 }
 
-// ── loadConfig (aba Config — agora so seguranca/senha) ───────────
+// ── loadConfig (aba Config) ─────────────────────────────────────
 async function loadConfig() {
-  // A aba Config agora so tem toggles e alteracao de senha
-  // Dados de email estao em loadEmailTab(), webhook em loadWebhookConfig()
+  loadVendaDiretaSection();
+}
+
+// ── Venda Direta: secao na aba Config ────────────────────────────
+async function loadVendaDiretaSection() {
+  var body = document.getElementById('cfg-venda-direta-body');
+  if (!body) return;
+  body.innerHTML = '<div style="color:var(--text3);font-size:13px;">Carregando...</div>';
+  try {
+    var res = await apiFetch('/api/seller/account');
+    if (!res.success) throw new Error(res.error || 'Erro ao carregar conta');
+    var account = res.account;
+    if (!account || account.status !== 'active') {
+      renderSellerOnboarding(body, account);
+    } else {
+      renderSellerActive(body, account);
+    }
+  } catch(e) {
+    body.innerHTML =
+      '<div style="color:var(--text2);font-size:13px;line-height:1.6;margin-bottom:14px;">' +
+        'Receba pagamentos pelos seus produtos direto na Vaultly (Pix e cartao).' +
+      '</div>' +
+      renderSellerForm(null);
+  }
+}
+
+function renderSellerOnboarding(body, account) {
+  var subTitle = account && account.status === 'pending'
+    ? '<div style="background:var(--yellow-dim);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--yellow);display:flex;align-items:center;gap:8px;margin-bottom:16px;"><i class="ti ti-clock" style="font-size:15px;flex-shrink:0;"></i> Conta em analise — aguarde a aprovacao antes de vender.</div>'
+    : '';
+  body.innerHTML =
+    '<div style="color:var(--text2);font-size:13px;line-height:1.6;margin-bottom:14px;">' +
+      'Receba pagamentos pelos seus produtos direto na Vaultly (Pix e cartao). ' +
+      'Preencha seus dados para ativar sua conta de recebimento.' +
+    '</div>' +
+    subTitle +
+    renderSellerForm(null);
+}
+
+function renderSellerForm(prefill) {
+  var userName  = (currentUser && currentUser.name)  ? currentUser.name  : '';
+  var userEmail = (currentUser && currentUser.email) ? currentUser.email : '';
+  return '<div class="form-grid" id="seller-onboarding-form">' +
+    '<div class="form-group"><label class="form-label">Nome completo</label><input type="text" class="form-input" id="seller-name" value="' + escAttr(userName) + '" placeholder="Joao Silva" /></div>' +
+    '<div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="seller-email" value="' + escAttr(userEmail) + '" placeholder="seu@email.com" /></div>' +
+    '<div class="form-group"><label class="form-label">CPF ou CNPJ</label><input type="text" class="form-input" id="seller-cpf" placeholder="000.000.000-00" /></div>' +
+    '<div class="form-group"><label class="form-label">Celular</label><input type="text" class="form-input" id="seller-phone" placeholder="(11) 91234-5678" /></div>' +
+    '<div class="form-group"><label class="form-label">Data de nascimento</label><input type="date" class="form-input" id="seller-birthdate" /></div>' +
+    '<div class="form-group"><label class="form-label">Renda / faturamento mensal aprox. (R$)</label><input type="number" class="form-input" id="seller-income" placeholder="3000" min="0" /></div>' +
+    '<div class="form-group full">' +
+      '<label class="form-label">Metodos de pagamento aceitos</label>' +
+      '<div style="display:flex;gap:20px;padding:8px 0;">' +
+        '<label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;"><input type="checkbox" id="seller-pix" checked style="width:16px;height:16px;accent-color:var(--orange);" /> <i class="ti ti-qrcode" style="color:var(--emerald);font-size:16px;"></i> Pix</label>' +
+        '<label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;"><input type="checkbox" id="seller-card" checked style="width:16px;height:16px;accent-color:var(--orange);" /> <i class="ti ti-credit-card" style="color:var(--orange);font-size:16px;"></i> Cartao de credito</label>' +
+      '</div>' +
+    '</div>' +
+  '</div>' +
+  '<button class="btn btn-primary" style="margin-top:16px;" id="seller-onboard-btn" onclick="submitSellerOnboarding()">' +
+    '<i class="ti ti-rocket"></i> Ativar conta de recebimento' +
+  '</button>';
+}
+
+function renderSellerActive(body, account) {
+  body.innerHTML =
+    '<div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--emerald-dim);border:1px solid rgba(34,197,94,0.25);border-radius:10px;margin-bottom:18px;">' +
+      '<i class="ti ti-circle-check-filled" style="color:var(--emerald);font-size:22px;flex-shrink:0;"></i>' +
+      '<div>' +
+        '<div style="font-size:13px;font-weight:700;color:var(--emerald);">Conta de recebimento ativa</div>' +
+        '<div style="font-size:12px;color:var(--text2);">Ative a venda direta em cada produto na aba Produtos.</div>' +
+      '</div>' +
+    '</div>' +
+    '<div style="font-size:13px;font-weight:600;margin-bottom:10px;">Metodos aceitos</div>' +
+    '<div class="toggle-row">' +
+      '<div class="toggle-info"><div class="t-title">Aceitar Pix</div><div class="t-desc">Pagamentos via QR Code Pix</div></div>' +
+      '<button class="toggle' + (account.accept_pix ? ' on' : '') + '" id="seller-toggle-pix" onclick="saveSellerMethods()"></button>' +
+    '</div>' +
+    '<div class="toggle-row">' +
+      '<div class="toggle-info"><div class="t-title">Aceitar cartao de credito</div><div class="t-desc">Credito via Asaas/gateway integrado</div></div>' +
+      '<button class="toggle' + (account.accept_card ? ' on' : '') + '" id="seller-toggle-card" onclick="saveSellerMethods()"></button>' +
+    '</div>';
+}
+
+function escAttr(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function submitSellerOnboarding() {
+  var btn = document.getElementById('seller-onboard-btn');
+  if (!btn) return;
+  var name       = (document.getElementById('seller-name') || {}).value || '';
+  var email      = (document.getElementById('seller-email') || {}).value || '';
+  var cpfCnpj    = (document.getElementById('seller-cpf') || {}).value || '';
+  var mobilePhone= (document.getElementById('seller-phone') || {}).value || '';
+  var birthDate  = (document.getElementById('seller-birthdate') || {}).value || '';
+  var incomeValue= parseFloat((document.getElementById('seller-income') || {}).value || '0') || 0;
+  var acceptPix  = !!(document.getElementById('seller-pix') || {}).checked;
+  var acceptCard = !!(document.getElementById('seller-card') || {}).checked;
+
+  if (!name || !email || !cpfCnpj || !mobilePhone || !birthDate) {
+    showToast('Preencha todos os campos obrigatorios.', 'warn');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i> Ativando...';
+  try {
+    var res = await apiFetch('/api/seller/onboarding', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name, email: email, cpfCnpj: cpfCnpj, mobilePhone: mobilePhone, birthDate: birthDate, incomeValue: incomeValue, accept_pix: acceptPix, accept_card: acceptCard })
+    });
+    if (!res.success) throw new Error(res.error || 'Erro desconhecido');
+    showToast('Conta de recebimento ativada!', 'success');
+    loadVendaDiretaSection();
+  } catch(e) {
+    showToast(e.message || 'Erro ao ativar conta.', 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-rocket"></i> Ativar conta de recebimento';
+  }
+}
+
+async function saveSellerMethods() {
+  var pixBtn  = document.getElementById('seller-toggle-pix');
+  var cardBtn = document.getElementById('seller-toggle-card');
+  var acceptPix  = pixBtn  ? pixBtn.classList.contains('on')  : false;
+  var acceptCard = cardBtn ? cardBtn.classList.contains('on') : false;
+  try {
+    var res = await apiFetch('/api/seller/methods', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accept_pix: acceptPix, accept_card: acceptCard })
+    });
+    if (!res.success) throw new Error(res.error || 'Erro ao salvar');
+    showToast('Metodos de pagamento atualizados!', 'success');
+  } catch(e) {
+    showToast(e.message || 'Erro ao salvar metodos.', 'error');
+  }
 }
 
 // saveEmailConfig mantida para compatibilidade — delega para saveEmailTab
@@ -1449,7 +1666,7 @@ function switchTab(name, el) {
   if (name === 'webhook')   { loadLogs(); loadWebhookConfig(); loadSimulatorProducts(); startLogPoller(); }
   else                      stopLogPoller();
   if (name === 'email')     loadEmailTab();
-  if (name === 'config')    {} // config nao precisa carregar dados dinamicos
+  if (name === 'config')    loadConfig();
 }
 
 // ── Webhook Config ────────────────────────────────────────────────
@@ -2175,6 +2392,7 @@ async function loadProducts() {
           ${p.kiwify_id ? `<span class="badge badge-orange" style="font-size:10px;"><i class="ti ti-plug"></i> Kiwify</span>` : ''}
           ${p.yampi_id  ? `<span class="badge badge-orange" style="font-size:10px;"><i class="ti ti-plug"></i> Yampi</span>`  : ''}
           ${p.extra_files_count > 0 ? `<span class="badge badge-yellow" style="font-size:10px;"><i class="ti ti-files"></i> Combo · ${(p.extra_files_count || 0) + (p.file_name ? 1 : 0)} arquivos</span>` : ''}
+          ${p.sellable && p.slug ? '<span class="badge badge-green" style="font-size:10px;"><i class="ti ti-shopping-cart"></i> A venda</span>' : ''}
           ${p.file_name
             ? `<span class="badge badge-gray" style="font-size:10px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${p.file_name}"><i class="ti ti-paperclip"></i> ${p.file_name}</span>`
             : `<span style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px;"><i class="ti ti-alert-circle" style="font-size:12px;"></i> Sem arquivo</span>`}
@@ -2182,6 +2400,9 @@ async function loadProducts() {
         <div style="display:flex;gap:8px;margin-top:auto;padding-top:12px;border-top:1px solid var(--border);">
           <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="editProduct('${p.id}')">
             <i class="ti ti-pencil"></i> Editar
+          </button>
+          <button class="btn btn-ghost btn-sm" style="flex:1;color:var(--orange);" onclick="openSelling('${p.id}')">
+            <i class="ti ti-shopping-cart"></i> Vender
           </button>
           <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}','${p.name.replace(/'/g, "\\'")}')">
             <i class="ti ti-trash"></i>
@@ -3007,6 +3228,116 @@ function preRegisterKiwify() {
   populateLinkDropdown('kiwify');
   setTimeout(function() { document.getElementById('m-name').focus(); }, 300);
   showToast('ID extraido: ' + kiwifyId + ' — preencha o nome e o arquivo, ou vincule a um produto existente.', 'info');
+}
+
+// ── Venda Direta: modal por produto ──────────────────────────────
+function openSelling(id) {
+  var p = productsCache.find(function(x) { return x.id === id; });
+  if (!p) return;
+
+  document.getElementById('selling-product-id').value = p.id;
+  document.getElementById('selling-modal-title').textContent = 'Vender direto — ' + (p.name || '');
+
+  var sellable = !!(p.sellable);
+  var toggleEl = document.getElementById('selling-toggle-sellable');
+  if (sellable) { toggleEl.classList.add('on'); } else { toggleEl.classList.remove('on'); }
+
+  document.getElementById('selling-price').value          = p.price_cents ? (p.price_cents / 100).toFixed(2) : '';
+  document.getElementById('selling-slug').value           = p.slug || '';
+  document.getElementById('selling-checkout-title').value = p.checkout_title || '';
+  document.getElementById('selling-checkout-desc').value  = p.checkout_description || '';
+  document.getElementById('selling-pix').checked          = p.accept_pix  !== false;
+  document.getElementById('selling-card').checked         = p.accept_card !== false;
+
+  // Mostra/esconde campos e link
+  var fieldsEl = document.getElementById('selling-fields');
+  fieldsEl.style.display = sellable ? 'block' : 'none';
+
+  var linkWrap = document.getElementById('selling-link-wrap');
+  if (sellable && p.slug) {
+    var url = window.location.origin + '/c/' + p.slug;
+    document.getElementById('selling-link-text').textContent = url;
+    linkWrap.style.display = 'block';
+  } else {
+    linkWrap.style.display = 'none';
+  }
+
+  document.getElementById('sellingModal').classList.add('open');
+}
+
+function toggleSellingFields() {
+  var toggleEl = document.getElementById('selling-toggle-sellable');
+  var isOn = toggleEl.classList.contains('on');
+  document.getElementById('selling-fields').style.display = isOn ? 'block' : 'none';
+}
+
+async function saveSelling() {
+  var btn = document.getElementById('selling-save-btn');
+  var id  = document.getElementById('selling-product-id').value;
+  if (!id) return;
+
+  var toggleEl = document.getElementById('selling-toggle-sellable');
+  var sellable = toggleEl.classList.contains('on');
+  var priceStr = (document.getElementById('selling-price').value || '').replace(',', '.');
+  var priceCents = sellable ? Math.round(parseFloat(priceStr) * 100) : 0;
+
+  if (sellable && priceCents < 900) {
+    showToast('Preco minimo e R$9,00', 'warn');
+    return;
+  }
+
+  var slug          = (document.getElementById('selling-slug').value || '').trim().toLowerCase().replace(/\s+/g, '-');
+  var checkoutTitle = (document.getElementById('selling-checkout-title').value || '').trim();
+  var checkoutDesc  = (document.getElementById('selling-checkout-desc').value || '').trim();
+  var acceptPix     = !!(document.getElementById('selling-pix').checked);
+  var acceptCard    = !!(document.getElementById('selling-card').checked);
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i> Salvando...';
+
+  try {
+    var res = await apiFetch('/api/products/' + id + '/selling', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sellable: sellable, price_cents: priceCents, slug: slug, checkout_title: checkoutTitle, checkout_description: checkoutDesc, accept_pix: acceptPix, accept_card: acceptCard })
+    });
+    if (!res.success) {
+      if (res.needs_onboarding) {
+        showToast('Ative sua conta de recebimento na aba Config primeiro.', 'warn');
+      } else {
+        showToast(res.error || 'Erro ao salvar.', 'error');
+      }
+      return;
+    }
+    showToast('Venda direta atualizada!', 'success');
+    closeSelling();
+    loadProducts();
+    if (sellable && slug) {
+      var link = window.location.origin + '/c/' + slug;
+      showToast('Link: ' + link, 'info');
+    }
+  } catch(e) {
+    showToast(e.message || 'Erro ao salvar.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar';
+  }
+}
+
+function closeSelling() {
+  document.getElementById('sellingModal').classList.remove('open');
+}
+
+async function copySelling() {
+  var slug = (document.getElementById('selling-slug').value || '').trim();
+  if (!slug) return;
+  var url = window.location.origin + '/c/' + slug;
+  try {
+    await navigator.clipboard.writeText(url);
+    showToast('Link copiado!', 'success');
+  } catch(e) {
+    prompt('Copie o link manualmente:', url);
+  }
 }
 
 // ── Auto-login se tiver token salvo ──────────────────────────────

@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Checkout — Vaultly</title>
+<link rel="icon" type="image/svg+xml" href="/img/logo-icon.svg"/>
+<style>
+  :root{--bg:#0B1020;--bg2:#141A2E;--orange:#FF6B35;--text:#E8ECF5;--muted:#8A93A8}
+  *{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;align-items:center;justify-content:center;padding:20px}
+  .card{background:var(--bg2);border:1px solid #222a40;border-radius:16px;max-width:440px;width:100%;padding:28px}
+  .logo{height:34px;margin-bottom:18px}
+  h1{font-size:20px;margin:0 0 4px}.desc{color:var(--muted);font-size:14px;margin:0 0 18px}
+  .price{font-size:30px;font-weight:700;color:var(--orange);margin:8px 0 18px}
+  label{display:block;font-size:13px;color:var(--muted);margin:12px 0 4px}
+  input{width:100%;padding:11px 12px;border-radius:9px;border:1px solid #2a3350;background:#0E1426;color:var(--text);font-size:14px}
+  .methods{display:flex;gap:8px;margin:16px 0}
+  .methods button{flex:1;padding:10px;border-radius:9px;border:1px solid #2a3350;background:#0E1426;color:var(--text);cursor:pointer}
+  .methods button.active{border-color:var(--orange);color:var(--orange)}
+  .pay{width:100%;margin-top:18px;padding:13px;border:0;border-radius:10px;background:var(--orange);color:#1a0e06;font-weight:700;font-size:15px;cursor:pointer}
+  .pay:disabled{opacity:.6;cursor:not-allowed}
+  .msg{margin-top:14px;font-size:14px;text-align:center}
+  .pix-box{text-align:center;margin-top:16px}.pix-box img{width:200px;border-radius:8px;background:#fff;padding:8px}
+  .copy{word-break:break-all;background:#0E1426;border:1px solid #2a3350;border-radius:8px;padding:10px;font-size:12px;margin-top:10px}
+  .foot{color:var(--muted);font-size:11px;text-align:center;margin-top:18px}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+  <div class="card">
+    <img class="logo" src="/img/logo-horizontal.png" alt="Vaultly"/>
+    <div id="loading" class="msg">Carregando…</div>
+    <div id="content" class="hidden">
+      <h1 id="title"></h1>
+      <p class="desc" id="desc"></p>
+      <div class="price" id="price"></div>
+
+      <div class="methods" id="methods">
+        <button data-m="pix" class="active">Pix</button>
+        <button data-m="card">Cartão</button>
+      </div>
+
+      <div id="form-common">
+        <label>Nome</label><input id="buyer_name" autocomplete="name"/>
+        <label>Email</label><input id="buyer_email" type="email" autocomplete="email"/>
+        <label>CPF</label><input id="buyer_doc" inputmode="numeric"/>
+      </div>
+
+      <div id="card-fields" class="hidden">
+        <label>Número do cartão</label><input id="cc_number" inputmode="numeric"/>
+        <label>Nome no cartão</label><input id="cc_name"/>
+        <label>Validade (MM/AAAA)</label><input id="cc_exp"/>
+        <label>CVV</label><input id="cc_cvv" inputmode="numeric"/>
+      </div>
+
+      <button class="pay" id="pay">Pagar</button>
+      <div class="msg" id="msg"></div>
+
+      <div class="pix-box hidden" id="pix-box">
+        <p>Escaneie o QR Code para pagar:</p>
+        <img id="pix-img" alt="QR Code Pix"/>
+        <div class="copy" id="pix-copy"></div>
+        <p class="desc" style="margin-top:10px">Após o pagamento, o produto chega no seu email automaticamente.</p>
+      </div>
+
+      <p class="foot">Pagamento processado com segurança. A Vaultly não se responsabiliza pelo conteúdo do produto. <a href="/termos" style="color:var(--muted)">Termos</a></p>
+    </div>
+  </div>
+
+<script>
+const slug = location.pathname.split('/').pop();
+let method = 'pix';
+const $ = id => document.getElementById(id);
+
+async function load(){
+  const r = await fetch('/api/checkout/' + slug);
+  const d = await r.json();
+  if(!d.success){ $('loading').textContent = 'Produto não encontrado.'; return; }
+  $('title').textContent = d.product.title;
+  $('desc').textContent = d.product.description || '';
+  $('price').textContent = 'R$ ' + (d.product.price_cents/100).toFixed(2).replace('.', ',');
+  // esconde métodos não aceitos
+  document.querySelectorAll('#methods button').forEach(b=>{
+    if(b.dataset.m==='pix' && !d.product.accept_pix) b.remove();
+    if(b.dataset.m==='card' && !d.product.accept_card) b.remove();
+  });
+  const first = document.querySelector('#methods button');
+  if(first){ method = first.dataset.m; setMethod(method); }
+  $('loading').classList.add('hidden'); $('content').classList.remove('hidden');
+}
+
+function setMethod(m){
+  method = m;
+  document.querySelectorAll('#methods button').forEach(b=>b.classList.toggle('active', b.dataset.m===m));
+  $('card-fields').classList.toggle('hidden', m!=='card');
+}
+document.getElementById('methods').addEventListener('click', e=>{ if(e.target.dataset.m) setMethod(e.target.dataset.m); });
+
+$('pay').addEventListener('click', async ()=>{
+  $('msg').textContent=''; $('pay').disabled=true; $('pay').textContent='Processando…';
+  const body = {
+    buyer_name: $('buyer_name').value, buyer_email: $('buyer_email').value,
+    buyer_doc: $('buyer_doc').value.replace(/\D/g,''), method
+  };
+  if(method==='card'){
+    const exp = $('cc_exp').value.split('/');
+    body.card = {
+      creditCard: { holderName: $('cc_name').value, number: $('cc_number').value.replace(/\s/g,''),
+        expiryMonth: (exp[0]||'').trim(), expiryYear: (exp[1]||'').trim(), ccv: $('cc_cvv').value },
+      holderInfo: { name: $('buyer_name').value, email: $('buyer_email').value, cpfCnpj: body.buyer_doc,
+        postalCode: '00000000', addressNumber: '0', phone: '' }
+    };
+  }
+  try{
+    const r = await fetch('/api/checkout/' + slug, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const d = await r.json();
+    if(!d.success){ $('msg').textContent = d.error || 'Falha no pagamento.'; $('pay').disabled=false; $('pay').textContent='Pagar'; return; }
+    if(d.method==='pix'){
+      $('pay').classList.add('hidden'); $('card-fields').classList.add('hidden'); $('form-common').classList.add('hidden'); $('methods').classList.add('hidden');
+      $('pix-img').src = 'data:image/png;base64,' + d.pix.encodedImage;
+      $('pix-copy').textContent = d.pix.payload;
+      $('pix-box').classList.remove('hidden');
+    } else {
+      const ok = ['CONFIRMED','RECEIVED','RECEIVED_IN_CASH'].includes(d.status);
+      $('msg').textContent = ok ? 'Pagamento aprovado! O produto chegará no seu email.' : 'Pagamento ' + (d.status||'pendente') + '. Você receberá por email quando confirmado.';
+      $('pay').textContent = ok ? 'Aprovado ✓' : 'Aguardando';
+    }
+  }catch(e){ $('msg').textContent='Erro de conexão.'; $('pay').disabled=false; $('pay').textContent='Pagar'; }
+});
+
+load();
+</script>
+</body>
+</html>

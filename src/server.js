@@ -33,6 +33,7 @@ const authLimiter = rateLimit({
 });
 
 const webhookLimiter = rateLimit({ windowMs: 60*1000, max: 60 });
+const checkoutLimiter = rateLimit({ windowMs: 60*1000, max: 20 });
 
 // CORS restrito à origem do app
 const allowedOrigins = [
@@ -74,6 +75,9 @@ app.use('/api/admin',      express.json());
 app.use('/api/tenants',    express.json());
 app.use('/api/billing',    express.json());
 app.use('/api/support',    express.json());
+app.use('/api/seller',     express.json());
+app.use('/api/checkout',   express.json());
+app.use('/api/asaas',      express.json());
 
 app.use(morgan('combined', { stream: { write: msg => logger.info(msg.trim()) } }));
 
@@ -93,6 +97,9 @@ app.use('/api/deliveries', require('./routes/deliveries'));
 app.use('/api/tenants',    require('./routes/tenants'));
 app.use('/api/billing',    require('./routes/billing'));
 app.use('/api/support',    require('./routes/support'));
+app.use('/api/seller',     require('./routes/seller'));
+app.use('/api/checkout',   checkoutLimiter, require('./routes/checkout'));
+app.use('/api/asaas',      require('./routes/asaasWebhook'));
 
 app.get('/health', (req, res) => res.json({ status: 'ok', version: '2.0.0', uptime: process.uptime(), timestamp: new Date().toISOString() }));
 
@@ -124,6 +131,13 @@ app.get('/suporte', (req, res) => {
 app.get('/termos', (req, res) => {
   const termos = path.join(publicPath, 'termos.html');
   if (fs.existsSync(termos)) return res.sendFile(termos);
+  res.redirect('/');
+});
+
+// Página pública de checkout de venda direta
+app.get('/c/:slug', (req, res) => {
+  const co = path.join(publicPath, 'checkout.html');
+  if (fs.existsSync(co)) return res.sendFile(co);
   res.redirect('/');
 });
 

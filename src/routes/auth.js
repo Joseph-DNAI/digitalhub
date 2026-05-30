@@ -14,7 +14,7 @@ const TERMS_VERSION = '2026-05-29';
 // POST /api/auth/register — cadastro self-service
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password, accept_terms } = req.body;
+    const { name, email, password, accept_terms, usage_mode } = req.body;
     if (!name || !email || !password) {
       return res.status(400).json({ success: false, error: 'name, email e password são obrigatórios' });
     }
@@ -28,7 +28,7 @@ router.post('/register', async (req, res) => {
     const existing = await users.findByEmail(email);
     if (existing) return res.status(409).json({ success: false, error: 'Email já cadastrado' });
 
-    const user = await users.create({ name, email, password, plan_id: 'free', is_active: true, email_verified: true, terms_version: TERMS_VERSION });
+    const user = await users.create({ name, email, password, plan_id: 'free', is_active: true, email_verified: true, terms_version: TERMS_VERSION, usage_mode: (usage_mode === 'direct' || usage_mode === 'both') ? usage_mode : 'automation' });
     const token = await sessions.create(user.id);
 
     logger.info(`Novo usuário cadastrado: ${email}`);

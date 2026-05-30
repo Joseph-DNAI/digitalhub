@@ -1,5 +1,5 @@
 // src/services/deliveryService.js — multi-tenant
-const { products, deliveries, tenants, unmatchedProducts, users, productFiles, queryOne } = require('../models/database');
+const { products, deliveries, tenants, unmatchedProducts, users, productFiles, orders, queryOne } = require('../models/database');
 const { sendProductEmail, sendLimitWarningEmail } = require('./emailService');
 const { normalizePayload, isApprovedEvent } = require('./platformAdapter');
 const logger = require('../config/logger');
@@ -78,6 +78,33 @@ async function processWebhookEvent(tenantId, platform, rawPayload, options) {
   // Planos pagos: entrega imediata. Teste no Free mostra branding (igual à entrega real).
   await attemptDelivery(deliveryId, product, normalized, tenant, isFree, user);
   return { deliveryId, productName: product.name, buyerEmail: normalized.buyerEmail };
+}
+
+// Processa uma venda direta JÁ PAGA: cria a delivery e entrega (reaproveita attemptDelivery).
+async function processDirectOrder(order) {
+  const tenant = await tenants.findById(order.tenant_id);
+  const user   = tenant ? await users.findById(tenant.user_id) : null;
+  const isFree = !user || user.plan_id === 'free';
+  const product = await products.findById(order.tenant_id, order.product_id);
+  if (!product) throw new Error('Produto da order ' + order.id + ' nao encontrado');
+
+  const deliveryId = await deliveries.create(order.tenant_id, {
+    product_id:        product.id,
+    platform:          'vaultly',
+    platform_order_id: order.id,
+    buyer_name:        order.buyer_name,
+    buyer_email:       order.buyer_email,
+    is_test:           false
+  });
+
+  const normalized = {
+    buyerEmail: order.buyer_email,
+    buyerName:  order.buyer_name,
+    orderId:    order.id,
+    platform:   'vaultly'
+  };
+  await attemptDelivery(deliveryId, product, normalized, tenant, isFree, user);
+  return deliveryId;
 }
 
 async function attemptDelivery(deliveryId, product, normalized, tenant, showBranding, user) {
@@ -188,4 +215,4 @@ function startRetryJob() {
   logger.info('Job de retry iniciado — intervalo: ' + (RETRY_DELAY/1000) + 's');
 }
 
-module.exports = { processWebhookEvent, retryFailedDeliveries, startRetryJob };
+module.exports = { processWebhookEvent, processDirectOrder, retryFailedDeliveries, startRetryJob };
