@@ -314,10 +314,10 @@ const users = {
     const hash = await bcrypt.hash(data.password);
 
     await query(`
-      INSERT INTO users (id, name, email, password_hash, role, plan_id, is_active, email_verified, terms_accepted_at, terms_version)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+      INSERT INTO users (id, name, email, password_hash, role, plan_id, is_active, email_verified, terms_accepted_at, terms_version, usage_mode)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
     `, [id, data.name, data.email, hash, data.role||'client', data.plan_id||'free', data.is_active!==false, data.email_verified||false,
-        data.terms_version ? new Date() : null, data.terms_version || null]);
+        data.terms_version ? new Date() : null, data.terms_version || null, data.usage_mode || 'automation']);
 
     await query(`INSERT INTO tenants (id, user_id) VALUES ($1,$2)`, [tenantId, id]);
 
