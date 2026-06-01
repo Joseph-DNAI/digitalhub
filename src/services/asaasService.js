@@ -106,7 +106,25 @@ async function getCharge(paymentId) {
   return request('GET', '/payments/' + paymentId);
 }
 
+// Procura uma subconta ja existente por CPF/CNPJ (p/ adotar quando a criacao
+// falhou apos o Asaas ja ter criado a conta). Devolve null se nao houver.
+async function findSubaccountByCpfCnpj(cpfCnpj) {
+  const clean = String(cpfCnpj || '').replace(/\D/g, '');
+  if (!clean) return null;
+  const res = await request('GET', '/accounts?cpfCnpj=' + encodeURIComponent(clean) + '&limit=1');
+  const acc = res && res.data && res.data[0];
+  if (!acc) return null;
+  return { accountId: acc.id, walletId: acc.walletId, status: acc.status || null };
+}
+
+// Lista as subcontas criadas pela conta master (diagnostico admin).
+async function listSubaccounts(limit) {
+  const res = await request('GET', '/accounts?limit=' + (parseInt(limit, 10) || 100));
+  return (res && res.data) || [];
+}
+
 module.exports = {
   buildSubaccountPayload, buildChargePayload, isValidWebhookToken,
-  createSubaccount, createCustomer, createCharge, getPixQrCode, getCharge
+  createSubaccount, createCustomer, createCharge, getPixQrCode, getCharge,
+  findSubaccountByCpfCnpj, listSubaccounts
 };

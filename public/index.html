@@ -1441,6 +1441,7 @@ async function loadVendaDiretaSection() {
     } else {
       renderSellerActive(body, account);
     }
+    if (currentUser && currentUser.role === 'admin') appendAdminSubaccountsTool(body);
   } catch(e) {
     body.innerHTML =
       '<div style="color:var(--text2);font-size:13px;line-height:1.6;margin-bottom:14px;">' +
@@ -1513,6 +1514,36 @@ function renderSellerActive(body, account) {
 function escAttr(s) {
   if (!s) return '';
   return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function appendAdminSubaccountsTool(body) {
+  var wrap = document.createElement('div');
+  wrap.style.cssText = 'margin-top:18px;padding-top:14px;border-top:1px solid var(--border);';
+  wrap.innerHTML =
+    '<button class="btn btn-ghost btn-sm" onclick="loadAdminSubaccounts()"><i class="ti ti-list-check"></i> Ver subcontas (admin)</button>' +
+    '<div id="admin-subaccounts-list" style="margin-top:10px;font-size:12px;color:var(--text2);"></div>';
+  body.appendChild(wrap);
+}
+
+async function loadAdminSubaccounts() {
+  var el = document.getElementById('admin-subaccounts-list');
+  if (el) el.innerHTML = 'Carregando...';
+  try {
+    var res = await apiFetch('/api/seller/admin/accounts');
+    if (!res.success) throw new Error(res.error || 'Erro');
+    if (!res.accounts || !res.accounts.length) { if (el) el.innerHTML = 'Nenhuma subconta criada ainda.'; return; }
+    if (el) el.innerHTML = res.accounts.map(function(a) {
+      var st = (a.status || '-');
+      var ok = (String(st).toUpperCase() === 'ACTIVE');
+      return '<div style="padding:6px 0;border-bottom:1px solid var(--border);">' +
+        '<strong>' + escAttr(a.name || '-') + '</strong> &mdash; ' + escAttr(a.email || '-') +
+        ' <span style="color:var(--text3);">(' + escAttr(a.cpfCnpj || '-') + ')</span> ' +
+        '<span class="badge badge-' + (ok ? 'green' : 'gray') + '" style="font-size:9px;">' + escAttr(st) + '</span>' +
+        '</div>';
+    }).join('');
+  } catch(e) {
+    if (el) el.innerHTML = '<span style="color:var(--red);">Erro: ' + escAttr(e.message) + '</span>';
+  }
 }
 
 async function submitSellerOnboarding() {
