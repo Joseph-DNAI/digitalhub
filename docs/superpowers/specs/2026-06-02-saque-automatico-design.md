@@ -48,13 +48,14 @@ Pré-requisito (Passo 0): para agir sobre a subconta (consultar saldo, criar tra
 ## 4. Saque automático (job)
 
 ### Comportamento
-- Um job periódico (mesmo padrão do `startRetryJob` em `deliveryService.js` — `setInterval`), por ex. a cada algumas horas (`PAYOUT_INTERVAL_HOURS`, default 6h).
+- Um job periódico (mesmo padrão do `startRetryJob` em `deliveryService.js` — `setInterval`), rodando **a cada 2 horas** (`PAYOUT_INTERVAL_HOURS`, default **2**). Isso limita a no máximo ~12 repasses/dia por vendedor e dispensa um valor mínimo (Pix é gratuito; o intervalo já controla o volume).
 - Para cada `seller_account` com `status='active'` E `asaas_api_key_enc` presente:
   1. Descriptografa a apiKey da subconta.
   2. Consulta o **saldo disponível** da subconta (`asaasService.getSubaccountBalance(apiKey)`).
-  3. Se saldo ≥ um mínimo (`PAYOUT_MIN_CENTS`, default ex. R$5 = 500; evita microtransferências), cria um **Pix transfer** (`asaasService.createPixTransfer(apiKey, { pixKey: cpfCnpj, value })`) para a chave CPF/CNPJ do vendedor.
+  3. Se houver saldo disponível (> 0), cria um **Pix transfer** (`asaasService.createPixTransfer(apiKey, { pixKey: cpfCnpj, value })`) para a chave CPF/CNPJ do vendedor — **sem valor mínimo**; transfere o que acumulou na janela.
   4. Registra o repasse (log) com tenant, valor, status, timestamp.
 - "Conforme o Asaas libera": o saldo disponível já reflete o liberado (Pix imediato; cartão depende da antecipação — Feature B futura). Sem antecipação, o cartão entra no saldo disponível só após a compensação padrão.
+- **Comunicação ao vendedor:** informar no onboarding (aba Loja) e na FAQ que "o repasse é automático a cada 2 horas, via Pix, para a sua chave CPF/CNPJ".
 
 ### Registro (auditoria/transparência)
 - Tabela `payouts` (simples): `id, tenant_id, amount_cents, asaas_transfer_id, status ('done'|'failed'), error, created_at`.
@@ -83,7 +84,7 @@ Pré-requisito (Passo 0): para agir sobre a subconta (consultar saldo, criar tra
 
 ## 7. Variáveis de ambiente
 - `ENCRYPTION_KEY` — chave de 32 bytes para AES-256-GCM (obrigatória para o saque; sem ela, o onboarding não consegue guardar a apiKey).
-- `PAYOUT_INTERVAL_HOURS` (default 6), `PAYOUT_MIN_CENTS` (default 500).
+- `PAYOUT_INTERVAL_HOURS` (default **2**). Sem valor mínimo de saque (transfere todo saldo disponível na janela).
 
 ---
 
