@@ -9,6 +9,7 @@ const fs        = require('fs');
 const logger    = require('./config/logger');
 const { initDatabase } = require('./models/database');
 const { startRetryJob } = require('./services/deliveryService');
+const { startPayoutJob } = require('./services/payoutService');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -159,6 +160,7 @@ async function startWithRetry(maxAttempts, delayMs) {
         var painelUrl = process.env.BASE_URL || ('http://localhost:' + PORT);
         logger.info('Painel: ' + painelUrl);
         startRetryJob();
+        startPayoutJob();
       });
       return;
     } catch (err) {
