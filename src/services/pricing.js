@@ -44,8 +44,10 @@ function asaasFeeCents(method, amountCents, overrides) {
 // Monta o array de split do Asaas. A cobrança é criada na conta MASTER da Vaultly,
 // que retém a margem como recebedora principal; o split envia ao vendedor o que sobra
 // após a taxa do Asaas E a margem da Vaultly (o vendedor absorve a taxa do banco).
-function buildSplit({ amountCents, sellerWalletId, method, overrides }) {
-  const feeCents     = vaultlyFeeCents(amountCents, overrides);
+// A taxa da Vaultly só é cobrada quando chargeVaultlyFee !== false (plano Free);
+// planos pagos são isentos (a assinatura cobre a Vaultly), então recebem mais no split.
+function buildSplit({ amountCents, sellerWalletId, method, chargeVaultlyFee, overrides }) {
+  const feeCents     = (chargeVaultlyFee === false) ? 0 : vaultlyFeeCents(amountCents, overrides);
   const gatewayCents = asaasFeeCents(method, amountCents, overrides);
   const sellerCents  = Math.max(0, amountCents - feeCents - gatewayCents);
   return [{ walletId: sellerWalletId, fixedValue: centsToReais(sellerCents) }];

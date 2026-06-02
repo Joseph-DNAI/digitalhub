@@ -24,6 +24,14 @@ test('buildSplit envia ao vendedor o liquido apos taxa Asaas + Vaultly', () => {
   ]);
 });
 
+test('buildSplit isenta a taxa Vaultly nos planos pagos (chargeVaultlyFee=false)', () => {
+  // amount 2700c, asaasPix 99c, sem taxa Vaultly -> vendedor 2700-99 = 2601 = R$26,01
+  const split = buildSplit({ amountCents: 2700, sellerWalletId: 'w_seller', method: 'pix', chargeVaultlyFee: false });
+  assert.deepStrictEqual(split, [
+    { walletId: 'w_seller', fixedValue: 26.01 }
+  ]);
+});
+
 test('nunca cobra mais que o valor da venda', () => {
   // venda de 1 centavo: taxa não pode passar do total
   assert.ok(vaultlyFeeCents(1) <= 1);
