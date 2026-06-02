@@ -20,9 +20,13 @@ async function runPayouts() {
       const apiKey = decrypt(acc.asaas_api_key_enc);
       const balanceCents = await asaas.getSubaccountBalance(apiKey);
       if (balanceCents <= 0) continue;
+      // Token idempotente por janela: um mesmo saldo retentado dentro da mesma janela
+      // carrega o mesmo externalReference, ajudando Asaas/auditoria a nao pagar duas vezes.
+      const windowRef = 'payout_' + acc.tenant_id + '_' + Math.floor(Date.now() / INTERVAL_MS);
       const transfer = await asaas.createPixTransfer(apiKey, {
         pixKey: acc.payout_pix_key,
-        valueReais: balanceCents / 100
+        valueReais: balanceCents / 100,
+        externalReference: windowRef
       });
       await payouts.create({ tenant_id: acc.tenant_id, amount_cents: balanceCents, asaas_transfer_id: transfer && transfer.id, status: 'done' });
       logger.info('Repasse R$' + (balanceCents / 100).toFixed(2) + ' — tenant ' + acc.tenant_id.slice(0, 8));

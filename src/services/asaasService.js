@@ -135,18 +135,27 @@ function pixKeyType(cpfCnpj) {
 // Saldo disponivel da subconta (usa a apiKey da subconta). Retorna em centavos.
 async function getSubaccountBalance(apiKey) {
   const r = await request('GET', '/finance/balance', null, apiKey);
-  return Math.round((r && r.balance ? r.balance : 0) * 100);
+  // Se o campo 'balance' nao vier, avisa: e provavel divergencia de shape da API
+  // (nao deixa o saque virar um no-op silencioso de R$0 para sempre).
+  if (!r || typeof r.balance !== 'number') {
+    logger.warn('Asaas /finance/balance sem campo numerico "balance" — resposta: ' + JSON.stringify(r).slice(0, 200));
+    return 0;
+  }
+  return Math.round(r.balance * 100);
 }
 
 // Transferencia Pix para uma chave (CPF/CNPJ). Roda na subconta (apiKey dela).
+// externalReference: token idempotente/rastreavel do repasse (mesmo token = mesmo repasse).
 async function createPixTransfer(apiKey, opts) {
   const cleanKey = String(opts.pixKey || '').replace(/\D/g, '');
-  return request('POST', '/transfers', {
+  const body = {
     value: opts.valueReais,
     pixAddressKey: cleanKey,
     pixAddressKeyType: opts.pixKeyType || pixKeyType(cleanKey),
     operationType: 'PIX'
-  }, apiKey);
+  };
+  if (opts.externalReference) body.externalReference = opts.externalReference;
+  return request('POST', '/transfers', body, apiKey);
 }
 
 module.exports = {
