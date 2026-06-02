@@ -348,4 +348,42 @@ router.put('/:id/status', async (req, res) => {
   }
 });
 
+// POST /api/products/bulk — cria varios produtos a partir de itens JSON (import CSV).
+// Itens: [{ name, price (reais, opcional), description (opcional) }]. Sem arquivo (entra depois).
+// Respeita o teto global e o limite de ativos. NAO faz eviction (para nao apagar em massa).
+router.post('/bulk', express.json(), async (req, res) => {
+  try {
+    const items = Array.isArray(req.body.items) ? req.body.items : [];
+    if (!items.length) return res.status(400).json({ success: false, error: 'Nenhum item para importar.' });
+
+    let total = await products.count(req.tenantId);
+    let activeCount = await products.countActive(req.tenantId);
+    const createdList = [];
+    let skipped = 0;
+
+    for (const it of items) {
+      const name = (it && it.name ? String(it.name) : '').trim();
+      if (!name) { skipped++; continue; }
+      if (atGlobalCap(total, MAX_PRODUCTS_TOTAL)) { skipped++; continue; }
+
+      const status = initialStatus(activeCount, req.user.max_products);
+      const priceReais = parseFloat(String(it.price || '0').replace(',', '.')) || 0;
+      const created = await products.create(req.tenantId, {
+        name,
+        description: it.description ? String(it.description) : null,
+        price: priceReais,
+        status: status
+      });
+      createdList.push({ id: created.id, name: created.name, status: created.status });
+      total++;
+      if (status === 'active') activeCount++;
+    }
+
+    res.status(201).json({ success: true, created: createdList.length, skipped: skipped, items: createdList });
+  } catch (err) {
+    logger.error('products/bulk: ' + err.message);
+    res.status(500).json({ success: false, error: 'Erro ao importar.' });
+  }
+});
+
 module.exports = router;
