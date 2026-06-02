@@ -12,7 +12,10 @@ router.get('/:slug', async (req, res) => {
     const product = await products.findBySlug(req.params.slug);
     if (!product) return res.status(404).json({ success: false, error: 'Produto nao encontrado.' });
     const acc = await sellerAccounts.findByTenant(product.tenant_id);
-    const passFee = !!(acc && acc.pass_card_fee_to_buyer);
+    const tenant = await tenants.findById(product.tenant_id);
+    const sellerUser = tenant ? await users.findById(tenant.user_id) : null;
+    const isFreePlan = !sellerUser || sellerUser.plan_id === 'free';
+    const passFee = !isFreePlan && !!(acc && acc.pass_card_fee_to_buyer);
     const cardCents = passFee ? cardChargeCents(product.price_cents) : product.price_cents;
     res.json({
       success: true,
@@ -66,7 +69,7 @@ router.post('/:slug', async (req, res) => {
 
     // Cartao com repasse ligado: cobra o valor com a taxa embutida (gross-up).
     // Pix sempre cobra o valor real. O split ja entrega ao vendedor (cobrado - taxaAsaas) = preco cheio.
-    const amountCents = (pm === 'card' && acc.pass_card_fee_to_buyer)
+    const amountCents = (pm === 'card' && acc.pass_card_fee_to_buyer && !isFreePlan)
       ? cardChargeCents(product.price_cents)
       : product.price_cents;
     const feeCents = isFreePlan ? vaultlyFeeCents(amountCents) : 0;

@@ -1566,11 +1566,11 @@ function renderSellerActive(body, account) {
     '<div style="font-size:13px;font-weight:600;margin-bottom:10px;">Metodos aceitos</div>' +
     '<div class="toggle-row">' +
       '<div class="toggle-info"><div class="t-title">Aceitar Pix</div><div class="t-desc">Pagamentos via QR Code Pix</div></div>' +
-      '<button class="toggle' + (account.accept_pix ? ' on' : '') + '" id="seller-toggle-pix" onclick="saveSellerMethods()"></button>' +
+      '<button class="toggle' + (account.accept_pix ? ' on' : '') + '" id="seller-toggle-pix" onclick="this.classList.toggle(\'on\');saveSellerMethods()"></button>' +
     '</div>' +
     '<div class="toggle-row">' +
       '<div class="toggle-info"><div class="t-title">Aceitar cartao de credito</div><div class="t-desc">Credito via Asaas/gateway integrado</div></div>' +
-      '<button class="toggle' + (account.accept_card ? ' on' : '') + '" id="seller-toggle-card" onclick="saveSellerMethods()"></button>' +
+      '<button class="toggle' + (account.accept_card ? ' on' : '') + '" id="seller-toggle-card" onclick="this.classList.toggle(\'on\');saveSellerMethods()"></button>' +
     '</div>' +
     '<div class="toggle-row">' +
       '<div class="toggle-info"><div class="t-title">Repassar a taxa do cartao ao comprador</div><div class="t-desc">No cartao, o comprador paga o valor com a taxa embutida — voce recebe o preco cheio. No Pix nada muda.</div></div>' +
