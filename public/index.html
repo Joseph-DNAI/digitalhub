@@ -1305,6 +1305,22 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
         </div>
       </div>
     </div>
+    <div id="m-selling-section" style="display:none;margin-top:6px;border-top:1px solid var(--border);padding-top:14px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px;"><i class="ti ti-shopping-cart" style="color:var(--orange);"></i> Vender direto pela Vaultly</div>
+      <div class="toggle-row" style="border-bottom:none;padding:0 0 10px;">
+        <div class="toggle-info"><div class="t-title">Colocar à venda</div><div class="t-desc">Gera um link de checkout para este produto</div></div>
+        <button type="button" class="toggle" id="m-sellable" onclick="this.classList.toggle('on');document.getElementById('m-selling-fields').style.display=this.classList.contains('on')?'block':'none'"></button>
+      </div>
+      <div id="m-selling-fields" style="display:none;">
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">Preço (R$) <span style="color:var(--red);font-size:10px;">mín. R$9,00</span></label><input type="number" class="form-input" id="m-price-cents" placeholder="27.00" step="0.01" min="9"/></div>
+          <div class="form-group full" style="display:flex;gap:16px;align-items:center;padding-top:6px;">
+            <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;"><input type="checkbox" id="m-accept-pix" checked style="width:16px;height:16px;accent-color:var(--orange);"/> <i class="ti ti-qrcode" style="color:var(--emerald);"></i> Pix</label>
+            <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;"><input type="checkbox" id="m-accept-card" checked style="width:16px;height:16px;accent-color:var(--orange);"/> <i class="ti ti-credit-card" style="color:var(--orange);"></i> Cartão</label>
+          </div>
+        </div>
+      </div>
+    </div>
     <input type="hidden" id="m-editing-id" value="" />
     <div id="m-error" style="display:none;margin-top:14px;"></div>
     <div class="grad-line"></div>
@@ -2719,6 +2735,14 @@ function openModal() {
   var errEl = document.getElementById('m-error');
   if (errEl) { errEl.style.display = 'none'; errEl.innerHTML = ''; }
   setupComboSection('');  // novo produto: sem id ainda
+  var sellingSec = document.getElementById('m-selling-section');
+  if (sellingSec) {
+    var paid = currentUser && currentUser.plan_id && currentUser.plan_id !== 'free';
+    sellingSec.style.display = paid ? 'block' : 'none';
+    var tgl = document.getElementById('m-sellable'); if (tgl) tgl.classList.remove('on');
+    var fld = document.getElementById('m-selling-fields'); if (fld) fld.style.display = 'none';
+    var pc = document.getElementById('m-price-cents'); if (pc) pc.value = '';
+  }
   document.getElementById('modal-bg').classList.add('open');
 }
 
@@ -2882,6 +2906,8 @@ function editProduct(id) {
   const p = productsCache.find(x => x.id === id);
   if (!p) return;
   openModal();
+  var _editSellSec = document.getElementById('m-selling-section');
+  if (_editSellSec) _editSellSec.style.display = 'none';
   document.getElementById('m-name').value         = p.name           || '';
   document.getElementById('m-desc').value         = p.description    || '';
   document.getElementById('m-price').value        = p.price          || '';
@@ -2939,8 +2965,43 @@ async function saveProduct() {
     const headers = authToken ? { 'Authorization': `Bearer ${authToken}` } : {};
 
     const raw  = await fetch(getApiUrl() + url, { method, headers, body: form });
-    const data = await raw.json();
+    let data = await raw.json();
+
+    if (data && data.needs_evict) {
+      var ev = data.evict_product || {};
+      var okEv = confirm('Voce atingiu o limite de produtos. O produto "' + (ev.name || '') + '" (inativo) sera apagado para liberar espaco. Continuar?');
+      if (!okEv) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar produto';
+        return;
+      }
+      form.append('confirm_evict', 'true');
+      var reResp = await fetch(getApiUrl() + '/api/products', { method: 'POST', headers: authToken ? { 'Authorization': 'Bearer ' + authToken } : {}, body: form });
+      data = await reResp.json();
+    }
+
     if (!data.success) throw new Error(data.error);
+
+    // Aplica configuracoes de venda direta, se ativado
+    var sellToggle = document.getElementById('m-sellable');
+    if (sellToggle && sellToggle.classList.contains('on') && data.data && data.data.id) {
+      var priceReais = (document.getElementById('m-price-cents').value || '').replace(',', '.');
+      var priceCents = Math.round(parseFloat(priceReais) * 100) || 0;
+      if (priceCents < 900) {
+        showToast('Produto criado, mas o preço mínimo de venda é R$9,00 — ajuste em "Config." no card.', 'warn');
+      } else {
+        var sres = await apiFetch('/api/products/' + data.data.id + '/selling', {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sellable: true, price_cents: priceCents,
+            checkout_title: document.getElementById('m-name').value || '',
+            accept_pix: document.getElementById('m-accept-pix').checked,
+            accept_card: document.getElementById('m-accept-card').checked })
+        });
+        if (sres && !sres.success && sres.needs_onboarding) {
+          showToast('Produto criado. Ative sua conta de recebimento na aba Config para vender.', 'warn');
+        }
+      }
+    }
 
     // Se veio de "Vincular" em Produtos Pendentes, apaga o registro da fila
     const unmatchedId = btn.dataset.unmatchedId;
