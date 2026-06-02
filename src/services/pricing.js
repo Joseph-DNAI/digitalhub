@@ -55,4 +55,14 @@ function buildSplit({ amountCents, sellerWalletId, method, chargeVaultlyFee, ove
   return [{ walletId: sellerWalletId, fixedValue: centsToReais(sellerCents) }];
 }
 
-module.exports = { vaultlyFeeCents, asaasFeeCents, centsToReais, buildSplit };
+// Gross-up do cartao: valor a cobrar para que, apos a taxa do cartao (pct + fixo),
+// o vendedor receba o preco cheio. Arredonda p/ cima (vendedor nunca recebe a menos).
+function cardChargeCents(priceCents, overrides) {
+  const o = overrides || {};
+  const pct   = (o.cardPercent != null ? o.cardPercent : parseFloat(process.env.ASAAS_CARD_PERCENT || '1.99')) / 100;
+  const fixed = o.cardFixedCents != null ? o.cardFixedCents : parseInt(process.env.ASAAS_CARD_FEE_CENTS || '49', 10);
+  if (!(pct < 1)) return priceCents;
+  return Math.ceil((priceCents + fixed) / (1 - pct));
+}
+
+module.exports = { vaultlyFeeCents, asaasFeeCents, centsToReais, buildSplit, cardChargeCents };
