@@ -250,16 +250,19 @@ router.get('/platform-list/:platform', async (req, res) => {
 
 const { sellerAccounts } = require('../models/database');
 
-function makeSlug(s) {
-  return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+// Codigo aleatorio curto e url-safe (sem caracteres ambiguos) — vira o link do checkout.
+function makeCode() {
+  const chars = 'abcdefghijkmnpqrstuvwxyz23456789';
+  let s = '';
+  for (let i = 0; i < 8; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return s;
 }
 
 // PUT /api/products/:id/selling — configura venda direta do produto
 router.put('/:id/selling', requireAuth, async (req, res) => {
   try {
     const MIN = parseInt(process.env.DIRECT_MIN_PRICE_CENTS || '900', 10);
-    const { sellable, price_cents, slug, checkout_title, checkout_description, accept_pix, accept_card } = req.body;
+    const { sellable, price_cents, checkout_title, checkout_description, accept_pix, accept_card } = req.body;
 
     const product = await products.findById(req.tenantId, req.params.id);
     if (!product) return res.status(404).json({ success: false, error: 'Produto nao encontrado.' });
@@ -274,10 +277,12 @@ router.put('/:id/selling', requireAuth, async (req, res) => {
       }
     }
 
-    let finalSlug = slug ? makeSlug(slug) : makeSlug(product.name) + '-' + req.params.id.slice(0, 6);
-    const clash = await require('../models/database').queryOne(
-      'SELECT id FROM products WHERE slug = $1 AND id <> $2', [finalSlug, req.params.id]);
-    if (clash) finalSlug = finalSlug + '-' + req.params.id.slice(0, 4);
+    // Link estavel: mantem o codigo ja existente; gera um aleatorio unico na 1a ativacao.
+    let finalSlug = product.slug;
+    if (!finalSlug) {
+      const db = require('../models/database');
+      do { finalSlug = makeCode(); } while (await db.queryOne('SELECT id FROM products WHERE slug = $1', [finalSlug]));
+    }
 
     const updated = await products.update(req.tenantId, req.params.id, {
       sellable: !!sellable,

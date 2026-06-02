@@ -1076,9 +1076,8 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
           <input type="number" class="form-input" id="selling-price" placeholder="27.00" step="0.01" min="9" />
         </div>
         <div class="form-group">
-          <label class="form-label">Slug da pagina</label>
-          <input type="text" class="form-input" id="selling-slug" placeholder="meu-ebook" />
-          <div class="form-hint">Parte final do link: /c/meu-ebook</div>
+          <label class="form-label">Link do checkout</label>
+          <div class="form-hint">Gerado automaticamente (codigo unico) ao ativar. Aparece abaixo e no card do produto.</div>
         </div>
         <div class="form-group full">
           <label class="form-label">Titulo do checkout</label>
@@ -2462,12 +2461,24 @@ async function loadProducts() {
             ? `<span class="badge badge-gray" style="font-size:10px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${p.file_name}"><i class="ti ti-paperclip"></i> ${p.file_name}</span>`
             : `<span style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px;"><i class="ti ti-alert-circle" style="font-size:12px;"></i> Sem arquivo</span>`}
         </div>
+        ${p.sellable && p.slug ? `
+        <div style="margin-bottom:14px;padding:10px 12px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.2);border-radius:8px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px;">
+            <span style="font-size:11px;color:var(--text3);">À venda por</span>
+            <span style="font-family:'Satoshi',sans-serif;font-weight:700;font-size:17px;color:var(--orange);">R$ ${((p.price_cents||0)/100).toFixed(2).replace('.',',')}</span>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input readonly value="${location.origin}/c/${p.slug}" onclick="this.select()" style="flex:1;min-width:0;font-size:11px;font-family:'JetBrains Mono',monospace;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);"/>
+            <button class="btn btn-ghost btn-sm" onclick="copyCheckoutLink('${p.slug}')" title="Copiar link"><i class="ti ti-copy"></i></button>
+            <button class="btn btn-ghost btn-sm" onclick="window.open('/c/${p.slug}','_blank')" title="Abrir checkout"><i class="ti ti-external-link"></i></button>
+          </div>
+        </div>` : ''}
         <div style="display:flex;gap:8px;margin-top:auto;padding-top:12px;border-top:1px solid var(--border);">
           <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="editProduct('${p.id}')">
             <i class="ti ti-pencil"></i> Editar
           </button>
           <button class="btn btn-ghost btn-sm" style="flex:1;color:var(--orange);" onclick="openSelling('${p.id}')">
-            <i class="ti ti-shopping-cart"></i> Vender
+            <i class="ti ti-shopping-cart"></i> ${p.sellable && p.slug ? 'Config.' : 'Vender'}
           </button>
           <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}','${p.name.replace(/'/g, "\\'")}')">
             <i class="ti ti-trash"></i>
@@ -3308,7 +3319,6 @@ function openSelling(id) {
   if (sellable) { toggleEl.classList.add('on'); } else { toggleEl.classList.remove('on'); }
 
   document.getElementById('selling-price').value          = p.price_cents ? (p.price_cents / 100).toFixed(2) : '';
-  document.getElementById('selling-slug').value           = p.slug || '';
   document.getElementById('selling-checkout-title').value = p.checkout_title || '';
   document.getElementById('selling-checkout-desc').value  = p.checkout_description || '';
   document.getElementById('selling-pix').checked          = p.accept_pix  !== false;
@@ -3351,7 +3361,6 @@ async function saveSelling() {
     return;
   }
 
-  var slug          = (document.getElementById('selling-slug').value || '').trim().toLowerCase().replace(/\s+/g, '-');
   var checkoutTitle = (document.getElementById('selling-checkout-title').value || '').trim();
   var checkoutDesc  = (document.getElementById('selling-checkout-desc').value || '').trim();
   var acceptPix     = !!(document.getElementById('selling-pix').checked);
@@ -3364,7 +3373,7 @@ async function saveSelling() {
     var res = await apiFetch('/api/products/' + id + '/selling', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sellable: sellable, price_cents: priceCents, slug: slug, checkout_title: checkoutTitle, checkout_description: checkoutDesc, accept_pix: acceptPix, accept_card: acceptCard })
+      body: JSON.stringify({ sellable: sellable, price_cents: priceCents, checkout_title: checkoutTitle, checkout_description: checkoutDesc, accept_pix: acceptPix, accept_card: acceptCard })
     });
     if (!res.success) {
       if (res.needs_onboarding) {
@@ -3377,8 +3386,8 @@ async function saveSelling() {
     showToast('Venda direta atualizada!', 'success');
     closeSelling();
     loadProducts();
-    if (sellable && slug) {
-      var link = window.location.origin + '/c/' + slug;
+    if (res.product && res.product.sellable && res.product.slug) {
+      var link = window.location.origin + '/c/' + res.product.slug;
       showToast('Link: ' + link, 'info');
     }
   } catch(e) {
@@ -3394,14 +3403,25 @@ function closeSelling() {
 }
 
 async function copySelling() {
-  var slug = (document.getElementById('selling-slug').value || '').trim();
+  var txt = (document.getElementById('selling-link-text') || {}).textContent || '';
+  if (!txt) return;
+  try {
+    await navigator.clipboard.writeText(txt);
+    showToast('Link copiado!', 'success');
+  } catch(e) {
+    prompt('Copie o link manualmente:', txt);
+  }
+}
+
+// Copia o link de checkout direto do card do produto
+async function copyCheckoutLink(slug) {
   if (!slug) return;
   var url = window.location.origin + '/c/' + slug;
   try {
     await navigator.clipboard.writeText(url);
     showToast('Link copiado!', 'success');
   } catch(e) {
-    prompt('Copie o link manualmente:', url);
+    prompt('Copie o link:', url);
   }
 }
 
