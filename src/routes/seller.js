@@ -4,13 +4,19 @@ const router  = express.Router();
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const { sellerAccounts } = require('../models/database');
 const asaas = require('../services/asaasService');
+const { encrypt } = require('../services/crypto');
 const logger = require('../config/logger');
 
 // GET /api/seller/account — status da conta de recebimento do tenant
 router.get('/account', requireAuth, async (req, res) => {
   try {
     const acc = await sellerAccounts.findByTenant(req.tenantId);
-    res.json({ success: true, account: acc || null });
+    let safe = null;
+    if (acc) {
+      const { asaas_api_key_enc, ...rest } = acc;
+      safe = { ...rest, has_payout_key: !!asaas_api_key_enc };
+    }
+    res.json({ success: true, account: safe });
   } catch (err) {
     logger.error('seller/account: ' + err.message);
     res.status(500).json({ success: false, error: 'Erro interno.' });
@@ -21,9 +27,12 @@ router.get('/account', requireAuth, async (req, res) => {
 router.post('/onboarding', requireAuth, async (req, res) => {
   try {
     const { name, email, cpfCnpj, mobilePhone, birthDate, incomeValue,
-            postalCode, address, addressNumber, province, accept_pix, accept_card } = req.body;
+            postalCode, address, addressNumber, province, accept_pix, accept_card, pix_key_declared } = req.body;
     if (!name || !email || !cpfCnpj) {
       return res.status(400).json({ success: false, error: 'name, email e cpfCnpj sao obrigatorios.' });
+    }
+    if (pix_key_declared !== true) {
+      return res.status(400).json({ success: false, error: 'E necessario declarar seu CPF/CNPJ como chave Pix para o repasse automatico.' });
     }
     // Venda direta e exclusiva de assinantes (planos pagos). Protege o custo de R$12,90/subconta.
     if (!req.user || req.user.plan_id === 'free') {
@@ -55,6 +64,8 @@ router.post('/onboarding', requireAuth, async (req, res) => {
     const acc = await sellerAccounts.upsert(req.tenantId, {
       asaas_account_id: created.accountId,
       asaas_wallet_id:  created.walletId,
+      asaas_api_key_enc: created.apiKey ? encrypt(created.apiKey) : null,
+      payout_pix_key:    String(cpfCnpj).replace(/\D/g, ''),
       status:           'active',
       kyc_status:       created.status || null,
       accept_pix:       accept_pix !== false,
