@@ -27,13 +27,28 @@ function centsToReais(cents) {
   return Math.round(cents) / 100;
 }
 
+// Estimativa da taxa do Asaas (gateway), em centavos. Configurável por env porque
+// as taxas mudam (ex.: promoções). O Asaas desconta a taxa dele ANTES do split, então
+// precisamos subtraí-la para o split caber em (cobrança − taxa Asaas).
+function asaasFeeCents(method, amountCents, overrides) {
+  const o = overrides || {};
+  if (method === 'card') {
+    const pct   = o.cardPercent    != null ? o.cardPercent    : parseFloat(process.env.ASAAS_CARD_PERCENT || '1.99');
+    const fixed = o.cardFixedCents != null ? o.cardFixedCents : parseInt(process.env.ASAAS_CARD_FEE_CENTS || '49', 10);
+    return Math.round(amountCents * (pct / 100)) + fixed;
+  }
+  const pixFixed = o.pixFixedCents != null ? o.pixFixedCents : parseInt(process.env.ASAAS_PIX_FEE_CENTS || '99', 10);
+  return pixFixed;
+}
+
 // Monta o array de split do Asaas. A cobrança é criada na conta MASTER da Vaultly,
-// que retém a taxa como recebedora principal; o split envia o LÍQUIDO do vendedor
-// (valor da venda menos a taxa da Vaultly) para a wallet dele.
-function buildSplit({ amountCents, sellerWalletId, overrides }) {
-  const feeCents = vaultlyFeeCents(amountCents, overrides);
-  const sellerCents = amountCents - feeCents;
+// que retém a margem como recebedora principal; o split envia ao vendedor o que sobra
+// após a taxa do Asaas E a margem da Vaultly (o vendedor absorve a taxa do banco).
+function buildSplit({ amountCents, sellerWalletId, method, overrides }) {
+  const feeCents     = vaultlyFeeCents(amountCents, overrides);
+  const gatewayCents = asaasFeeCents(method, amountCents, overrides);
+  const sellerCents  = Math.max(0, amountCents - feeCents - gatewayCents);
   return [{ walletId: sellerWalletId, fixedValue: centsToReais(sellerCents) }];
 }
 
-module.exports = { vaultlyFeeCents, centsToReais, buildSplit };
+module.exports = { vaultlyFeeCents, asaasFeeCents, centsToReais, buildSplit };

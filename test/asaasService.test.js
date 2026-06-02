@@ -21,7 +21,7 @@ test('buildChargePayload Pix inclui billingType e split', () => {
   assert.strictEqual(p.billingType, 'PIX');
   assert.strictEqual(p.customer, 'cus_1');
   assert.strictEqual(p.value, 27);
-  assert.deepStrictEqual(p.split, [{ walletId: 'w_s', fixedValue: 26.5 }]);
+  assert.deepStrictEqual(p.split, [{ walletId: 'w_s', fixedValue: 25.51 }]);
 });
 
 test('buildChargePayload cartão usa CREDIT_CARD', () => {

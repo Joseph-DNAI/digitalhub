@@ -65,7 +65,7 @@ function buildChargePayload(d) {
     dueDate: d.dueDate,
     description: d.description || 'Compra Vaultly',
     externalReference: d.orderId || undefined,
-    split: buildSplit({ amountCents: d.amountCents, sellerWalletId: d.sellerWalletId })
+    split: buildSplit({ amountCents: d.amountCents, sellerWalletId: d.sellerWalletId, method: d.method })
   };
 }
 
