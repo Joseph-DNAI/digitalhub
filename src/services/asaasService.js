@@ -11,17 +11,17 @@ function baseUrl() {
   return process.env.ASAAS_BASE_URL || 'https://api-sandbox.asaas.com/v3';
 }
 
-function headers() {
+function headers(apiKey) {
   return {
     'Content-Type': 'application/json',
-    'access_token': process.env.ASAAS_API_KEY || ''
+    'access_token': apiKey || process.env.ASAAS_API_KEY || ''
   };
 }
 
-async function request(method, path, body) {
+async function request(method, path, body, apiKey) {
   const res = await fetch(baseUrl() + path, {
     method,
-    headers: headers(),
+    headers: headers(apiKey),
     body: body ? JSON.stringify(body) : undefined
   });
   const text = await res.text();
@@ -126,8 +126,32 @@ async function listSubaccounts(limit) {
   return (res && res.data) || [];
 }
 
+// Deriva o tipo da chave Pix a partir do documento (11 digitos = CPF, 14 = CNPJ).
+function pixKeyType(cpfCnpj) {
+  const clean = String(cpfCnpj || '').replace(/\D/g, '');
+  return clean.length > 11 ? 'CNPJ' : 'CPF';
+}
+
+// Saldo disponivel da subconta (usa a apiKey da subconta). Retorna em centavos.
+async function getSubaccountBalance(apiKey) {
+  const r = await request('GET', '/finance/balance', null, apiKey);
+  return Math.round((r && r.balance ? r.balance : 0) * 100);
+}
+
+// Transferencia Pix para uma chave (CPF/CNPJ). Roda na subconta (apiKey dela).
+async function createPixTransfer(apiKey, opts) {
+  const cleanKey = String(opts.pixKey || '').replace(/\D/g, '');
+  return request('POST', '/transfers', {
+    value: opts.valueReais,
+    pixAddressKey: cleanKey,
+    pixAddressKeyType: opts.pixKeyType || pixKeyType(cleanKey),
+    operationType: 'PIX'
+  }, apiKey);
+}
+
 module.exports = {
   buildSubaccountPayload, buildChargePayload, isValidWebhookToken,
   createSubaccount, createCustomer, createCharge, getPixQrCode, getCharge,
-  findSubaccountByCpfCnpj, listSubaccounts
+  findSubaccountByCpfCnpj, listSubaccounts,
+  pixKeyType, getSubaccountBalance, createPixTransfer
 };

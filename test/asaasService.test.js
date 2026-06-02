@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { buildSubaccountPayload, buildChargePayload, isValidWebhookToken } = require('../src/services/asaasService');
+const { buildSubaccountPayload, buildChargePayload, isValidWebhookToken, pixKeyType } = require('../src/services/asaasService');
 
 test('buildSubaccountPayload mapeia os campos do formulário', () => {
   const p = buildSubaccountPayload({
@@ -37,4 +37,9 @@ test('isValidWebhookToken compara com env', () => {
   assert.strictEqual(isValidWebhookToken('segredo'), true);
   assert.strictEqual(isValidWebhookToken('errado'), false);
   assert.strictEqual(isValidWebhookToken(undefined), false);
+});
+
+test('pixKeyType: 11 digitos = CPF, 14 = CNPJ', () => {
+  assert.strictEqual(pixKeyType('123.456.789-00'), 'CPF');
+  assert.strictEqual(pixKeyType('12.345.678/0001-90'), 'CNPJ');
 });
