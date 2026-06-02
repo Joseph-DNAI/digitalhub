@@ -82,8 +82,11 @@ async function createSubaccount(formData) {
 }
 
 async function createCustomer({ name, email, cpfCnpj }) {
+  // notificationDisabled: a Vaultly entrega e avisa o comprador por conta propria,
+  // entao desabilitamos as notificacoes do Asaas (evita a taxa de R$0,99 Email/SMS por cobranca).
   const c = await request('POST', '/customers', {
-    name, email, cpfCnpj: String(cpfCnpj || '').replace(/\D/g, '')
+    name, email, cpfCnpj: String(cpfCnpj || '').replace(/\D/g, ''),
+    notificationDisabled: true
   });
   return c.id;
 }

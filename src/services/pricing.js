@@ -37,7 +37,9 @@ function asaasFeeCents(method, amountCents, overrides) {
     const fixed = o.cardFixedCents != null ? o.cardFixedCents : parseInt(process.env.ASAAS_CARD_FEE_CENTS || '49', 10);
     return Math.round(amountCents * (pct / 100)) + fixed;
   }
-  const pixFixed = o.pixFixedCents != null ? o.pixFixedCents : parseInt(process.env.ASAAS_PIX_FEE_CENTS || '99', 10);
+  // Pix de recebimento é gratuito no Asaas, e desabilitamos as notificações (R$0,99),
+  // então a taxa de Pix é 0 por padrão. Configurável caso o Asaas passe a cobrar algo.
+  const pixFixed = o.pixFixedCents != null ? o.pixFixedCents : parseInt(process.env.ASAAS_PIX_FEE_CENTS || '0', 10);
   return pixFixed;
 }
 
