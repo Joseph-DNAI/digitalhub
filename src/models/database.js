@@ -217,6 +217,17 @@ async function initDatabase() {
         paid_at           TIMESTAMP,
         refunded_at       TIMESTAMP
       );
+
+      -- Repasses automaticos (saque via Pix) para o vendedor
+      CREATE TABLE IF NOT EXISTS payouts (
+        id                TEXT PRIMARY KEY,
+        tenant_id         TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        amount_cents      INTEGER NOT NULL DEFAULT 0,
+        asaas_transfer_id TEXT,
+        status            TEXT NOT NULL DEFAULT 'done',   -- 'done' | 'failed'
+        error             TEXT,
+        created_at        TIMESTAMP DEFAULT NOW()
+      );
     `);
 
     // Migracoes incrementais — adiciona colunas novas se nao existirem
@@ -247,6 +258,8 @@ async function initDatabase() {
       ALTER TABLE products ADD COLUMN IF NOT EXISTS accept_card         BOOLEAN DEFAULT TRUE;
       CREATE UNIQUE INDEX IF NOT EXISTS products_slug_unique ON products (slug) WHERE slug IS NOT NULL;
       ALTER TABLE seller_accounts ADD COLUMN IF NOT EXISTS pass_card_fee_to_buyer BOOLEAN DEFAULT FALSE;
+      ALTER TABLE seller_accounts ADD COLUMN IF NOT EXISTS asaas_api_key_enc TEXT;
+      ALTER TABLE seller_accounts ADD COLUMN IF NOT EXISTS payout_pix_key    TEXT;
     `);
 
     // Planos — DO UPDATE garante que mudancas de preco/limite sejam aplicadas no restart
@@ -722,16 +735,35 @@ const sellerAccounts = {
     }
     const id = uuidv4();
     await query(
-      `INSERT INTO seller_accounts (id, tenant_id, asaas_account_id, asaas_wallet_id, status, kyc_status, accept_pix, accept_card)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      `INSERT INTO seller_accounts (id, tenant_id, asaas_account_id, asaas_wallet_id, status, kyc_status, accept_pix, accept_card, asaas_api_key_enc, payout_pix_key)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
       [id, tenantId, data.asaas_account_id || null, data.asaas_wallet_id || null,
        data.status || 'pending', data.kyc_status || null,
-       data.accept_pix !== false, data.accept_card !== false]
+       data.accept_pix !== false, data.accept_card !== false,
+       data.asaas_api_key_enc || null, data.payout_pix_key || null]
     );
     return this.findByTenant(tenantId);
   },
   async findByTenant(tenantId) {
     return queryOne('SELECT * FROM seller_accounts WHERE tenant_id = $1', [tenantId]);
+  },
+  async findAllActiveWithKey() {
+    return query("SELECT * FROM seller_accounts WHERE status='active' AND asaas_api_key_enc IS NOT NULL");
+  }
+};
+
+// ─── Payouts (repasses automaticos) ─────────────────────────────────────────────
+const payouts = {
+  async create(data) {
+    const id = uuidv4();
+    await query(
+      'INSERT INTO payouts (id, tenant_id, amount_cents, asaas_transfer_id, status, error) VALUES ($1,$2,$3,$4,$5,$6)',
+      [id, data.tenant_id, data.amount_cents || 0, data.asaas_transfer_id || null, data.status || 'done', data.error || null]
+    );
+    return id;
+  },
+  async findAll(tenantId, limit = 100) {
+    return query('SELECT * FROM payouts WHERE tenant_id=$1 ORDER BY created_at DESC LIMIT $2', [tenantId, limit]);
   }
 };
 
@@ -780,4 +812,4 @@ const orders = {
   }
 };
 
-module.exports = { initDatabase, pool, query, queryOne, users, sessions, tenants, products, deliveries, webhookLogs, plans, unmatchedProducts, supportTickets, productFiles, sellerAccounts, orders };
+module.exports = { initDatabase, pool, query, queryOne, users, sessions, tenants, products, deliveries, webhookLogs, plans, unmatchedProducts, supportTickets, productFiles, sellerAccounts, payouts, orders };
