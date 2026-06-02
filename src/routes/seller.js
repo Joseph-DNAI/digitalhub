@@ -25,6 +25,10 @@ router.post('/onboarding', requireAuth, async (req, res) => {
     if (!name || !email || !cpfCnpj) {
       return res.status(400).json({ success: false, error: 'name, email e cpfCnpj sao obrigatorios.' });
     }
+    // Venda direta e exclusiva de assinantes (planos pagos). Protege o custo de R$12,90/subconta.
+    if (!req.user || req.user.plan_id === 'free') {
+      return res.status(403).json({ success: false, error: 'A venda direta esta disponivel a partir do plano Starter. Faca upgrade para ativar.', needs_upgrade: true });
+    }
     // Idempotente: se este tenant ja tem subconta registrada, reutiliza (nunca cria outra).
     const existing = await sellerAccounts.findByTenant(req.tenantId);
     if (existing && existing.asaas_account_id) {

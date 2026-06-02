@@ -1431,6 +1431,8 @@ async function loadConfig() {
 async function loadVendaDiretaSection() {
   var body = document.getElementById('cfg-venda-direta-body');
   if (!body) return;
+  // Venda direta e exclusiva de assinantes — Free ve o card de upgrade.
+  if (currentUser && currentUser.plan_id === 'free') { renderSellerUpgrade(body); return; }
   body.innerHTML = '<div style="color:var(--text3);font-size:13px;">Carregando...</div>';
   try {
     var res = await apiFetch('/api/seller/account');
@@ -1508,7 +1510,31 @@ function renderSellerActive(body, account) {
     '<div class="toggle-row">' +
       '<div class="toggle-info"><div class="t-title">Aceitar cartao de credito</div><div class="t-desc">Credito via Asaas/gateway integrado</div></div>' +
       '<button class="toggle' + (account.accept_card ? ' on' : '') + '" id="seller-toggle-card" onclick="saveSellerMethods()"></button>' +
-    '</div>';
+    '</div>' +
+    sellerFeesNote();
+}
+
+// Card de upgrade exibido pra usuarios Free (venda direta e exclusiva de assinantes)
+function renderSellerUpgrade(body) {
+  body.innerHTML =
+    '<div style="text-align:center;padding:8px 4px;">' +
+      '<div style="width:52px;height:52px;border-radius:14px;background:var(--orange-dim);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;"><i class="ti ti-rocket" style="color:var(--orange);font-size:26px;"></i></div>' +
+      '<div style="font-family:\'Satoshi\',sans-serif;font-weight:700;font-size:17px;margin-bottom:6px;">Venda direta e um recurso dos assinantes</div>' +
+      '<div style="font-size:13px;color:var(--text2);line-height:1.6;max-width:440px;margin:0 auto 16px;">Venda seus produtos direto pela Vaultly, com checkout proprio e split automatico. No <strong style="color:var(--emerald);">Pix voce recebe sem taxa por venda</strong> &mdash; perfeito pra low ticket. Disponivel a partir do plano <strong>Starter</strong>.</div>' +
+      '<button class="btn btn-primary" onclick="showUpgradeModal()"><i class="ti ti-rocket"></i> Fazer upgrade</button>' +
+    '</div>' +
+    sellerFeesNote();
+}
+
+// Bloco de transparencia das taxas (Pix x cartao) mostrado ao vendedor
+function sellerFeesNote() {
+  return '<div style="margin-top:16px;padding:12px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;font-size:12px;color:var(--text2);line-height:1.6;">' +
+    '<div style="font-weight:700;color:var(--text);margin-bottom:8px;"><i class="ti ti-info-circle" style="color:var(--orange);"></i> Como funcionam as taxas ao vender</div>' +
+    '<div style="display:flex;gap:14px;flex-wrap:wrap;">' +
+      '<div style="flex:1;min-width:170px;"><strong style="color:var(--emerald);"><i class="ti ti-qrcode"></i> Pix</strong><br>Recebe <strong>na hora</strong> e <strong>sem taxa por venda</strong> &mdash; voce fica com o valor cheio. Sem risco de estorno.</div>' +
+      '<div style="flex:1;min-width:170px;"><strong style="color:var(--orange);"><i class="ti ti-credit-card"></i> Cartao</strong><br>Taxa do cartao (~1,99% + R$0,49), recebimento em alguns dias e possibilidade de estorno/chargeback.</div>' +
+    '</div>' +
+  '</div>';
 }
 
 function escAttr(s) {
