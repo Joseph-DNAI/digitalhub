@@ -6,8 +6,9 @@ const path     = require('path');
 const fs       = require('fs');
 const { products, unmatchedProducts, tenants, productFiles } = require('../models/database');
 const { uploadFile, deleteFile } = require('../services/storageService');
-const { requireAuth, requirePlanLimit } = require('../middleware/auth');
+const { requireAuth } = require('../middleware/auth');
 const { fetchYampiProducts, fetchKiwifyProducts } = require('../services/platformApiService');
+const { initialStatus, canActivate, atGlobalCap, MAX_PRODUCTS_TOTAL } = require('../services/productLimits');
 const logger   = require('../config/logger');
 
 router.use(requireAuth);
@@ -80,11 +81,31 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.post('/', requirePlanLimit('product'), uploadMw, async (req, res) => {
+router.post('/', uploadMw, async (req, res) => {
   try {
-    const { name, description, price, kiwify_id, yampi_id, email_template } = req.body;
+    const { name, description, price, kiwify_id, yampi_id, email_template, confirm_evict } = req.body;
     if (!name) return res.status(400).json({ success: false, error: 'Campo obrigatório: name' });
-    if (!kiwify_id && !yampi_id) return res.status(400).json({ success: false, error: 'Informe kiwify_id ou yampi_id' });
+
+    // Teto global anti-abuso (ativos + inativos). Se cheio: descarta o inativo mais antigo
+    // (com confirmacao) ou bloqueia se todos estiverem ativos.
+    const total = await products.count(req.tenantId);
+    if (atGlobalCap(total, MAX_PRODUCTS_TOTAL)) {
+      const oldest = await products.findOldestInactive(req.tenantId);
+      if (!oldest) {
+        if (req.file) { try { fs.unlinkSync(req.file.path); } catch (_) {} }
+        return res.status(409).json({ success: false,
+          error: 'Voce atingiu o limite de ' + MAX_PRODUCTS_TOTAL + ' produtos e todos estao ativos. Desative ou apague algum para cadastrar.' });
+      }
+      if (confirm_evict !== 'true' && confirm_evict !== true) {
+        if (req.file) { try { fs.unlinkSync(req.file.path); } catch (_) {} }
+        return res.status(200).json({ success: false, needs_evict: true,
+          evict_product: { id: oldest.id, name: oldest.name, since: oldest.created_at },
+          error: 'Limite de ' + MAX_PRODUCTS_TOTAL + ' produtos atingido.' });
+      }
+      // confirmado: apaga o mais antigo inativo (e seu arquivo no storage, se houver)
+      if (oldest.file_path) { try { await deleteFile(oldest.file_path); } catch (_) {} }
+      await products.delete(req.tenantId, oldest.id);
+    }
 
     let r2Key = null, fileName = null;
     if (req.file) {
@@ -92,22 +113,26 @@ router.post('/', requirePlanLimit('product'), uploadMw, async (req, res) => {
       fileName = req.file.originalname;
     }
 
+    // Status inicial: ativo se ha espaco no limite de ativos do plano; senao inativo.
+    const activeCount = await products.countActive(req.tenantId);
+    const status = initialStatus(activeCount, req.user.max_products);
+
     const created = await products.create(req.tenantId, {
-      name, description: description||null,
-      price: parseFloat(price)||0,
-      kiwify_id: kiwify_id||null, yampi_id: yampi_id||null,
-      email_template: email_template||null,
-      file_path: r2Key, file_name: fileName
+      name, description: description || null,
+      price: parseFloat(price) || 0,
+      kiwify_id: kiwify_id || null, yampi_id: yampi_id || null,
+      email_template: email_template || null,
+      file_path: r2Key, file_name: fileName,
+      status: status
     });
 
-    // Limpa produtos pendentes que correspondem ao mesmo ID de plataforma
     if (kiwify_id) await unmatchedProducts.deleteByPlatformId(req.tenantId, 'kiwify', kiwify_id);
     if (yampi_id)  await unmatchedProducts.deleteByPlatformId(req.tenantId, 'yampi',  yampi_id);
 
     const { file_path, ...safe } = created;
-    res.status(201).json({ success: true, data: safe });
+    res.status(201).json({ success: true, data: safe, status: status });
   } catch (err) {
-    logger.error(`Erro ao criar produto: ${err.message}`);
+    logger.error('Erro ao criar produto: ' + err.message);
     res.status(500).json({ success: false, error: err.message });
   }
 });
@@ -129,6 +154,15 @@ router.put('/:id', uploadMw, async (req, res) => {
     }
 
     if (updateData.price !== undefined) updateData.price = parseFloat(updateData.price);
+
+    // Ativar pelo editor tambem respeita o limite de ativos do plano.
+    if (updateData.status === 'active' && existing.status !== 'active') {
+      const activeCount = await products.countActive(req.tenantId);
+      if (!canActivate(activeCount, req.user.max_products)) {
+        return res.status(403).json({ success: false, needs_upgrade: true,
+          error: 'Limite de produtos ativos do seu plano atingido. Faca upgrade ou desative outro produto.' });
+      }
+    }
 
     const updated = await products.update(req.tenantId, req.params.id, updateData);
 
@@ -250,16 +284,19 @@ router.get('/platform-list/:platform', async (req, res) => {
 
 const { sellerAccounts } = require('../models/database');
 
-function makeSlug(s) {
-  return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+// Codigo aleatorio curto e url-safe (sem caracteres ambiguos) — vira o link do checkout.
+function makeCode() {
+  const chars = 'abcdefghijkmnpqrstuvwxyz23456789';
+  let s = '';
+  for (let i = 0; i < 8; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return s;
 }
 
 // PUT /api/products/:id/selling — configura venda direta do produto
 router.put('/:id/selling', requireAuth, async (req, res) => {
   try {
     const MIN = parseInt(process.env.DIRECT_MIN_PRICE_CENTS || '900', 10);
-    const { sellable, price_cents, slug, checkout_title, checkout_description, accept_pix, accept_card } = req.body;
+    const { sellable, price_cents, checkout_title, checkout_description, accept_pix, accept_card } = req.body;
 
     const product = await products.findById(req.tenantId, req.params.id);
     if (!product) return res.status(404).json({ success: false, error: 'Produto nao encontrado.' });
@@ -274,10 +311,12 @@ router.put('/:id/selling', requireAuth, async (req, res) => {
       }
     }
 
-    let finalSlug = slug ? makeSlug(slug) : makeSlug(product.name) + '-' + req.params.id.slice(0, 6);
-    const clash = await require('../models/database').queryOne(
-      'SELECT id FROM products WHERE slug = $1 AND id <> $2', [finalSlug, req.params.id]);
-    if (clash) finalSlug = finalSlug + '-' + req.params.id.slice(0, 4);
+    // Link estavel: mantem o codigo ja existente; gera um aleatorio unico na 1a ativacao.
+    let finalSlug = product.slug;
+    if (!finalSlug) {
+      const db = require('../models/database');
+      do { finalSlug = makeCode(); } while (await db.queryOne('SELECT id FROM products WHERE slug = $1', [finalSlug]));
+    }
 
     const updated = await products.update(req.tenantId, req.params.id, {
       sellable: !!sellable,
@@ -292,6 +331,67 @@ router.put('/:id/selling', requireAuth, async (req, res) => {
   } catch (err) {
     logger.error('products/selling: ' + err.message);
     res.status(500).json({ success: false, error: 'Erro interno.' });
+  }
+});
+
+// PUT /api/products/:id/status — ativa/desativa o produto (ativos contam no limite do plano)
+router.put('/:id/status', async (req, res) => {
+  try {
+    const want = req.body.status === 'active' ? 'active' : 'inactive';
+    const product = await products.findById(req.tenantId, req.params.id);
+    if (!product) return res.status(404).json({ success: false, error: 'Produto nao encontrado.' });
+
+    if (want === 'active' && product.status !== 'active') {
+      const activeCount = await products.countActive(req.tenantId);
+      if (!canActivate(activeCount, req.user.max_products)) {
+        return res.status(403).json({ success: false, needs_upgrade: true,
+          error: 'Limite de produtos ativos do seu plano atingido. Faca upgrade ou desative outro produto.' });
+      }
+    }
+    const updated = await products.update(req.tenantId, req.params.id, { status: want });
+    const { file_path, ...safe } = updated;
+    res.json({ success: true, data: safe });
+  } catch (err) {
+    logger.error('products/status: ' + err.message);
+    res.status(500).json({ success: false, error: 'Erro interno.' });
+  }
+});
+
+// POST /api/products/bulk — cria varios produtos a partir de itens JSON (import CSV).
+// Itens: [{ name, price (reais, opcional), description (opcional) }]. Sem arquivo (entra depois).
+// Respeita o teto global e o limite de ativos. NAO faz eviction (para nao apagar em massa).
+router.post('/bulk', express.json(), async (req, res) => {
+  try {
+    const items = Array.isArray(req.body.items) ? req.body.items : [];
+    if (!items.length) return res.status(400).json({ success: false, error: 'Nenhum item para importar.' });
+
+    let total = await products.count(req.tenantId);
+    let activeCount = await products.countActive(req.tenantId);
+    const createdList = [];
+    let skipped = 0;
+
+    for (const it of items) {
+      const name = (it && it.name ? String(it.name) : '').trim();
+      if (!name) { skipped++; continue; }
+      if (atGlobalCap(total, MAX_PRODUCTS_TOTAL)) { skipped++; continue; }
+
+      const status = initialStatus(activeCount, req.user.max_products);
+      const priceReais = parseFloat(String(it.price || '0').replace(',', '.')) || 0;
+      const created = await products.create(req.tenantId, {
+        name,
+        description: it.description ? String(it.description) : null,
+        price: priceReais,
+        status: status
+      });
+      createdList.push({ id: created.id, name: created.name, status: created.status });
+      total++;
+      if (status === 'active') activeCount++;
+    }
+
+    res.status(201).json({ success: true, created: createdList.length, skipped: skipped, items: createdList });
+  } catch (err) {
+    logger.error('products/bulk: ' + err.message);
+    res.status(500).json({ success: false, error: 'Erro ao importar.' });
   }
 });
 

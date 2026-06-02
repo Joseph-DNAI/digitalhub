@@ -463,6 +463,18 @@ const products = {
   async count(tenantId) {
     const r = await queryOne('SELECT COUNT(*) as n FROM products WHERE tenant_id = $1', [tenantId]);
     return parseInt(r.n);
+  },
+
+  async countActive(tenantId) {
+    const r = await queryOne("SELECT COUNT(*) as n FROM products WHERE tenant_id = $1 AND status = 'active'", [tenantId]);
+    return parseInt(r.n);
+  },
+
+  async findOldestInactive(tenantId) {
+    return queryOne(
+      "SELECT * FROM products WHERE tenant_id = $1 AND status = 'inactive' ORDER BY created_at ASC LIMIT 1",
+      [tenantId]
+    );
   }
 };
 
