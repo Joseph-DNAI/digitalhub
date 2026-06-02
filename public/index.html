@@ -391,7 +391,8 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
             <div class="page-title">Produtos</div>
             <div class="page-sub">gerencie seus produtos digitais</div>
           </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <span id="products-active-count" style="font-size:12px;color:var(--text2);"></span>
             <button class="btn btn-ghost" onclick="openImportMenu()"><i class="ti ti-download"></i> Importar produtos</button>
             <button class="btn btn-primary" onclick="openModal()">
               <i class="ti ti-plus"></i> Novo produto
@@ -411,6 +412,12 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
             <span style="font-size:12px;color:var(--text2);margin-left:4px;">— chegaram via webhook mas ainda não têm arquivo vinculado</span>
           </div>
           <div id="unmatched-list" style="color:var(--text3);font-size:13px;">Verificando...</div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <button class="btn btn-ghost btn-sm" id="pf-all" onclick="setProductFilter('all')">Todos</button>
+          <button class="btn btn-ghost btn-sm" id="pf-active" onclick="setProductFilter('active')">Ativos</button>
+          <button class="btn btn-ghost btn-sm" id="pf-inactive" onclick="setProductFilter('inactive')">Inativos</button>
         </div>
 
         <div class="products-grid" id="products-grid">
@@ -2465,6 +2472,8 @@ async function loadDashboard() {
 
 // ── Products ─────────────────────────────────────────────────────
 let productsCache = [];
+var _productFilter = 'all';
+function setProductFilter(f) { _productFilter = f; loadProducts(); }
 
 async function loadProducts() {
   const grid = document.getElementById('products-grid');
@@ -2473,22 +2482,28 @@ async function loadProducts() {
     const res = await apiFetch('/api/products');
     if (!res.success) throw new Error(res.error);
     productsCache = res.data;
-    if (!res.data.length) {
+    var _active = res.data.filter(function(p) { return p.status === 'active'; }).length;
+    var _lim = (currentUser && currentUser.max_products);
+    var _limTxt = (_lim === -1 || _lim == null) ? '∞' : _lim;
+    var _cc = document.getElementById('products-active-count');
+    if (_cc) _cc.textContent = _active + '/' + _limTxt + ' ativos · ' + res.data.length + '/100 cadastrados';
+    var _list = (_productFilter === 'all') ? res.data : res.data.filter(function(p) { return p.status === _productFilter; });
+    if (!_list.length) {
       grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--text3);padding:48px;">
         <i class="ti ti-packages" style="font-size:32px;display:block;margin-bottom:12px;opacity:0.4;"></i>
-        Nenhum produto cadastrado. Clique em <strong>Novo produto</strong> para começar.
+        ${res.data.length ? 'Nenhum produto neste filtro.' : 'Nenhum produto cadastrado. Clique em <strong>Novo produto</strong> para começar.'}
       </div>`;
       return;
     }
-    grid.innerHTML = res.data.map(p => `
+    grid.innerHTML = _list.map(p => `
       <div class="product-card">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px;">
           <div style="width:42px;height:42px;border-radius:10px;background:var(--orange-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
             <i class="ti ti-file-text" style="color:var(--orange);font-size:20px;"></i>
           </div>
-          <span class="badge badge-${p.status === 'active' ? 'green' : 'red'}">
-            ${p.status === 'active' ? 'Ativo' : 'Inativo'}
-          </span>
+          <button class="btn btn-ghost btn-sm" onclick="toggleProductStatus('${p.id}','${p.status === 'active' ? 'inactive' : 'active'}')" title="${p.status === 'active' ? 'Desativar' : 'Ativar'}">
+            <i class="ti ti-${p.status === 'active' ? 'player-pause' : 'player-play'}"></i> ${p.status === 'active' ? 'Ativo' : 'Inativo'}
+          </button>
         </div>
         <div style="font-family:'Satoshi',sans-serif;font-weight:700;font-size:15px;margin-bottom:6px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${p.name}">${p.name}</div>
         <div style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.5;flex:1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
@@ -2530,6 +2545,19 @@ async function loadProducts() {
   } catch(e) {
     grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--red);padding:48px;">Erro ao carregar: ${e.message}</div>`;
   }
+}
+
+async function toggleProductStatus(id, want) {
+  try {
+    var res = await apiFetch('/api/products/' + id + '/status', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: want }) });
+    if (!res.success) {
+      if (res.needs_upgrade) { showToast(res.error, 'warn'); if (typeof showUpgradeModal === 'function') showUpgradeModal(); }
+      else showToast(res.error || 'Erro.', 'error');
+      return;
+    }
+    showToast(want === 'active' ? 'Produto ativado!' : 'Produto desativado.', 'success');
+    loadProducts();
+  } catch (e) { showToast(e.message || 'Erro.', 'error'); }
 }
 
 // ── Deliveries ───────────────────────────────────────────────────
