@@ -1,7 +1,7 @@
 // src/routes/checkout.js — API pública de checkout (sem auth)
 const express = require('express');
 const router  = express.Router();
-const { products, orders, sellerAccounts, tenants } = require('../models/database');
+const { products, orders, sellerAccounts, tenants, users } = require('../models/database');
 const asaas = require('../services/asaasService');
 const { vaultlyFeeCents } = require('../services/pricing');
 const logger = require('../config/logger');
@@ -53,8 +53,13 @@ router.post('/:slug', async (req, res) => {
       return res.status(409).json({ success: false, error: 'Vendedor sem conta de recebimento ativa.' });
     }
 
+    // Taxa Vaultly só incide no plano Free; planos pagos sao isentos (a assinatura cobre).
+    const tenant = await tenants.findById(product.tenant_id);
+    const sellerUser = tenant ? await users.findById(tenant.user_id) : null;
+    const isFreePlan = !sellerUser || sellerUser.plan_id === 'free';
+
     const amountCents = product.price_cents;
-    const feeCents = vaultlyFeeCents(amountCents);
+    const feeCents = isFreePlan ? vaultlyFeeCents(amountCents) : 0;
 
     orderId = await orders.create(product.tenant_id, {
       product_id: product.id, buyer_name, buyer_email, buyer_doc,
@@ -69,6 +74,7 @@ router.post('/:slug', async (req, res) => {
       customerId, method: pm, amountCents,
       description: product.checkout_title || product.name,
       sellerWalletId: acc.asaas_wallet_id,
+      chargeVaultlyFee: isFreePlan,
       dueDate, orderId,
       card: pm === 'card' ? card : undefined,
       remoteIp: req.headers['x-forwarded-for'] || req.ip

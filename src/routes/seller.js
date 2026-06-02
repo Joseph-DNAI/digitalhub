@@ -1,7 +1,7 @@
 // src/routes/seller.js — onboarding e status da conta de recebimento (Asaas)
 const express = require('express');
 const router  = express.Router();
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requireAdmin } = require('../middleware/auth');
 const { sellerAccounts } = require('../models/database');
 const asaas = require('../services/asaasService');
 const logger = require('../config/logger');
@@ -25,13 +25,33 @@ router.post('/onboarding', requireAuth, async (req, res) => {
     if (!name || !email || !cpfCnpj) {
       return res.status(400).json({ success: false, error: 'name, email e cpfCnpj sao obrigatorios.' });
     }
+    // Venda direta e exclusiva de assinantes (planos pagos). Protege o custo de R$12,90/subconta.
+    if (!req.user || req.user.plan_id === 'free') {
+      return res.status(403).json({ success: false, error: 'A venda direta esta disponivel a partir do plano Starter. Faca upgrade para ativar.', needs_upgrade: true });
+    }
+    // Idempotente: se este tenant ja tem subconta registrada, reutiliza (nunca cria outra).
     const existing = await sellerAccounts.findByTenant(req.tenantId);
-    if (existing && existing.status === 'active') {
-      return res.status(409).json({ success: false, error: 'Conta de recebimento ja ativa.' });
+    if (existing && existing.asaas_account_id) {
+      const acc = await sellerAccounts.upsert(req.tenantId, {
+        status:      'active',
+        accept_pix:  accept_pix !== false,
+        accept_card: accept_card !== false
+      });
+      return res.json({ success: true, account: acc, reused: true });
     }
 
-    const created = await asaas.createSubaccount({ name, email, cpfCnpj, mobilePhone, birthDate, incomeValue,
-                                                   postalCode, address, addressNumber, province });
+    // Cria no Asaas; se falhar, tenta adotar uma subconta ja existente p/ este CPF/CNPJ
+    // (cobre o caso do Asaas ter criado a conta mas devolvido erro, evitando duplicatas).
+    let created;
+    try {
+      created = await asaas.createSubaccount({ name, email, cpfCnpj, mobilePhone, birthDate, incomeValue,
+                                               postalCode, address, addressNumber, province });
+    } catch (e) {
+      const found = await asaas.findSubaccountByCpfCnpj(cpfCnpj).catch(() => null);
+      if (!found || !found.accountId) throw e;
+      created = found;
+      logger.warn('Subconta ja existia no Asaas — adotada (tenant ' + req.tenantId.slice(0, 8) + ')');
+    }
     const acc = await sellerAccounts.upsert(req.tenantId, {
       asaas_account_id: created.accountId,
       asaas_wallet_id:  created.walletId,
@@ -40,7 +60,7 @@ router.post('/onboarding', requireAuth, async (req, res) => {
       accept_pix:       accept_pix !== false,
       accept_card:      accept_card !== false
     });
-    logger.info('Subconta Asaas criada — tenant ' + req.tenantId.slice(0, 8));
+    logger.info('Subconta Asaas ativa — tenant ' + req.tenantId.slice(0, 8));
     res.status(201).json({ success: true, account: acc });
   } catch (err) {
     logger.error('seller/onboarding: ' + err.message);
@@ -60,6 +80,19 @@ router.put('/methods', requireAuth, async (req, res) => {
   } catch (err) {
     logger.error('seller/methods: ' + err.message);
     res.status(500).json({ success: false, error: 'Erro interno.' });
+  }
+});
+
+// GET /api/seller/admin/accounts — lista todas as subcontas criadas no Asaas (admin)
+router.get('/admin/accounts', requireAdmin, async (req, res) => {
+  try {
+    const list = await asaas.listSubaccounts(100);
+    res.json({ success: true, accounts: (list || []).map(a => ({
+      id: a.id, name: a.name, email: a.email, cpfCnpj: a.cpfCnpj, walletId: a.walletId, status: a.status
+    })) });
+  } catch (err) {
+    logger.error('seller/admin/accounts: ' + err.message);
+    res.status(502).json({ success: false, error: err.message });
   }
 });
 
