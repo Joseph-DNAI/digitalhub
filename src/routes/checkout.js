@@ -3,7 +3,7 @@ const express = require('express');
 const router  = express.Router();
 const { products, orders, sellerAccounts, tenants, users } = require('../models/database');
 const asaas = require('../services/asaasService');
-const { vaultlyFeeCents } = require('../services/pricing');
+const { vaultlyFeeCents, cardChargeCents } = require('../services/pricing');
 const logger = require('../config/logger');
 
 // GET /api/checkout/:slug — dados públicos do produto p/ renderizar a página
@@ -11,6 +11,9 @@ router.get('/:slug', async (req, res) => {
   try {
     const product = await products.findBySlug(req.params.slug);
     if (!product) return res.status(404).json({ success: false, error: 'Produto nao encontrado.' });
+    const acc = await sellerAccounts.findByTenant(product.tenant_id);
+    const passFee = !!(acc && acc.pass_card_fee_to_buyer);
+    const cardCents = passFee ? cardChargeCents(product.price_cents) : product.price_cents;
     res.json({
       success: true,
       product: {
@@ -18,6 +21,9 @@ router.get('/:slug', async (req, res) => {
         title: product.checkout_title || product.name,
         description: product.checkout_description,
         price_cents: product.price_cents,
+        pix_cents: product.price_cents,
+        card_cents: cardCents,
+        pass_card_fee: passFee,
         accept_pix: product.accept_pix,
         accept_card: product.accept_card
       }
@@ -58,7 +64,11 @@ router.post('/:slug', async (req, res) => {
     const sellerUser = tenant ? await users.findById(tenant.user_id) : null;
     const isFreePlan = !sellerUser || sellerUser.plan_id === 'free';
 
-    const amountCents = product.price_cents;
+    // Cartao com repasse ligado: cobra o valor com a taxa embutida (gross-up).
+    // Pix sempre cobra o valor real. O split ja entrega ao vendedor (cobrado - taxaAsaas) = preco cheio.
+    const amountCents = (pm === 'card' && acc.pass_card_fee_to_buyer)
+      ? cardChargeCents(product.price_cents)
+      : product.price_cents;
     const feeCents = isFreePlan ? vaultlyFeeCents(amountCents) : 0;
 
     orderId = await orders.create(product.tenant_id, {
