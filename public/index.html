@@ -1548,6 +1548,12 @@ function renderSellerForm(prefill) {
         '<label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;"><input type="checkbox" id="seller-card" checked style="width:16px;height:16px;accent-color:var(--orange);" /> <i class="ti ti-credit-card" style="color:var(--orange);font-size:16px;"></i> Cartao de credito</label>' +
       '</div>' +
     '</div>' +
+    '<div class="form-group full" style="margin-top:6px;">' +
+      '<label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:12px;color:var(--text2);line-height:1.5;">' +
+        '<input type="checkbox" id="seller-pixdecl" style="width:16px;height:16px;accent-color:var(--orange);margin-top:2px;flex-shrink:0;" /> ' +
+        '<span>Declaro que meu <strong>CPF/CNPJ esta cadastrado como chave Pix</strong> no meu banco e autorizo a Vaultly a usar essa chave para repassar automaticamente os valores das minhas vendas (repasse automatico a cada 2 horas, via Pix). Se a chave nao estiver ativa no banco, o repasse nao sera concluido.</span>' +
+      '</label>' +
+    '</div>' +
   '</div>' +
   '<button class="btn btn-primary" style="margin-top:16px;" id="seller-onboard-btn" onclick="submitSellerOnboarding()">' +
     '<i class="ti ti-rocket"></i> Ativar conta de recebimento' +
@@ -1563,6 +1569,12 @@ function renderSellerActive(body, account) {
         '<div style="font-size:12px;color:var(--text2);">Ative a venda direta em cada produto na aba Produtos.</div>' +
       '</div>' +
     '</div>' +
+    (account.has_payout_key === false ?
+      '<div style="display:flex;align-items:flex-start;gap:8px;padding:10px 14px;background:var(--yellow-dim);border:1px solid rgba(245,158,11,0.3);border-radius:8px;margin-bottom:16px;font-size:12px;color:var(--yellow);line-height:1.5;">' +
+        '<i class="ti ti-alert-triangle" style="font-size:15px;flex-shrink:0;margin-top:1px;"></i>' +
+        '<span>Sua conta foi criada antes do saque automatico. Para habilitar o repasse automatico, reative sua conta de recebimento (refaca o cadastro).</span>' +
+      '</div>'
+      : '') +
     '<div style="font-size:13px;font-weight:600;margin-bottom:10px;">Metodos aceitos</div>' +
     '<div class="toggle-row">' +
       '<div class="toggle-info"><div class="t-title">Aceitar Pix</div><div class="t-desc">Pagamentos via QR Code Pix</div></div>' +
@@ -1652,11 +1664,13 @@ async function submitSellerOnboarding() {
   var province   = (document.getElementById('seller-province') || {}).value || '';
   var acceptPix  = !!(document.getElementById('seller-pix') || {}).checked;
   var acceptCard = !!(document.getElementById('seller-card') || {}).checked;
+  var pixDecl    = !!(document.getElementById('seller-pixdecl') || {}).checked;
 
   if (!name || !email || !cpfCnpj || !mobilePhone || !birthDate || !postalCode || !address || !addressNumber || !province) {
     showToast('Preencha todos os campos obrigatorios (incluindo endereco).', 'warn');
     return;
   }
+  if (!pixDecl) { showToast('Marque a declaracao do CPF/CNPJ como chave Pix para continuar.', 'warn'); return; }
 
   btn.disabled = true;
   btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i> Ativando...';
@@ -1664,7 +1678,7 @@ async function submitSellerOnboarding() {
     var res = await apiFetch('/api/seller/onboarding', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name, email: email, cpfCnpj: cpfCnpj, mobilePhone: mobilePhone, birthDate: birthDate, incomeValue: incomeValue, postalCode: postalCode, address: address, addressNumber: addressNumber, province: province, accept_pix: acceptPix, accept_card: acceptCard })
+      body: JSON.stringify({ name: name, email: email, cpfCnpj: cpfCnpj, mobilePhone: mobilePhone, birthDate: birthDate, incomeValue: incomeValue, postalCode: postalCode, address: address, addressNumber: addressNumber, province: province, accept_pix: acceptPix, accept_card: acceptCard, pix_key_declared: pixDecl })
     });
     if (!res.success) throw new Error(res.error || 'Erro desconhecido');
     showToast('Conta de recebimento ativada!', 'success');
