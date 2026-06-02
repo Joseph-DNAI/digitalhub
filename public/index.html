@@ -392,12 +392,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
             <div class="page-sub">gerencie seus produtos digitais</div>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn btn-ghost" id="btn-import-kiwify" onclick="importFromPlatform('kiwify')" title="Saiba como conectar a Kiwify">
-              <i class="ti ti-download"></i> Importar da Kiwify
-            </button>
-            <button class="btn btn-ghost" id="btn-import-yampi" onclick="importFromPlatform('yampi')" title="Requer yampi_store_alias e yampi_api_token nas Configurações">
-              <i class="ti ti-download"></i> Importar da Yampi
-            </button>
+            <button class="btn btn-ghost" onclick="openImportMenu()"><i class="ti ti-download"></i> Importar produtos</button>
             <button class="btn btn-primary" onclick="openModal()">
               <i class="ti ti-plus"></i> Novo produto
             </button>
@@ -1117,6 +1112,19 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
       <button class="btn btn-primary" id="selling-save-btn" onclick="saveSelling()">
         <i class="ti ti-device-floppy"></i> Salvar
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── IMPORT MENU MODAL ── -->
+<div class="modal-bg" id="importMenuModal" onclick="if(event.target===this)closeImportMenu()">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header"><div class="modal-title">Importar produtos</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeImportMenu()"><i class="ti ti-x"></i></button></div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px;">
+      <button class="btn btn-ghost" style="justify-content:flex-start;" onclick="closeImportMenu();importFromKiwify()"><i class="ti ti-plug" style="color:var(--orange);"></i> Importar da Kiwify</button>
+      <button class="btn btn-ghost" style="justify-content:flex-start;" onclick="closeImportMenu();importFromYampi()"><i class="ti ti-plug" style="color:var(--orange);"></i> Importar da Yampi</button>
+      <button class="btn btn-ghost" style="justify-content:flex-start;" onclick="closeImportMenu();openCsvImport()"><i class="ti ti-file-spreadsheet" style="color:var(--emerald);"></i> Importar de CSV</button>
     </div>
   </div>
 </div>
@@ -3178,6 +3186,11 @@ async function getTenantConfig() {
   if (res.success) { _tenantConfigCache = res.data; return res.data; }
   return null;
 }
+
+function openImportMenu() { document.getElementById('importMenuModal').classList.add('open'); }
+function closeImportMenu() { document.getElementById('importMenuModal').classList.remove('open'); }
+function importFromKiwify() { importFromPlatform('kiwify'); }
+function importFromYampi() { importFromPlatform('yampi'); }
 
 async function importFromPlatform(platform) {
   var btn    = document.getElementById('btn-import-' + platform);
