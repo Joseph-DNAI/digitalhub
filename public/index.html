@@ -1129,6 +1129,24 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   </div>
 </div>
 
+<!-- ── CSV IMPORT MODAL ── -->
+<div class="modal-bg" id="csvModal" onclick="if(event.target===this)closeCsv()">
+  <div class="modal" style="max-width:600px;">
+    <div class="modal-header"><div class="modal-title">Importar de CSV</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeCsv()"><i class="ti ti-x"></i></button></div>
+    <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:12px;">
+      Colunas: <code>nome,preco,descricao</code> (cabeçalho na 1ª linha). O preço é usado só em planos pagos. O arquivo PDF é enviado depois, por produto.
+      <a href="#" onclick="downloadCsvTemplate();return false;" style="color:var(--orange);">Baixar modelo</a>
+    </div>
+    <input type="file" id="csv-file" accept=".csv,text/csv" onchange="parseCsvFile(this.files[0])" class="form-input"/>
+    <div id="csv-list" style="margin-top:14px;max-height:340px;overflow:auto;"></div>
+    <div id="csv-actions" style="display:none;justify-content:flex-end;gap:10px;margin-top:14px;">
+      <button class="btn btn-ghost" onclick="closeCsv()">Cancelar</button>
+      <button class="btn btn-primary" id="csv-import-btn" onclick="importCsvSelected()"><i class="ti ti-download"></i> Importar selecionados</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── STICKY SAVE BAR (webhook) ── -->
 <div class="save-bar" id="webhook-save-bar">
   <span class="save-bar-msg">Você tem alterações não salvas</span>
@@ -3191,6 +3209,84 @@ function openImportMenu() { document.getElementById('importMenuModal').classList
 function closeImportMenu() { document.getElementById('importMenuModal').classList.remove('open'); }
 function importFromKiwify() { importFromPlatform('kiwify'); }
 function importFromYampi() { importFromPlatform('yampi'); }
+
+// ── CSV IMPORT ──
+var _csvRows = [];
+
+function openCsvImport() { _csvRows = []; document.getElementById('csv-list').innerHTML = ''; document.getElementById('csv-actions').style.display = 'none'; var f = document.getElementById('csv-file'); if (f) f.value = ''; document.getElementById('csvModal').classList.add('open'); }
+function closeCsv() { document.getElementById('csvModal').classList.remove('open'); }
+
+function downloadCsvTemplate() {
+  var csv = 'nome,preco,descricao\nEbook Marketing,27.00,Guia completo de marketing\nPlanilha Financeira,19.90,Controle suas financas\n';
+  var blob = new Blob([csv], { type: 'text/csv' });
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'modelo-produtos.csv'; a.click();
+}
+
+function parseCsv(text) {
+  var lines = text.replace(/\r/g, '').split('\n').filter(function(l) { return l.trim() !== ''; });
+  if (!lines.length) return [];
+  var sep = (lines[0].indexOf(';') > -1 && lines[0].indexOf(',') === -1) ? ';' : ',';
+  function splitLine(line) {
+    var out = [], cur = '', q = false;
+    for (var i = 0; i < line.length; i++) {
+      var c = line[i];
+      if (c === '"') { q = !q; }
+      else if (c === sep && !q) { out.push(cur); cur = ''; }
+      else { cur += c; }
+    }
+    out.push(cur);
+    return out.map(function(s) { return s.trim().replace(/^"|"$/g, ''); });
+  }
+  var header = splitLine(lines[0]).map(function(h) { return h.toLowerCase(); });
+  var iName = header.indexOf('nome'); var iPrice = header.indexOf('preco'); var iDesc = header.indexOf('descricao');
+  if (iName === -1) iName = 0;
+  var rows = [];
+  for (var r = 1; r < lines.length; r++) {
+    var cols = splitLine(lines[r]);
+    var name = (cols[iName] || '').trim();
+    if (!name) continue;
+    rows.push({ name: name, price: iPrice > -1 ? (cols[iPrice] || '') : '', description: iDesc > -1 ? (cols[iDesc] || '') : '' });
+  }
+  return rows;
+}
+
+function parseCsvFile(file) {
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) { _csvRows = parseCsv(e.target.result); renderCsvList(); };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function renderCsvList() {
+  var el = document.getElementById('csv-list');
+  if (!_csvRows.length) { el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:12px;">Nenhum produto encontrado no arquivo.</div>'; document.getElementById('csv-actions').style.display = 'none'; return; }
+  el.innerHTML = _csvRows.map(function(row, i) {
+    return '<label style="display:flex;align-items:center;gap:10px;padding:8px 6px;border-bottom:1px solid var(--border);cursor:pointer;font-size:13px;">' +
+      '<input type="checkbox" class="csv-chk" data-i="' + i + '" checked style="width:16px;height:16px;accent-color:var(--orange);"/>' +
+      '<span style="flex:1;font-weight:600;">' + escAttr(row.name) + '</span>' +
+      (row.price ? '<span style="color:var(--orange);font-family:\'JetBrains Mono\',monospace;">R$ ' + escAttr(row.price) + '</span>' : '') +
+      '</label>';
+  }).join('');
+  document.getElementById('csv-actions').style.display = 'flex';
+}
+
+async function importCsvSelected() {
+  var checks = Array.prototype.slice.call(document.querySelectorAll('.csv-chk:checked'));
+  var items = checks.map(function(c) { return _csvRows[parseInt(c.getAttribute('data-i'), 10)]; }).filter(Boolean);
+  if (!items.length) { showToast('Selecione ao menos um produto.', 'warn'); return; }
+  var btn = document.getElementById('csv-import-btn'); btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i> Importando...';
+  try {
+    var res = await apiFetch('/api/products/bulk', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items: items }) });
+    if (!res.success) throw new Error(res.error || 'Falha ao importar');
+    showToast(res.created + ' produto(s) importado(s)' + (res.skipped ? ' - ' + res.skipped + ' ignorado(s)' : '') + '.', 'success');
+    closeCsv();
+    loadProducts();
+  } catch (e) {
+    showToast(e.message || 'Erro ao importar.', 'error');
+  } finally {
+    btn.disabled = false; btn.innerHTML = '<i class="ti ti-download"></i> Importar selecionados';
+  }
+}
 
 async function importFromPlatform(platform) {
   var btn    = document.getElementById('btn-import-' + platform);
