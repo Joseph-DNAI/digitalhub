@@ -8,7 +8,7 @@ const { products, unmatchedProducts, tenants, productFiles } = require('../model
 const { uploadFile, deleteFile } = require('../services/storageService');
 const { requireAuth, requirePlanLimit } = require('../middleware/auth');
 const { fetchYampiProducts, fetchKiwifyProducts } = require('../services/platformApiService');
-const { initialStatus, atGlobalCap, MAX_PRODUCTS_TOTAL } = require('../services/productLimits');
+const { initialStatus, canActivate, atGlobalCap, MAX_PRODUCTS_TOTAL } = require('../services/productLimits');
 const logger   = require('../config/logger');
 
 router.use(requireAuth);
@@ -321,6 +321,29 @@ router.put('/:id/selling', requireAuth, async (req, res) => {
     res.json({ success: true, product: updated });
   } catch (err) {
     logger.error('products/selling: ' + err.message);
+    res.status(500).json({ success: false, error: 'Erro interno.' });
+  }
+});
+
+// PUT /api/products/:id/status — ativa/desativa o produto (ativos contam no limite do plano)
+router.put('/:id/status', async (req, res) => {
+  try {
+    const want = req.body.status === 'active' ? 'active' : 'inactive';
+    const product = await products.findById(req.tenantId, req.params.id);
+    if (!product) return res.status(404).json({ success: false, error: 'Produto nao encontrado.' });
+
+    if (want === 'active' && product.status !== 'active') {
+      const activeCount = await products.countActive(req.tenantId);
+      if (!canActivate(activeCount, req.user.max_products)) {
+        return res.status(403).json({ success: false, needs_upgrade: true,
+          error: 'Limite de produtos ativos do seu plano atingido. Faca upgrade ou desative outro produto.' });
+      }
+    }
+    const updated = await products.update(req.tenantId, req.params.id, { status: want });
+    const { file_path, ...safe } = updated;
+    res.json({ success: true, data: safe });
+  } catch (err) {
+    logger.error('products/status: ' + err.message);
     res.status(500).json({ success: false, error: 'Erro interno.' });
   }
 });
