@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { vaultlyFeeCents, buildSplit } = require('../src/services/pricing');
+const { vaultlyFeeCents, buildSplit, cardChargeCents } = require('../src/services/pricing');
 
 test('taxa Vaultly = fixo 10c + 1.49% (arredonda p/ centavo)', () => {
   // R$27,00 = 2700c -> 10 + round(2700*0.0149)=10+40=50
@@ -43,4 +43,16 @@ test('buildSplit isenta a taxa Vaultly nos planos pagos (chargeVaultlyFee=false)
 test('nunca cobra mais que o valor da venda', () => {
   // venda de 1 centavo: taxa não pode passar do total
   assert.ok(vaultlyFeeCents(1) <= 1);
+});
+
+test('cardChargeCents: gross-up cobre a taxa do cartao (arredonda p/ cima)', () => {
+  // P=2700, taxa 1,99% + R$0,49 -> ceil((2700+49)/0.9801) = ceil(2804.81) = 2805
+  assert.strictEqual(cardChargeCents(2700), 2805);
+});
+
+test('cardChargeCents: apos a taxa, o vendedor recebe ~o preco cheio', () => {
+  const charged = cardChargeCents(2700);              // 2805
+  const asaasFee = Math.round(charged * 0.0199) + 49;  // 56 + 49 = 105
+  assert.ok(charged - asaasFee >= 2700);
+  assert.ok(charged - asaasFee <= 2702);
 });

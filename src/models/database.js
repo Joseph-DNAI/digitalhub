@@ -246,6 +246,7 @@ async function initDatabase() {
       ALTER TABLE products ADD COLUMN IF NOT EXISTS accept_pix          BOOLEAN DEFAULT TRUE;
       ALTER TABLE products ADD COLUMN IF NOT EXISTS accept_card         BOOLEAN DEFAULT TRUE;
       CREATE UNIQUE INDEX IF NOT EXISTS products_slug_unique ON products (slug) WHERE slug IS NOT NULL;
+      ALTER TABLE seller_accounts ADD COLUMN IF NOT EXISTS pass_card_fee_to_buyer BOOLEAN DEFAULT FALSE;
     `);
 
     // Planos — DO UPDATE garante que mudancas de preco/limite sejam aplicadas no restart

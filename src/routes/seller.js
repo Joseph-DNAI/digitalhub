@@ -71,11 +71,13 @@ router.post('/onboarding', requireAuth, async (req, res) => {
 // PUT /api/seller/methods — atualiza meios aceitos (Pix/cartao)
 router.put('/methods', requireAuth, async (req, res) => {
   try {
-    const { accept_pix, accept_card } = req.body;
-    const acc = await sellerAccounts.upsert(req.tenantId, {
+    const { accept_pix, accept_card, pass_card_fee_to_buyer } = req.body;
+    const data = {
       accept_pix: accept_pix !== false,
       accept_card: accept_card !== false
-    });
+    };
+    if (pass_card_fee_to_buyer !== undefined) data.pass_card_fee_to_buyer = !!pass_card_fee_to_buyer;
+    const acc = await sellerAccounts.upsert(req.tenantId, data);
     res.json({ success: true, account: acc });
   } catch (err) {
     logger.error('seller/methods: ' + err.message);
