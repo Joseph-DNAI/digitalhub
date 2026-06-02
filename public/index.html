@@ -286,6 +286,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
       <div class="nav-section">Sistema</div>
       <button class="nav-item" onclick="switchTab('webhook',this)"><i class="ti ti-webhook"></i> Webhook</button>
       <button class="nav-item" onclick="switchTab('email',this)"><i class="ti ti-mail"></i> Email</button>
+      <button class="nav-item" id="nav-loja" onclick="switchTab('loja',this)"><i class="ti ti-building-store"></i> Loja</button>
       <button class="nav-item" onclick="switchTab('config',this)"><i class="ti ti-settings"></i> Configurações</button>
       <button class="nav-item" onclick="switchTab('suporte',this)"><i class="ti ti-lifebuoy"></i> Suporte</button>
       <div id="admin-nav-section" style="display:none;">
@@ -852,7 +853,17 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
           </div>
         </div>
 
-        <!-- Venda Direta -->
+      </div>
+
+      <!-- ── LOJA ── -->
+      <div id="tab-loja" class="section">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Loja</div>
+            <div class="page-sub">venda direta e configuracoes de checkout</div>
+          </div>
+        </div>
+
         <div class="card" id="cfg-venda-direta-card">
           <div class="card-header">
             <div class="card-title"><i class="ti ti-shopping-cart" style="color:var(--orange);"></i> Venda Direta</div>
@@ -1430,6 +1441,9 @@ function showApp() {
   if (currentUser && currentUser.role === 'admin') {
     document.getElementById('admin-nav-section').style.display = 'block';
   }
+  // Oculta aba Loja para usuarios Free
+  var navLoja = document.getElementById('nav-loja');
+  if (navLoja) navLoja.style.display = (currentUser && currentUser.plan_id && currentUser.plan_id !== 'free') ? '' : 'none';
   // Card de assinatura na aba Config
   var planLabels = { free: 'Free', starter: 'Starter', basic: 'Basic', pro: 'Pro', business: 'Business' };
   var planSubs   = { free: 'Grátis · 1 produto · 50 entregas/mês', starter: 'R$37/mês · 2 produtos · 200 entregas/mês', basic: 'R$77/mês · 5 produtos · 1.000 entregas/mês', pro: 'R$147/mês · produtos ilimitados · 5.000 entregas/mês', business: 'R$247/mês anual · ilimitado' };
@@ -1472,7 +1486,6 @@ async function doLogout() {
 
 // ── loadConfig (aba Config) ─────────────────────────────────────
 async function loadConfig() {
-  loadVendaDiretaSection();
 }
 
 // ── Venda Direta: secao na aba Config ────────────────────────────
@@ -1558,6 +1571,10 @@ function renderSellerActive(body, account) {
     '<div class="toggle-row">' +
       '<div class="toggle-info"><div class="t-title">Aceitar cartao de credito</div><div class="t-desc">Credito via Asaas/gateway integrado</div></div>' +
       '<button class="toggle' + (account.accept_card ? ' on' : '') + '" id="seller-toggle-card" onclick="saveSellerMethods()"></button>' +
+    '</div>' +
+    '<div class="toggle-row">' +
+      '<div class="toggle-info"><div class="t-title">Repassar a taxa do cartao ao comprador</div><div class="t-desc">No cartao, o comprador paga o valor com a taxa embutida — voce recebe o preco cheio. No Pix nada muda.</div></div>' +
+      '<button class="toggle' + (account.pass_card_fee_to_buyer ? ' on' : '') + '" id="seller-toggle-passfee" onclick="this.classList.toggle(\'on\');saveSellerMethods()"></button>' +
     '</div>' +
     sellerFeesNote();
 }
@@ -1662,13 +1679,15 @@ async function submitSellerOnboarding() {
 async function saveSellerMethods() {
   var pixBtn  = document.getElementById('seller-toggle-pix');
   var cardBtn = document.getElementById('seller-toggle-card');
+  var passBtn = document.getElementById('seller-toggle-passfee');
   var acceptPix  = pixBtn  ? pixBtn.classList.contains('on')  : false;
   var acceptCard = cardBtn ? cardBtn.classList.contains('on') : false;
+  var passFee = passBtn ? passBtn.classList.contains('on') : false;
   try {
     var res = await apiFetch('/api/seller/methods', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accept_pix: acceptPix, accept_card: acceptCard })
+      body: JSON.stringify({ accept_pix: acceptPix, accept_card: acceptCard, pass_card_fee_to_buyer: passFee })
     });
     if (!res.success) throw new Error(res.error || 'Erro ao salvar');
     showToast('Metodos de pagamento atualizados!', 'success');
@@ -1779,6 +1798,7 @@ function switchTab(name, el) {
   if (name === 'webhook')   { loadLogs(); loadWebhookConfig(); loadSimulatorProducts(); startLogPoller(); }
   else                      stopLogPoller();
   if (name === 'email')     loadEmailTab();
+  if (name === 'loja')      loadVendaDiretaSection();
   if (name === 'config')    loadConfig();
 }
 
