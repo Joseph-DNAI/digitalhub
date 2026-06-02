@@ -6,7 +6,7 @@ const path     = require('path');
 const fs       = require('fs');
 const { products, unmatchedProducts, tenants, productFiles } = require('../models/database');
 const { uploadFile, deleteFile } = require('../services/storageService');
-const { requireAuth, requirePlanLimit } = require('../middleware/auth');
+const { requireAuth } = require('../middleware/auth');
 const { fetchYampiProducts, fetchKiwifyProducts } = require('../services/platformApiService');
 const { initialStatus, canActivate, atGlobalCap, MAX_PRODUCTS_TOTAL } = require('../services/productLimits');
 const logger   = require('../config/logger');
@@ -154,6 +154,15 @@ router.put('/:id', uploadMw, async (req, res) => {
     }
 
     if (updateData.price !== undefined) updateData.price = parseFloat(updateData.price);
+
+    // Ativar pelo editor tambem respeita o limite de ativos do plano.
+    if (updateData.status === 'active' && existing.status !== 'active') {
+      const activeCount = await products.countActive(req.tenantId);
+      if (!canActivate(activeCount, req.user.max_products)) {
+        return res.status(403).json({ success: false, needs_upgrade: true,
+          error: 'Limite de produtos ativos do seu plano atingido. Faca upgrade ou desative outro produto.' });
+      }
+    }
 
     const updated = await products.update(req.tenantId, req.params.id, updateData);
 

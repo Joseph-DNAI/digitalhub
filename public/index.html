@@ -2997,7 +2997,6 @@ async function saveProduct() {
   if (errEl) { errEl.style.display = 'none'; errEl.innerHTML = ''; }
 
   if (!name)                   { showModalError('Informe o nome do produto'); return; }
-  if (!kiwify_id && !yampi_id) { showModalError('Informe pelo menos um ID (Kiwify ou Yampi)'); return; }
 
   btn.disabled = true;
   btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i> Salvando...';
@@ -3062,6 +3061,10 @@ async function saveProduct() {
     if (unmatchedId) {
       try { await apiFetch('/api/products/unmatched/' + unmatchedId, { method: 'DELETE' }); } catch(e) {}
       delete btn.dataset.unmatchedId;
+    }
+
+    if (!editingId && data.data && data.data.status === 'inactive') {
+      showToast('Produto cadastrado como inativo — limite de produtos ativos do plano atingido. Ative-o desativando outro, ou faca upgrade.', 'warn');
     }
 
     closeModal();
