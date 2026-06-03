@@ -62,6 +62,25 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .topbar { height: 50px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; padding: 0 28px; background: rgba(11,16,32,0.7); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); gap: 8px; }
 .content { flex: 1; overflow-y: auto; padding: 28px; }
+.topbar-burger { display: none; background: none; border: none; color: var(--text); font-size: 22px; cursor: pointer; padding: 4px 8px; border-radius: 8px; }
+.topbar-burger:hover { background: rgba(255,255,255,0.05); }
+.sidebar-overlay { display: none; position: fixed; inset: 0; z-index: 150; background: rgba(0,0,0,0.55); }
+@media (max-width: 860px) {
+  .sidebar { position: fixed; top: 0; left: 0; bottom: 0; z-index: 200; transform: translateX(-100%); transition: transform 0.25s ease; }
+  .sidebar.open { transform: translateX(0); box-shadow: 0 0 40px rgba(0,0,0,0.5); }
+  .sidebar-overlay.open { display: block; }
+  .topbar { padding: 0 14px; justify-content: space-between; }
+  .topbar-burger { display: flex; }
+  .content { padding: 16px; }
+  .page-header { flex-wrap: wrap; gap: 12px; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .form-grid { grid-template-columns: 1fr; }
+  .products-grid { grid-template-columns: 1fr; }
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}
+@media (max-width: 520px) {
+  .stats-grid { grid-template-columns: 1fr; }
+}
 
 /* ── Sections ── */
 .section { display: none; }
@@ -306,9 +325,12 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
     </div>
   </aside>
 
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
   <!-- Main -->
   <div class="main">
     <div class="topbar">
+      <button class="topbar-burger" onclick="toggleSidebar()" aria-label="Menu"><i class="ti ti-menu-2"></i></button>
       <div id="tb-deliveries-today" style="display:none;align-items:center;gap:5px;background:var(--emerald-dim);border:1px solid rgba(34,197,94,0.2);padding:4px 10px;border-radius:99px;font-size:12px;color:var(--emerald);font-weight:600;cursor:default;" title="Entregas hoje">
         <i class="ti ti-package" style="font-size:13px;"></i>
         <span id="tb-today-count">0</span>
@@ -1882,6 +1904,19 @@ style.textContent = '@keyframes spin { from { transform: rotate(0deg); } to { tr
 document.head.appendChild(style);
 
 // ── Tab navigation ───────────────────────────────────────────────
+function toggleSidebar() {
+  var sb = document.querySelector('.sidebar');
+  var ov = document.getElementById('sidebarOverlay');
+  if (sb) sb.classList.toggle('open');
+  if (ov) ov.classList.toggle('open');
+}
+function closeSidebar() {
+  var sb = document.querySelector('.sidebar');
+  var ov = document.getElementById('sidebarOverlay');
+  if (sb) sb.classList.remove('open');
+  if (ov) ov.classList.remove('open');
+}
+
 function switchTab(name, el) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -1897,6 +1932,7 @@ function switchTab(name, el) {
   if (name === 'email')     loadEmailTab();
   if (name === 'loja')      loadVendaDiretaSection();
   if (name === 'config')    loadConfig();
+  closeSidebar();
 }
 
 // ── Webhook Config ────────────────────────────────────────────────
