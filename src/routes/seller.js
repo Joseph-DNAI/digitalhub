@@ -4,7 +4,7 @@ const router  = express.Router();
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const { sellerAccounts } = require('../models/database');
 const asaas = require('../services/asaasService');
-const { encrypt } = require('../services/crypto');
+const { encrypt, decrypt } = require('../services/crypto');
 const logger = require('../config/logger');
 
 // GET /api/seller/account — status da conta de recebimento do tenant
@@ -72,6 +72,10 @@ router.post('/onboarding', requireAuth, async (req, res) => {
       accept_card:      accept_card !== false
     });
     logger.info('Subconta Asaas ativa — tenant ' + req.tenantId.slice(0, 8));
+    if (created.apiKey) {
+      try { await asaas.enableAutoAnticipation(created.apiKey); }
+      catch (e) { logger.warn('Antecipacao automatica nao habilitada agora (tenant ' + req.tenantId.slice(0, 8) + '): ' + e.message); }
+    }
     res.status(201).json({ success: true, account: acc });
   } catch (err) {
     logger.error('seller/onboarding: ' + err.message);
@@ -106,6 +110,22 @@ router.get('/admin/accounts', requireAdmin, async (req, res) => {
   } catch (err) {
     logger.error('seller/admin/accounts: ' + err.message);
     res.status(502).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/seller/enable-anticipation — (re)habilita a antecipacao automatica da subconta
+router.post('/enable-anticipation', requireAuth, async (req, res) => {
+  try {
+    const acc = await sellerAccounts.findByTenant(req.tenantId);
+    if (!acc || !acc.asaas_api_key_enc) {
+      return res.status(409).json({ success: false, error: 'Conta de recebimento sem chave para antecipacao. Reative a conta.' });
+    }
+    const apiKey = decrypt(acc.asaas_api_key_enc);
+    await asaas.enableAutoAnticipation(apiKey);
+    res.json({ success: true });
+  } catch (err) {
+    logger.error('seller/enable-anticipation: ' + err.message);
+    res.status(502).json({ success: false, error: 'Nao foi possivel ativar a antecipacao. ' + err.message });
   }
 });
 
