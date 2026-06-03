@@ -5,6 +5,7 @@ const { requireAuth, requireAdmin } = require('../middleware/auth');
 const { sellerAccounts } = require('../models/database');
 const asaas = require('../services/asaasService');
 const { encrypt, decrypt } = require('../services/crypto');
+const { feeSimulation } = require('../services/pricing');
 const logger = require('../config/logger');
 
 // GET /api/seller/account — status da conta de recebimento do tenant
@@ -126,6 +127,21 @@ router.post('/enable-anticipation', requireAuth, async (req, res) => {
   } catch (err) {
     logger.error('seller/enable-anticipation: ' + err.message);
     res.status(502).json({ success: false, error: 'Nao foi possivel ativar a antecipacao. ' + err.message });
+  }
+});
+
+// GET /api/seller/fee-simulator?amount_cents=X — simula taxas/recebimento (consulta)
+router.get('/fee-simulator', requireAuth, async (req, res) => {
+  try {
+    const amount = parseInt(req.query.amount_cents, 10);
+    const MIN = parseInt(process.env.DIRECT_MIN_PRICE_CENTS || '900', 10);
+    if (!Number.isInteger(amount) || amount < MIN || amount > 100000000) {
+      return res.status(400).json({ success: false, error: 'Valor invalido para simulacao.' });
+    }
+    res.json({ success: true, simulation: feeSimulation(amount) });
+  } catch (err) {
+    logger.error('seller/fee-simulator: ' + err.message);
+    res.status(500).json({ success: false, error: 'Erro interno.' });
   }
 });
 

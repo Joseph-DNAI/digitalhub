@@ -109,4 +109,26 @@ function installmentOptions({ priceCents, passFee, maxInstallments, minParcelaCe
   return out;
 }
 
-module.exports = { vaultlyFeeCents, asaasFeeCents, centsToReais, buildSplit, cardChargeCents, anticipationFeeCents, anticipPercent, installmentOptions };
+// Simulador de recebimento (puro). Para uma venda de amountCents (plano pago, sem taxa
+// Vaultly), retorna o liquido do vendedor no Pix e, para cada parcela do cartao (1..MAX),
+// os dois cenarios: sem repasse (vendedor absorve) e com repasse (comprador paga o gross-up).
+function feeSimulation(amountCents, overrides) {
+  const o = overrides || {};
+  const max = Math.max(1, parseInt(o.maxInstallments != null ? o.maxInstallments : (process.env.MAX_INSTALLMENTS || '3'), 10));
+  const card = [];
+  for (let n = 1; n <= max; n++) {
+    const semRepasse = Math.max(0, amountCents - asaasFeeCents('card', amountCents, Object.assign({ installments: n }, o)));
+    const buyer = cardChargeCents(amountCents, n, o);
+    const split = buildSplit({ amountCents: buyer, sellerWalletId: 'sim', method: 'card', chargeVaultlyFee: false, installments: n, overrides: o });
+    const sellerCom = Math.round((split[0] && split[0].fixedValue ? split[0].fixedValue : 0) * 100);
+    card.push({
+      n: n,
+      sem_repasse_seller_cents: semRepasse,
+      com_repasse_buyer_cents: buyer,
+      com_repasse_seller_cents: sellerCom
+    });
+  }
+  return { amount_cents: amountCents, pix: { seller_cents: amountCents }, card: card };
+}
+
+module.exports = { vaultlyFeeCents, asaasFeeCents, centsToReais, buildSplit, cardChargeCents, anticipationFeeCents, anticipPercent, installmentOptions, feeSimulation };
