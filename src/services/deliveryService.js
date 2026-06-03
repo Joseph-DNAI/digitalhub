@@ -1,6 +1,6 @@
 // src/services/deliveryService.js — multi-tenant
 const { products, deliveries, tenants, unmatchedProducts, users, productFiles, orders, queryOne } = require('../models/database');
-const { sendProductEmail, sendLimitWarningEmail } = require('./emailService');
+const { sendProductEmail, sendLimitWarningEmail, sendDeliveryFailedEmail } = require('./emailService');
 const { normalizePayload, isApprovedEvent } = require('./platformAdapter');
 const logger = require('../config/logger');
 
@@ -139,6 +139,17 @@ async function attemptDelivery(deliveryId, product, normalized, tenant, showBran
   } catch (err) {
     logger.error('Falha — delivery: ' + deliveryId + ' — ' + err.message);
     await deliveries.updateStatus(deliveryId, 'failed', err.message);
+    if (tenant && tenant.notify_on_failure && user) {
+      try {
+        const row = await queryOne('SELECT attempts FROM deliveries WHERE id=$1', [deliveryId]);
+        if (row && row.attempts >= 3) {
+          await sendDeliveryFailedEmail({
+            userEmail: user.email, userName: user.name,
+            productName: product.name, buyerEmail: normalized.buyerEmail, error: err.message
+          });
+        }
+      } catch (e) { logger.warn('Aviso de falha nao enviado: ' + e.message); }
+    }
     throw err;
   }
 }

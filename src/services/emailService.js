@@ -240,4 +240,36 @@ async function testSmtpConnection() {
   return true;
 }
 
-module.exports = { sendProductEmail, sendLimitWarningEmail, testSmtpConnection, sendTestEmail };
+async function sendDeliveryFailedEmail({ userEmail, userName, productName, buyerEmail, error }) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const fAddr  = process.env.EMAIL_FROM_ADDRESS || 'entregas@vaultly.digital';
+  if (!apiKey) {
+    logger.warn('RESEND_API_KEY nao configurada — aviso de falha nao enviado para ' + userEmail);
+    return;
+  }
+  const baseUrl = process.env.BASE_URL || 'https://vaultly.digital';
+  var html = '<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#333;">' +
+    '<div style="background:linear-gradient(135deg,#DC2626,#EF4444);padding:30px 24px;border-radius:8px 8px 0 0;">' +
+    '<h1 style="color:#fff;margin:0;font-size:22px;">Uma entrega falhou</h1>' +
+    '</div>' +
+    '<div style="background:#f9f9f9;padding:28px 24px;border-radius:0 0 8px 8px;border:1px solid #e5e5e5;">' +
+    '<p style="font-size:16px;">Ola, <strong>' + (userName || userEmail) + '</strong>!</p>' +
+    '<p style="font-size:15px;line-height:1.6;">A entrega do produto <strong>' + (productName || '-') + '</strong> para <strong>' + (buyerEmail || '-') + '</strong> falhou apos 3 tentativas automaticas.</p>' +
+    '<p style="font-size:14px;color:#555;line-height:1.6;">Motivo: ' + (error || 'erro desconhecido') + '</p>' +
+    '<p style="font-size:14px;color:#555;line-height:1.6;">Verifique se o produto tem arquivo anexado e se o email do comprador esta correto. Voce pode reprocessar pela aba Entregas.</p>' +
+    '<div style="text-align:center;margin:28px 0;">' +
+    '<a href="' + baseUrl + '/app" style="background:#FF6B35;color:#fff;padding:14px 32px;border-radius:6px;font-size:15px;font-weight:700;text-decoration:none;">Abrir o painel</a>' +
+    '</div>' +
+    '<p style="font-size:12px;color:#aaa;margin-top:16px;">Voce recebe este email porque ativou o aviso de falha de entrega nas configuracoes.</p>' +
+    '</div></div>';
+  var response = await fetch('https://api.resend.com/emails', {
+    method:  'POST',
+    headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: 'Vaultly <' + fAddr + '>', to: [userEmail], subject: 'Uma entrega falhou apos 3 tentativas', html: html })
+  });
+  var result = await response.json();
+  if (!response.ok) throw new Error('Resend erro: ' + JSON.stringify(result));
+  logger.info('Aviso de falha de entrega enviado para ' + userEmail);
+}
+
+module.exports = { sendProductEmail, sendLimitWarningEmail, testSmtpConnection, sendTestEmail, sendDeliveryFailedEmail };
