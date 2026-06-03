@@ -24,7 +24,7 @@ router.get('/:slug', async (req, res) => {
         parcela_cents: o.parcela_cents,
         label: o.n === 1
           ? '1x de R$ ' + (o.parcela_cents / 100).toFixed(2).replace('.', ',') + ' (a vista)'
-          : o.n + 'x de R$ ' + (o.parcela_cents / 100).toFixed(2).replace('.', ',')
+          : o.n + 'x de R$ ' + (o.parcela_cents / 100).toFixed(2).replace('.', ',') + ' (total R$ ' + (o.total_cents / 100).toFixed(2).replace('.', ',') + ')'
       };
     });
     res.json({
