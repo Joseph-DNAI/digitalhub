@@ -43,3 +43,23 @@ test('pixKeyType: 11 digitos = CPF, 14 = CNPJ', () => {
   assert.strictEqual(pixKeyType('123.456.789-00'), 'CPF');
   assert.strictEqual(pixKeyType('12.345.678/0001-90'), 'CNPJ');
 });
+
+test('buildChargePayload cartao 3x usa installmentCount + totalValue (sem value)', () => {
+  const p = buildChargePayload({
+    customerId: 'cus_1', method: 'card', amountCents: 10600,
+    description: 'Curso', sellerWalletId: 'w_s', dueDate: '2026-06-01', installments: 3
+  });
+  assert.strictEqual(p.billingType, 'CREDIT_CARD');
+  assert.strictEqual(p.installmentCount, 3);
+  assert.strictEqual(p.totalValue, 106);
+  assert.strictEqual(p.value, undefined);
+});
+
+test('buildChargePayload cartao 1x mantem value unico', () => {
+  const p = buildChargePayload({
+    customerId: 'cus_1', method: 'card', amountCents: 2839,
+    description: 'Curso', sellerWalletId: 'w_s', dueDate: '2026-06-01', installments: 1
+  });
+  assert.strictEqual(p.value, 28.39);
+  assert.strictEqual(p.installmentCount, undefined);
+});

@@ -58,15 +58,22 @@ function buildSubaccountPayload(d) {
 
 function buildChargePayload(d) {
   const value = Math.round(d.amountCents) / 100;
-  return {
+  const n = Math.max(1, parseInt(d.installments || 1, 10));
+  const payload = {
     customer: d.customerId,
     billingType: d.method === 'card' ? 'CREDIT_CARD' : 'PIX',
-    value,
     dueDate: d.dueDate,
     description: d.description || 'Compra Vaultly',
     externalReference: d.orderId || undefined,
-    split: buildSplit({ amountCents: d.amountCents, sellerWalletId: d.sellerWalletId, method: d.method, chargeVaultlyFee: d.chargeVaultlyFee })
+    split: buildSplit({ amountCents: d.amountCents, sellerWalletId: d.sellerWalletId, method: d.method, chargeVaultlyFee: d.chargeVaultlyFee, installments: n })
   };
+  if (d.method === 'card' && n >= 2) {
+    payload.installmentCount = n;
+    payload.totalValue = value;
+  } else {
+    payload.value = value;
+  }
+  return payload;
 }
 
 function isValidWebhookToken(token) {
@@ -158,9 +165,16 @@ async function createPixTransfer(apiKey, opts) {
   return request('POST', '/transfers', body, apiKey);
 }
 
+// Habilita a antecipacao automatica do cartao na subconta (recebimento rapido).
+// Best-effort: contas novas podem exigir aprovacao do Asaas; nunca deve quebrar o fluxo.
+// GATE (sandbox): confirmar o endpoint/flag exato da antecipacao automatica.
+async function enableAutoAnticipation(apiKey) {
+  return request('POST', '/anticipations/config', { automaticAnticipationEnabled: true }, apiKey);
+}
+
 module.exports = {
   buildSubaccountPayload, buildChargePayload, isValidWebhookToken,
   createSubaccount, createCustomer, createCharge, getPixQrCode, getCharge,
   findSubaccountByCpfCnpj, listSubaccounts,
-  pixKeyType, getSubaccountBalance, createPixTransfer
+  pixKeyType, getSubaccountBalance, createPixTransfer, enableAutoAnticipation
 };

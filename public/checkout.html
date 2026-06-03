@@ -48,6 +48,7 @@
       </div>
 
       <div id="card-fields" class="hidden">
+        <label>Parcelas</label><select id="cc_installments"></select>
         <label>Número do cartão</label><input id="cc_number" inputmode="numeric"/>
         <label>Nome no cartão</label><input id="cc_name"/>
         <label>Validade (MM/AAAA)</label><input id="cc_exp"/>
@@ -80,6 +81,7 @@ async function load(){
   window._pixCents = d.product.pix_cents;
   window._cardCents = d.product.card_cents;
   window._passFee = d.product.pass_card_fee;
+  window._installments = d.product.installments || [{ n:1, total_cents: d.product.card_cents, parcela_cents: d.product.card_cents, label:'1x' }];
   $('title').textContent = d.product.title;
   $('desc').textContent = d.product.description || '';
   $('price').textContent = 'R$ ' + (window._pixCents/100).toFixed(2).replace('.', ',');
@@ -97,13 +99,34 @@ function setMethod(m){
   method = m;
   document.querySelectorAll('#methods button').forEach(b=>b.classList.toggle('active', b.dataset.m===m));
   $('card-fields').classList.toggle('hidden', m!=='card');
-  var cents = (m === 'card') ? window._cardCents : window._pixCents;
-  if (window._pixCents != null) {
-    $('price').textContent = 'R$ ' + (cents/100).toFixed(2).replace('.', ',');
+  if (m === 'card') {
+    var sel = $('cc_installments');
+    if (sel && !sel.dataset.filled) {
+      sel.innerHTML = (window._installments || []).map(function(o){ return '<option value="'+o.n+'">'+o.label+'</option>'; }).join('');
+      sel.dataset.filled = '1';
+      sel.onchange = updateCardTotal;
+    }
+    updateCardTotal();
+  } else {
+    if (window._pixCents != null) $('price').textContent = 'R$ ' + (window._pixCents/100).toFixed(2).replace('.', ',');
+    var note0 = $('fee-note'); if (note0) note0.style.display = 'none';
+  }
+}
+
+function selectedInstallments(){
+  var sel = $('cc_installments');
+  var n = sel ? parseInt(sel.value || '1', 10) : 1;
+  return (window._installments || []).find(function(o){ return o.n === n; }) || { n:1, total_cents: window._cardCents };
+}
+
+function updateCardTotal(){
+  var opt = selectedInstallments();
+  if (opt && opt.total_cents != null) {
+    $('price').textContent = 'R$ ' + (opt.total_cents/100).toFixed(2).replace('.', ',');
   }
   var note = $('fee-note');
   if (note) {
-    if (m === 'card' && window._passFee) { note.textContent = 'No cartão, a taxa de processamento é adicionada.'; note.style.display = 'block'; }
+    if (window._passFee) { note.textContent = 'No cartao, a taxa de processamento e a antecipacao estao incluidas no valor.'; note.style.display = 'block'; }
     else { note.style.display = 'none'; }
   }
 }
@@ -116,6 +139,7 @@ $('pay').addEventListener('click', async ()=>{
     buyer_doc: $('buyer_doc').value.replace(/\D/g,''), method
   };
   if(method==='card'){
+    body.installments = selectedInstallments().n;
     const exp = $('cc_exp').value.split('/');
     body.card = {
       creditCard: { holderName: $('cc_name').value, number: $('cc_number').value.replace(/\s/g,''),

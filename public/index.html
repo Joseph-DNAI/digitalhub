@@ -1588,6 +1588,10 @@ function renderSellerActive(body, account) {
       '<div class="toggle-info"><div class="t-title">Repassar a taxa do cartao ao comprador</div><div class="t-desc">No cartao, o comprador paga o valor com a taxa embutida — voce recebe o preco cheio. No Pix nada muda.</div></div>' +
       '<button class="toggle' + (account.pass_card_fee_to_buyer ? ' on' : '') + '" id="seller-toggle-passfee" onclick="this.classList.toggle(\'on\');saveSellerMethods()"></button>' +
     '</div>' +
+    '<div class="toggle-row">' +
+      '<div class="toggle-info"><div class="t-title">Recebimento rapido (antecipacao automatica)</div><div class="t-desc">Recebe o cartao em ~1-2 dias em vez de ~30. A taxa de antecipacao ja esta refletida nas taxas acima.</div></div>' +
+      '<button class="btn btn-ghost btn-sm" onclick="enableFastPayout(this)"><i class="ti ti-bolt"></i> Ativar</button>' +
+    '</div>' +
     sellerFeesNote();
 }
 
@@ -1609,7 +1613,7 @@ function sellerFeesNote() {
     '<div style="font-weight:700;color:var(--text);margin-bottom:8px;"><i class="ti ti-info-circle" style="color:var(--orange);"></i> Como funcionam as taxas ao vender</div>' +
     '<div style="display:flex;gap:14px;flex-wrap:wrap;">' +
       '<div style="flex:1;min-width:170px;"><strong style="color:var(--emerald);"><i class="ti ti-qrcode"></i> Pix</strong><br>Recebe <strong>na hora</strong> e <strong>sem taxa por venda</strong> &mdash; voce fica com o valor cheio. Sem risco de estorno.</div>' +
-      '<div style="flex:1;min-width:170px;"><strong style="color:var(--orange);"><i class="ti ti-credit-card"></i> Cartao</strong><br>Taxa do cartao (~1,99% + R$0,49), recebimento em alguns dias e possibilidade de estorno/chargeback.</div>' +
+      '<div style="flex:1;min-width:170px;"><strong style="color:var(--orange);"><i class="ti ti-credit-card"></i> Cartao</strong><br>A vista: 1,99% + R$0,49 + 1,15% (antecipacao). Parcelado: + antecipacao por parcela (2x +2,40%, 3x +3,20%). Com antecipacao automatica voce recebe em ~1-2 dias. Sujeito a estorno/chargeback.</div>' +
     '</div>' +
   '</div>';
 }
@@ -1687,6 +1691,19 @@ async function submitSellerOnboarding() {
     showToast(e.message || 'Erro ao ativar conta.', 'error');
     btn.disabled = false;
     btn.innerHTML = '<i class="ti ti-rocket"></i> Ativar conta de recebimento';
+  }
+}
+
+async function enableFastPayout(btn) {
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i> Ativando...'; }
+  try {
+    var res = await apiFetch('/api/seller/enable-anticipation', { method: 'POST' });
+    if (!res.success) throw new Error(res.error || 'Erro');
+    showToast('Recebimento rapido ativado (ou ja estava ativo).', 'success');
+    if (btn) { btn.innerHTML = '<i class="ti ti-check"></i> Ativado'; }
+  } catch (e) {
+    showToast(e.message || 'Nao foi possivel ativar agora. Tente mais tarde.', 'warn');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-bolt"></i> Ativar'; }
   }
 }
 
