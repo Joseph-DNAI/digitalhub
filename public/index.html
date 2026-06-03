@@ -1592,7 +1592,8 @@ function renderSellerActive(body, account) {
       '<div class="toggle-info"><div class="t-title">Recebimento rapido (antecipacao automatica)</div><div class="t-desc">Recebe o cartao em ~1-2 dias em vez de ~30. A taxa de antecipacao ja esta refletida nas taxas acima.</div></div>' +
       '<button class="btn btn-ghost btn-sm" onclick="enableFastPayout(this)"><i class="ti ti-bolt"></i> Ativar</button>' +
     '</div>' +
-    sellerFeesNote();
+    sellerFeesNote() + feeSimulatorCard();
+  loadFeeSimulator();
 }
 
 // Card de upgrade exibido pra usuarios Free (venda direta e exclusiva de assinantes)
@@ -1616,6 +1617,71 @@ function sellerFeesNote() {
       '<div style="flex:1;min-width:170px;"><strong style="color:var(--orange);"><i class="ti ti-credit-card"></i> Cartao</strong><br>A vista: 1,99% + R$0,49 + 1,15% (antecipacao). Parcelado: + antecipacao por parcela (2x +2,40%, 3x +3,20%). Com antecipacao automatica voce recebe em ~1-2 dias. Sujeito a estorno/chargeback.</div>' +
     '</div>' +
   '</div>';
+}
+
+// Card do simulador de recebimento (aba Loja)
+function feeSimulatorCard() {
+  return '<div style="margin-top:16px;padding:14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;">' +
+    '<div style="font-weight:700;font-size:13px;margin-bottom:4px;"><i class="ti ti-calculator" style="color:var(--orange);"></i> Simulador de recebimento</div>' +
+    '<div style="font-size:12px;color:var(--text2);margin-bottom:10px;">Veja quanto voce recebe e quanto o comprador paga em cada forma de pagamento.</div>' +
+    '<label class="form-label">Valor da venda</label>' +
+    '<input type="text" class="form-input" id="sim-amount" value="R$ 100,00" inputmode="numeric" style="max-width:180px;" oninput="onSimInput()" />' +
+    '<div id="sim-result" style="margin-top:12px;"></div>' +
+  '</div>';
+}
+
+var _simTimer = null;
+function onSimInput() {
+  if (_simTimer) clearTimeout(_simTimer);
+  _simTimer = setTimeout(loadFeeSimulator, 400);
+}
+
+function simAmountCents() {
+  var raw = (document.getElementById('sim-amount') || {}).value || '';
+  var digits = String(raw).replace(/\D/g, '');
+  return parseInt(digits || '0', 10);
+}
+
+function simBRL(cents) { return 'R$ ' + (cents / 100).toFixed(2).replace('.', ','); }
+
+async function loadFeeSimulator() {
+  var el = document.getElementById('sim-result');
+  if (!el) return;
+  var cents = simAmountCents();
+  if (!cents || cents < 900) { el.innerHTML = '<span style="font-size:12px;color:var(--text3);">Informe um valor a partir de R$ 9,00.</span>'; return; }
+  el.innerHTML = '<span style="font-size:12px;color:var(--text3);">Calculando...</span>';
+  try {
+    var res = await apiFetch('/api/seller/fee-simulator?amount_cents=' + cents);
+    if (!res.success) throw new Error(res.error || 'Erro');
+    renderFeeSimulator(res.simulation);
+  } catch (e) {
+    el.innerHTML = '<span style="font-size:12px;color:var(--red);">Nao foi possivel simular agora.</span>';
+  }
+}
+
+function renderFeeSimulator(sim) {
+  var el = document.getElementById('sim-result');
+  if (!el) return;
+  var rows = '<tr><td style="padding:6px 8px;">Pix</td>' +
+    '<td style="padding:6px 8px;color:var(--emerald);">' + simBRL(sim.pix.seller_cents) + '</td>' +
+    '<td style="padding:6px 8px;color:var(--text2);">' + simBRL(sim.pix.seller_cents) + '</td></tr>';
+  for (var i = 0; i < sim.card.length; i++) {
+    var c = sim.card[i];
+    rows += '<tr>' +
+      '<td style="padding:6px 8px;">Cartao ' + c.n + 'x</td>' +
+      '<td style="padding:6px 8px;color:var(--emerald);">' + simBRL(c.sem_repasse_seller_cents) + '</td>' +
+      '<td style="padding:6px 8px;color:var(--text2);">' + simBRL(c.com_repasse_buyer_cents) + ' &rarr; ' + simBRL(c.com_repasse_seller_cents) + '</td>' +
+    '</tr>';
+  }
+  el.innerHTML =
+    '<div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Venda de <strong>' + simBRL(sim.amount_cents) + '</strong></div>' +
+    '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+      '<thead><tr style="color:var(--text3);font-size:10px;text-transform:uppercase;">' +
+        '<th style="text-align:left;padding:6px 8px;">Metodo</th>' +
+        '<th style="text-align:left;padding:6px 8px;">Sem repasse (voce recebe)</th>' +
+        '<th style="text-align:left;padding:6px 8px;">Com repasse (comprador paga &rarr; voce recebe)</th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table>' +
+    '<div style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.5;">Pix: recebe na hora, sem taxa. Cartao: recebimento rapido via antecipacao automatica. Valores ilustrativos; as taxas do banco podem variar.</div>';
 }
 
 function escAttr(s) {
