@@ -32,7 +32,8 @@ router.get('/me', async (req, res) => {
         onboarding_completed:   !!(tenant && tenant.onboarding_completed),
         platforms_enabled:      (tenant && tenant.platforms_enabled) || 'kiwify,yampi',
         has_email_template:     !!(tenant && tenant.email_template),
-        email_template:         tenant ? (tenant.email_template || '') : ''
+        email_template:         tenant ? (tenant.email_template || '') : '',
+        notify_on_failure:      !!(tenant && tenant.notify_on_failure)
       }
     });
   } catch(err) {
@@ -52,7 +53,7 @@ router.put('/me', async (req, res) => {
       'email_from_name', 'email_from_address', 'resend_api_key',
       'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass',
       'kiwify_api_key', 'yampi_api_token', 'yampi_secret_token', 'yampi_store_alias',
-      'onboarding_completed', 'platforms_enabled', 'email_template'
+      'onboarding_completed', 'platforms_enabled', 'email_template', 'notify_on_failure'
     ];
     var updateData = {};
     allowed.forEach(function(f) {

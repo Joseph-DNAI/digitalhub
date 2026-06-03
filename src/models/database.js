@@ -241,6 +241,7 @@ async function initDatabase() {
       ALTER TABLE tenants ADD COLUMN IF NOT EXISTS platforms_enabled       TEXT DEFAULT 'kiwify,yampi';
       ALTER TABLE tenants ADD COLUMN IF NOT EXISTS notif_80_sent_month     TEXT;
       ALTER TABLE tenants ADD COLUMN IF NOT EXISTS notif_95_sent_month     TEXT;
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS notify_on_failure       BOOLEAN DEFAULT FALSE;
       ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS is_test              BOOLEAN DEFAULT FALSE;
       ALTER TABLE users   ADD COLUMN IF NOT EXISTS stripe_customer_id      TEXT;
       ALTER TABLE users   ADD COLUMN IF NOT EXISTS subscription_id         TEXT;
