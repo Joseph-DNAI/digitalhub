@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { vaultlyFeeCents, buildSplit, cardChargeCents, anticipationFeeCents, installmentOptions } = require('../src/services/pricing');
+const { vaultlyFeeCents, buildSplit, cardChargeCents, anticipationFeeCents, installmentOptions, feeSimulation } = require('../src/services/pricing');
 
 test('taxa Vaultly = fixo 10c + 1.49% (arredonda p/ centavo)', () => {
   // R$27,00 = 2700c -> 10 + round(2700*0.0149)=10+40=50
@@ -91,4 +91,29 @@ test('installmentOptions com repasse: total cresce com as parcelas (gross-up por
   assert.ok(opts[1].total_cents < opts[2].total_cents);
   assert.strictEqual(opts[0].total_cents, cardChargeCents(5000, 1));
   assert.strictEqual(opts[2].total_cents, cardChargeCents(5000, 3));
+});
+
+test('feeSimulation: Pix recebe o valor cheio e ha MAX_INSTALLMENTS itens de cartao', () => {
+  const sim = feeSimulation(10000);
+  assert.strictEqual(sim.amount_cents, 10000);
+  assert.strictEqual(sim.pix.seller_cents, 10000);
+  assert.strictEqual(sim.card.length, 3);
+  assert.deepStrictEqual(sim.card.map(function (c) { return c.n; }), [1, 2, 3]);
+});
+
+test('feeSimulation: sem repasse desconta taxa; com repasse comprador paga mais e vendedor recebe ~cheio', () => {
+  const sim = feeSimulation(10000);
+  for (const c of sim.card) {
+    assert.ok(c.sem_repasse_seller_cents < 10000, 'sem repasse deve descontar taxa');
+    assert.ok(c.com_repasse_buyer_cents > 10000, 'com repasse o comprador paga o gross-up');
+    assert.ok(c.com_repasse_seller_cents >= 10000, 'com repasse o vendedor recebe ao menos o preco');
+    assert.ok(c.com_repasse_seller_cents <= 10002, 'arredondamento de poucos centavos');
+  }
+});
+
+test('feeSimulation: mais parcelas = mais antecipacao', () => {
+  const sim = feeSimulation(10000);
+  assert.ok(sim.card[0].sem_repasse_seller_cents > sim.card[1].sem_repasse_seller_cents);
+  assert.ok(sim.card[1].sem_repasse_seller_cents > sim.card[2].sem_repasse_seller_cents);
+  assert.ok(sim.card[0].com_repasse_buyer_cents < sim.card[2].com_repasse_buyer_cents);
 });
