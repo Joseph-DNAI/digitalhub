@@ -27,6 +27,32 @@ function centsToReais(cents) {
   return Math.round(cents) / 100;
 }
 
+// Config das taxas de antecipacao do cartao (mensais). Configuravel por env.
+function anticipConfig(overrides) {
+  const o = overrides || {};
+  const avista = o.anticipAvistaPercent != null
+    ? o.anticipAvistaPercent
+    : parseFloat(process.env.ANTICIP_AVISTA_PERCENT || '1.15');
+  const parcelado = o.anticipParceladoPercent != null
+    ? o.anticipParceladoPercent
+    : parseFloat(process.env.ANTICIP_PARCELADO_PERCENT || '1.6');
+  return { avista, parcelado };
+}
+
+// Percentual de antecipacao (numero, ex.: 1.15) para N parcelas.
+// A vista (N<=1) = taxa a vista; parcelado = taxa mensal * (N+1)/2 (media de meses adiantados).
+function anticipPercent(installments, overrides) {
+  const n = Math.max(1, parseInt(installments || 1, 10));
+  const { avista, parcelado } = anticipConfig(overrides);
+  if (n <= 1) return avista;
+  return parcelado * (n + 1) / 2;
+}
+
+// Custo da antecipacao do cartao, em centavos, para amountCents em N parcelas.
+function anticipationFeeCents(amountCents, installments, overrides) {
+  return Math.round(amountCents * (anticipPercent(installments, overrides) / 100));
+}
+
 // Estimativa da taxa do Asaas (gateway), em centavos. Configurável por env porque
 // as taxas mudam (ex.: promoções). O Asaas desconta a taxa dele ANTES do split, então
 // precisamos subtraí-la para o split caber em (cobrança − taxa Asaas).
@@ -35,7 +61,8 @@ function asaasFeeCents(method, amountCents, overrides) {
   if (method === 'card') {
     const pct   = o.cardPercent    != null ? o.cardPercent    : parseFloat(process.env.ASAAS_CARD_PERCENT || '1.99');
     const fixed = o.cardFixedCents != null ? o.cardFixedCents : parseInt(process.env.ASAAS_CARD_FEE_CENTS || '49', 10);
-    return Math.round(amountCents * (pct / 100)) + fixed;
+    const base  = Math.round(amountCents * (pct / 100)) + fixed;
+    return base + anticipationFeeCents(amountCents, o.installments, o);
   }
   // Pix de recebimento é gratuito no Asaas, e desabilitamos as notificações (R$0,99),
   // então a taxa de Pix é 0 por padrão. Configurável caso o Asaas passe a cobrar algo.
@@ -48,21 +75,38 @@ function asaasFeeCents(method, amountCents, overrides) {
 // após a taxa do Asaas E a margem da Vaultly (o vendedor absorve a taxa do banco).
 // A taxa da Vaultly só é cobrada quando chargeVaultlyFee !== false (plano Free);
 // planos pagos são isentos (a assinatura cobre a Vaultly), então recebem mais no split.
-function buildSplit({ amountCents, sellerWalletId, method, chargeVaultlyFee, overrides }) {
+function buildSplit({ amountCents, sellerWalletId, method, chargeVaultlyFee, installments, overrides }) {
   const feeCents     = (chargeVaultlyFee === false) ? 0 : vaultlyFeeCents(amountCents, overrides);
-  const gatewayCents = asaasFeeCents(method, amountCents, overrides);
+  const gatewayCents = asaasFeeCents(method, amountCents, Object.assign({ installments: installments }, overrides || {}));
   const sellerCents  = Math.max(0, amountCents - feeCents - gatewayCents);
   return [{ walletId: sellerWalletId, fixedValue: centsToReais(sellerCents) }];
 }
 
-// Gross-up do cartao: valor a cobrar para que, apos a taxa do cartao (pct + fixo),
+// Gross-up do cartao: valor a cobrar para que, apos cartao (pct + fixo) E antecipacao(N),
 // o vendedor receba o preco cheio. Arredonda p/ cima (vendedor nunca recebe a menos).
-function cardChargeCents(priceCents, overrides) {
+function cardChargeCents(priceCents, installments, overrides) {
   const o = overrides || {};
-  const pct   = (o.cardPercent != null ? o.cardPercent : parseFloat(process.env.ASAAS_CARD_PERCENT || '1.99')) / 100;
-  const fixed = o.cardFixedCents != null ? o.cardFixedCents : parseInt(process.env.ASAAS_CARD_FEE_CENTS || '49', 10);
-  if (!(pct < 1)) return priceCents;
-  return Math.ceil((priceCents + fixed) / (1 - pct));
+  const cardPct = (o.cardPercent != null ? o.cardPercent : parseFloat(process.env.ASAAS_CARD_PERCENT || '1.99'));
+  const fixed   = o.cardFixedCents != null ? o.cardFixedCents : parseInt(process.env.ASAAS_CARD_FEE_CENTS || '49', 10);
+  const pctTotal = (cardPct + anticipPercent(installments, o)) / 100;
+  if (!(pctTotal < 1)) return priceCents;
+  return Math.ceil((priceCents + fixed) / (1 - pctTotal));
 }
 
-module.exports = { vaultlyFeeCents, asaasFeeCents, centsToReais, buildSplit, cardChargeCents };
+// Monta as opcoes de parcela para o checkout. Sempre inclui 1x. Para N>1, para de
+// oferecer quando o valor da parcela cai abaixo do minimo (parcelas maiores so diminuem).
+// Com repasse ligado, o total cresce com N (gross-up por parcela); sem repasse, total = preco.
+function installmentOptions({ priceCents, passFee, maxInstallments, minParcelaCents, overrides }) {
+  const max = Math.max(1, parseInt(maxInstallments != null ? maxInstallments : (process.env.MAX_INSTALLMENTS || '3'), 10));
+  const minParcela = parseInt(minParcelaCents != null ? minParcelaCents : (process.env.MIN_PARCELA_CENTS || '500'), 10);
+  const out = [];
+  for (let n = 1; n <= max; n++) {
+    const total = passFee ? cardChargeCents(priceCents, n, overrides) : priceCents;
+    const parcela = Math.ceil(total / n);
+    if (n > 1 && parcela < minParcela) break;
+    out.push({ n: n, total_cents: total, parcela_cents: parcela });
+  }
+  return out;
+}
+
+module.exports = { vaultlyFeeCents, asaasFeeCents, centsToReais, buildSplit, cardChargeCents, anticipationFeeCents, anticipPercent, installmentOptions };
