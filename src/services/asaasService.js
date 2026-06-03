@@ -167,9 +167,9 @@ async function createPixTransfer(apiKey, opts) {
 
 // Habilita a antecipacao automatica do cartao na subconta (recebimento rapido).
 // Best-effort: contas novas podem exigir aprovacao do Asaas; nunca deve quebrar o fluxo.
-// GATE (sandbox): confirmar o endpoint/flag exato da antecipacao automatica.
+// Endpoint confirmado na doc oficial: PUT /anticipations/configurations { creditCardAutomaticEnabled }.
 async function enableAutoAnticipation(apiKey) {
-  return request('POST', '/anticipations/config', { automaticAnticipationEnabled: true }, apiKey);
+  return request('PUT', '/anticipations/configurations', { creditCardAutomaticEnabled: true }, apiKey);
 }
 
 module.exports = {
