@@ -1674,9 +1674,10 @@ function renderSellerActive(body, account) {
       '</div>' +
     '</div>' +
     (account.has_payout_key === false ?
-      '<div style="display:flex;align-items:flex-start;gap:8px;padding:10px 14px;background:var(--yellow-dim);border:1px solid rgba(245,158,11,0.3);border-radius:8px;margin-bottom:16px;font-size:12px;color:var(--yellow);line-height:1.5;">' +
-        '<i class="ti ti-alert-triangle" style="font-size:15px;flex-shrink:0;margin-top:1px;"></i>' +
-        '<span>Sua conta foi criada antes do saque automatico. Para habilitar o repasse automatico, reative sua conta de recebimento (refaca o cadastro).</span>' +
+      '<div style="padding:12px 14px;background:var(--yellow-dim);border:1px solid rgba(245,158,11,0.3);border-radius:8px;margin-bottom:16px;font-size:12px;color:var(--text2);line-height:1.6;">' +
+        '<div style="display:flex;align-items:center;gap:8px;color:var(--yellow);font-weight:700;margin-bottom:6px;"><i class="ti ti-alert-triangle" style="font-size:15px;flex-shrink:0;"></i> Saque automático indisponível nesta conta</div>' +
+        '<div style="margin-bottom:10px;">Sua conta de recebimento foi criada antes do saque automático. Por segurança, o banco parceiro (<strong>Asaas</strong>) fornece a chave de acesso da sua subconta <strong>uma única vez, na criação</strong> — e ela não pode ser recuperada depois. Por isso a reativação <strong>não é automática</strong>: ela é feita pela nossa equipe junto ao banco, <strong>sem que você perca seus dados de venda</strong>.</div>' +
+        '<button class="btn btn-primary btn-sm" id="btn-reactivate" onclick="requestSellerReactivation(this)"><i class="ti ti-send"></i> Solicitar reativação</button>' +
       '</div>'
       : '') +
     '<div style="font-size:13px;font-weight:600;margin-bottom:10px;">Metodos aceitos</div>' +
@@ -1861,6 +1862,26 @@ async function submitSellerOnboarding() {
     showToast(e.message || 'Erro ao ativar conta.', 'error');
     btn.disabled = false;
     btn.innerHTML = '<i class="ti ti-rocket"></i> Ativar conta de recebimento';
+  }
+}
+
+async function requestSellerReactivation(btn) {
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i> Enviando...'; }
+  var msg = 'Solicito a reativacao da minha conta de recebimento para habilitar o saque automatico. ' +
+            'Minha subconta foi criada antes do recurso e nao possui a chave de acesso armazenada (o banco so fornece a chave na criacao e nao a reexpoe). ' +
+            'Por favor, reativem/regenerem a chave junto ao Asaas para habilitar o repasse automatico via Pix, sem perder meus dados de venda.';
+  try {
+    var res = await apiFetch('/api/support/ticket', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subject: 'Reativacao da conta de recebimento', message: msg })
+    });
+    if (!res.success) throw new Error(res.error || 'Erro');
+    showToast('Pedido de reativacao enviado! Nossa equipe vai te ajudar pelo email da sua conta.', 'success');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-check"></i> Pedido enviado'; }
+  } catch (e) {
+    showToast(e.message || 'Nao foi possivel enviar agora. Tente novamente.', 'warn');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-send"></i> Solicitar reativação'; }
   }
 }
 
