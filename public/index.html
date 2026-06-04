@@ -1730,7 +1730,7 @@ function feeSimulatorCard() {
     '<div style="font-size:12px;color:var(--text2);margin-bottom:10px;">Veja quanto voce recebe e quanto o comprador paga em cada forma de pagamento.</div>' +
     '<label class="form-label">Valor da venda</label>' +
     '<input type="text" class="form-input" id="sim-amount" value="R$ 100,00" inputmode="numeric" style="max-width:180px;" oninput="onSimInput()" />' +
-    '<div id="sim-result" style="margin-top:12px;"></div>' +
+    '<div id="fee-sim-result" style="margin-top:12px;"></div>' +
   '</div>';
 }
 
@@ -1749,7 +1749,7 @@ function simAmountCents() {
 function simBRL(cents) { return 'R$ ' + (cents / 100).toFixed(2).replace('.', ','); }
 
 async function loadFeeSimulator() {
-  var el = document.getElementById('sim-result');
+  var el = document.getElementById('fee-sim-result');
   if (!el) return;
   var cents = simAmountCents();
   if (!cents || cents < 900) { el.innerHTML = '<span style="font-size:12px;color:var(--text3);">Informe um valor a partir de R$ 9,00.</span>'; return; }
@@ -1764,7 +1764,7 @@ async function loadFeeSimulator() {
 }
 
 function renderFeeSimulator(sim) {
-  var el = document.getElementById('sim-result');
+  var el = document.getElementById('fee-sim-result');
   if (!el) return;
   var rows = '<tr><td style="padding:6px 8px;">Pix</td>' +
     '<td style="padding:6px 8px;color:var(--emerald);">' + simBRL(sim.pix.seller_cents) + '</td>' +
