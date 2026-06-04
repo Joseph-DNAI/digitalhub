@@ -48,6 +48,8 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .nav-item.active i { color: var(--orange); }
 .nav-item i { font-size: 17px; flex-shrink: 0; }
 .nav-badge { margin-left: auto; background: var(--red); color: #fff; font-size: 10px; padding: 1px 6px; border-radius: 99px; font-family: 'JetBrains Mono', monospace; }
+.nav-dot { display: none; width: 7px; height: 7px; border-radius: 50%; background: var(--red); margin-left: auto; flex-shrink: 0; box-shadow: 0 0 6px rgba(239,68,68,0.7); }
+.nav-dot.on { display: inline-block; }
 
 .sidebar-footer { padding: 12px 10px; border-top: 1px solid var(--border); }
 .user-card { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius); background: rgba(255,255,255,0.03); border: 1px solid var(--border); }
@@ -300,13 +302,13 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
     <div class="nav-wrap">
       <div class="nav-section">Principal</div>
       <button class="nav-item active" onclick="switchTab('dashboard',this)"><i class="ti ti-layout-dashboard"></i> Dashboard</button>
-      <button class="nav-item" onclick="switchTab('produtos',this)"><i class="ti ti-package"></i> Produtos</button>
+      <button class="nav-item" onclick="switchTab('produtos',this)"><i class="ti ti-package"></i> Produtos<span class="nav-dot" id="dot-produtos"></span></button>
       <button class="nav-item" onclick="switchTab('vendas',this)"><i class="ti ti-shopping-cart"></i> Vendas</button>
-      <button class="nav-item" onclick="switchTab('entregas',this)"><i class="ti ti-mail-forward"></i> Entregas</button>
+      <button class="nav-item" onclick="switchTab('entregas',this)"><i class="ti ti-mail-forward"></i> Entregas<span class="nav-dot" id="dot-entregas"></span></button>
       <div class="nav-section">Sistema</div>
       <button class="nav-item" onclick="switchTab('webhook',this)"><i class="ti ti-webhook"></i> Webhook</button>
       <button class="nav-item" onclick="switchTab('email',this)"><i class="ti ti-mail"></i> Email</button>
-      <button class="nav-item" id="nav-loja" onclick="switchTab('loja',this)"><i class="ti ti-building-store"></i> Loja</button>
+      <button class="nav-item" id="nav-loja" onclick="switchTab('loja',this)"><i class="ti ti-building-store"></i> Loja<span class="nav-dot" id="dot-loja"></span></button>
       <button class="nav-item" onclick="switchTab('config',this)"><i class="ti ti-settings"></i> Configurações</button>
       <button class="nav-item" onclick="switchTab('suporte',this)"><i class="ti ti-lifebuoy"></i> Suporte</button>
       <div id="admin-nav-section" style="display:none;">
@@ -1976,6 +1978,20 @@ async function initApp() {
   }
   loadDashboard();
   loadUnmatchedProducts();
+  loadPendings();
+}
+
+function setNavDot(id, on) { var d = document.getElementById(id); if (d) d.classList.toggle('on', !!on); }
+
+async function loadPendings() {
+  try {
+    var res = await apiFetch('/api/pendings');
+    if (!res || !res.success || !res.pendings) return;
+    var p = res.pendings;
+    setNavDot('dot-produtos', p.produtos);
+    setNavDot('dot-entregas', p.entregas);
+    setNavDot('dot-loja',     p.loja);
+  } catch (e) {}
 }
 
 // spin keyframe
@@ -2074,6 +2090,7 @@ function switchTab(name, el) {
   if (name === 'config')    loadConfig();
   if (name === 'vendas')    loadVendas();
   closeSidebar();
+  loadPendings();
 }
 
 // ── Webhook Config ────────────────────────────────────────────────
