@@ -675,6 +675,7 @@ footer { position: relative; z-index: 1; background: #09090E; border-top: 1px so
       <div class="footer-links">
         <a href="/termos">Termos</a>
         <a href="/termos#privacidade">Privacidade</a>
+        <a href="#" onclick="if(window.VaultlyConsent){VaultlyConsent.open();}return false;">Cookies</a>
         <a href="/suporte">Suporte</a>
         <a href="#" onclick="openLoginModal();return false;">Entrar</a>
       </div>
@@ -949,5 +950,6 @@ window.addEventListener('scroll', function() {
     window.scrollY > 40 ? 'rgba(13,15,24,0.97)' : 'rgba(13,15,24,0.8)';
 });
 </script>
+<script src="/consent.js" defer></script>
 </body>
 </html>
