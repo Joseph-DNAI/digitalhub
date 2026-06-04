@@ -301,6 +301,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
       <div class="nav-section">Principal</div>
       <button class="nav-item active" onclick="switchTab('dashboard',this)"><i class="ti ti-layout-dashboard"></i> Dashboard</button>
       <button class="nav-item" onclick="switchTab('produtos',this)"><i class="ti ti-package"></i> Produtos</button>
+      <button class="nav-item" onclick="switchTab('vendas',this)"><i class="ti ti-shopping-cart"></i> Vendas</button>
       <button class="nav-item" onclick="switchTab('entregas',this)"><i class="ti ti-mail-forward"></i> Entregas</button>
       <div class="nav-section">Sistema</div>
       <button class="nav-item" onclick="switchTab('webhook',this)"><i class="ti ti-webhook"></i> Webhook</button>
@@ -389,6 +390,20 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
           </div>
         </div>
 
+        <div class="card" id="dash-vendas-card" style="display:none;">
+          <div class="card-header">
+            <div class="card-title"><i class="ti ti-shopping-cart"></i> Vendas diretas (mes)</div>
+            <button class="btn btn-ghost btn-xs" onclick="switchTabById('vendas')">Ver vendas</button>
+          </div>
+          <div class="card-body" style="display:flex;align-items:baseline;gap:18px;flex-wrap:wrap;">
+            <div>
+              <div class="stat-label">Faturamento</div>
+              <div class="stat-val" id="dash-fat" style="font-size:26px;">R$ 0,00</div>
+            </div>
+            <div style="color:var(--text2);font-size:13px;" id="dash-vendas-sub">0 vendas no mes</div>
+          </div>
+        </div>
+
         <div id="limit-warning-banner" style="display:none;"></div>
 
         <div class="card">
@@ -445,6 +460,29 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 
         <div class="products-grid" id="products-grid">
           <div style="grid-column:1/-1;text-align:center;color:var(--text3);padding:48px;">Carregando...</div>
+        </div>
+      </div>
+
+      <!-- ── VENDAS ── -->
+      <div id="tab-vendas" class="section">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Vendas</div>
+            <div class="page-sub">pedidos da venda direta (checkout Vaultly)</div>
+          </div>
+          <button class="btn btn-ghost" onclick="loadVendas()">
+            <i class="ti ti-refresh"></i> Atualizar
+          </button>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Comprador</th><th>Produto</th><th>Valor</th><th>Metodo</th><th>Status</th><th>Data</th></tr></thead>
+              <tbody id="orders-table">
+                <tr><td colspan="6" style="text-align:center;color:var(--text3);padding:32px;">Carregando...</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -1928,6 +1966,66 @@ style.textContent = '@keyframes spin { from { transform: rotate(0deg); } to { tr
 document.head.appendChild(style);
 
 // ── Tab navigation ───────────────────────────────────────────────
+function orderStatusBadge(status) {
+  var map = {
+    paid:       ['Pago', 'var(--emerald)'],
+    pending:    ['Pendente', 'var(--yellow)'],
+    failed:     ['Falhou', 'var(--red)'],
+    refunded:   ['Estornado', 'var(--red)'],
+    chargeback: ['Chargeback', 'var(--red)']
+  };
+  var m = map[status] || [status || '-', 'var(--text3)'];
+  return '<span style="color:' + m[1] + ';font-weight:600;">' + m[0] + '</span>';
+}
+
+async function loadVendas() {
+  var tb = document.getElementById('orders-table');
+  if (!tb) return;
+  if (currentUser && currentUser.plan_id === 'free') {
+    tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text2);padding:32px;">Ative a venda direta na aba <strong>Loja</strong> para vender pela Vaultly.</td></tr>';
+    return;
+  }
+  tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:32px;">Carregando...</td></tr>';
+  try {
+    var res = await apiFetch('/api/orders');
+    if (!res.success) throw new Error(res.error || 'Erro');
+    var list = res.orders || [];
+    if (!list.length) {
+      tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:32px;">Nenhuma venda ainda.</td></tr>';
+      return;
+    }
+    tb.innerHTML = list.map(function(o) {
+      var metodo = o.payment_method === 'card' ? 'Cartao' : (o.payment_method === 'pix' ? 'Pix' : '-');
+      var valor  = 'R$ ' + ((o.amount_cents || 0) / 100).toFixed(2).replace('.', ',');
+      var data   = o.created_at ? new Date(o.created_at).toLocaleDateString('pt-BR') : '-';
+      return '<tr>' +
+        '<td>' + escAttr(o.buyer_name || o.buyer_email || '-') + '</td>' +
+        '<td>' + escAttr(o.product_name || '-') + '</td>' +
+        '<td>' + valor + '</td>' +
+        '<td>' + metodo + '</td>' +
+        '<td>' + orderStatusBadge(o.status) + '</td>' +
+        '<td style="color:var(--text3);">' + data + '</td>' +
+      '</tr>';
+    }).join('');
+  } catch (e) {
+    tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--red);padding:32px;">Erro ao carregar.</td></tr>';
+  }
+}
+
+async function loadDashVendas() {
+  var card = document.getElementById('dash-vendas-card');
+  if (!card) return;
+  if (currentUser && currentUser.plan_id === 'free') { card.style.display = 'none'; return; }
+  try {
+    var res = await apiFetch('/api/orders/stats');
+    if (!res.success || !res.stats) return;
+    var s = res.stats;
+    document.getElementById('dash-fat').textContent = 'R$ ' + ((s.faturamento_month_cents || 0) / 100).toFixed(2).replace('.', ',');
+    document.getElementById('dash-vendas-sub').textContent = (s.count_month || 0) + ' vendas no mes · ' + (s.count_today || 0) + ' hoje';
+    card.style.display = 'block';
+  } catch (e) {}
+}
+
 function toggleSidebar() {
   var sb = document.querySelector('.sidebar');
   var ov = document.getElementById('sidebarOverlay');
@@ -1956,6 +2054,7 @@ function switchTab(name, el) {
   if (name === 'email')     loadEmailTab();
   if (name === 'loja')      loadVendaDiretaSection();
   if (name === 'config')    loadConfig();
+  if (name === 'vendas')    loadVendas();
   closeSidebar();
 }
 
@@ -2576,6 +2675,7 @@ function countUp(id, target, duration) {
 
 // ── Dashboard ────────────────────────────────────────────────────
 async function loadDashboard() {
+  loadDashVendas();
   try {
     const [statsRes, delivRes, prodRes] = await Promise.all([
       apiFetch('/api/deliveries/stats'),
