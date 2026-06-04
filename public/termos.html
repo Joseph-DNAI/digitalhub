@@ -172,8 +172,11 @@ footer { border-top: 1px solid var(--border); padding: 28px 0; text-align: cente
         <li>Mantemos os dados pelo tempo necessário à prestação do serviço e às obrigações legais.</li>
       </ul>
 
-      <h3>6. Cookies</h3>
-      <p>Usamos apenas o necessário para manter sua sessão ativa após o login. Não utilizamos cookies de rastreamento publicitário.</p>
+      <h3 id="cookies">6. Cookies e armazenamento local</h3>
+      <p><strong>Armazenamento essencial.</strong> Usamos o armazenamento local do seu navegador apenas para manter sua sessão ativa após o login e guardar preferências de interface (por exemplo, o modo de privacidade do painel). É necessário para o funcionamento da plataforma e não depende de consentimento.</p>
+      <p><strong>Itens opcionais.</strong> Recursos de melhoria ou medição de uso só são ativados com o seu consentimento (opt-in). <strong>Nenhum item opcional está ativo atualmente</strong> — não utilizamos cookies de rastreamento ou de publicidade.</p>
+      <p><strong>Terceiros.</strong> Carregamos fontes e ícones de provedores externos (Google Fonts, Tabler, jsDelivr), que podem definir armazenamento técnico próprio para entregar esses recursos.</p>
+      <p>Você pode rever suas escolhas a qualquer momento em <a href="#" onclick="if(window.VaultlyConsent){VaultlyConsent.open();}return false;" style="color:#FF6B35;font-weight:600;">Gerenciar preferências de cookies</a>. Também é possível limpar o armazenamento diretamente pelo seu navegador.</p>
     </section>
 
     <!-- RESPONSABILIDADE -->
@@ -249,5 +252,6 @@ function onScroll() {
 window.addEventListener('scroll', onScroll);
 onScroll();
 </script>
+<script src="/consent.js" defer></script>
 </body>
 </html>
