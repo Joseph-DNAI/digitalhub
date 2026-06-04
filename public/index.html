@@ -50,6 +50,11 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .nav-badge { margin-left: auto; background: var(--red); color: #fff; font-size: 10px; padding: 1px 6px; border-radius: 99px; font-family: 'JetBrains Mono', monospace; }
 .nav-dot { display: none; width: 7px; height: 7px; border-radius: 50%; background: var(--red); margin-left: auto; flex-shrink: 0; box-shadow: 0 0 6px rgba(239,68,68,0.7); }
 .nav-dot.on { display: inline-block; }
+.topbar-eye { background: none; border: 1px solid var(--border2); color: var(--text2); width: 34px; height: 30px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 16px; transition: all 0.2s; }
+.topbar-eye:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+.topbar-eye.on { color: var(--orange); border-color: rgba(255,107,53,0.4); background: var(--orange-dim); }
+.priv-on #s-today, .priv-on #s-delivered, .priv-on #s-failed, .priv-on #s-products, .priv-on #sparkline-svg, .priv-on #dash-fat, .priv-on #dash-vendas-sub, .priv-on #tb-plan-usage-text, .priv-on #tb-today-count, .priv-on #orders-table td:nth-child(1), .priv-on #orders-table td:nth-child(3), .priv-on #deliveries-table td:nth-child(1) { filter: blur(6px); user-select: none; transition: filter 0.12s; cursor: default; }
+.priv-on #s-today:hover, .priv-on #s-delivered:hover, .priv-on #s-failed:hover, .priv-on #s-products:hover, .priv-on #sparkline-svg:hover, .priv-on #dash-fat:hover, .priv-on #dash-vendas-sub:hover, .priv-on #tb-plan-usage-text:hover, .priv-on #tb-today-count:hover, .priv-on #orders-table td:nth-child(1):hover, .priv-on #orders-table td:nth-child(3):hover, .priv-on #deliveries-table td:nth-child(1):hover { filter: none; }
 
 .sidebar-footer { padding: 12px 10px; border-top: 1px solid var(--border); }
 .user-card { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius); background: rgba(255,255,255,0.03); border: 1px solid var(--border); }
@@ -344,6 +349,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
         <span id="tb-unmatched-count">0</span> pendentes
       </div>
       <span id="topbar-btn" style="display:none;"></span>
+      <button class="topbar-eye" id="topbar-eye" onclick="togglePrivacy()" title="Modo privacidade — ocultar dados sensíveis"><i class="ti ti-eye" id="eye-icon"></i></button>
     </div>
     <div class="content">
       <!-- ── DASHBOARD ── -->
@@ -2000,6 +2006,21 @@ async function initApp() {
   loadDashboard();
   loadUnmatchedProducts();
   loadPendings();
+  applyPrivacy(getPrivacyPref());
+}
+
+function getPrivacyPref() { try { return localStorage.getItem('vaultly_priv') === '1'; } catch (e) { return false; } }
+function applyPrivacy(on) {
+  document.body.classList.toggle('priv-on', !!on);
+  var btn = document.getElementById('topbar-eye');
+  var ic  = document.getElementById('eye-icon');
+  if (btn) btn.classList.toggle('on', !!on);
+  if (ic)  ic.className = on ? 'ti ti-eye-off' : 'ti ti-eye';
+}
+function togglePrivacy() {
+  var on = !document.body.classList.contains('priv-on');
+  try { localStorage.setItem('vaultly_priv', on ? '1' : '0'); } catch (e) {}
+  applyPrivacy(on);
 }
 
 function setNavDot(id, on) { var d = document.getElementById(id); if (d) d.classList.toggle('on', !!on); }
