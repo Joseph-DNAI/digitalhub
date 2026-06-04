@@ -810,6 +810,20 @@ const orders = {
        LEFT JOIN products p ON o.product_id = p.id
        WHERE o.tenant_id = $1 ORDER BY o.created_at DESC LIMIT $2`,
       [tenantId, limit]);
+  },
+  async stats(tenantId) {
+    const row = await queryOne(`
+      SELECT
+        COALESCE(SUM(amount_cents) FILTER (WHERE status='paid' AND created_at >= date_trunc('month', NOW())), 0) AS faturamento_month_cents,
+        COUNT(*) FILTER (WHERE status='paid' AND created_at >= date_trunc('month', NOW())) AS count_month,
+        COUNT(*) FILTER (WHERE status='paid' AND created_at >= date_trunc('day', NOW()))   AS count_today
+      FROM orders WHERE tenant_id = $1
+    `, [tenantId]);
+    return {
+      faturamento_month_cents: parseInt(row ? row.faturamento_month_cents : 0, 10) || 0,
+      count_month: parseInt(row ? row.count_month : 0, 10) || 0,
+      count_today: parseInt(row ? row.count_today : 0, 10) || 0
+    };
   }
 };
 
