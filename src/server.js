@@ -78,6 +78,7 @@ app.use('/api/billing',    express.json());
 app.use('/api/support',    express.json());
 app.use('/api/seller',     express.json());
 app.use('/api/checkout',   express.json());
+app.use('/api/orders',     express.json());
 app.use('/api/asaas',      express.json());
 
 app.use(morgan('combined', { stream: { write: msg => logger.info(msg.trim()) } }));
@@ -100,6 +101,7 @@ app.use('/api/billing',    require('./routes/billing'));
 app.use('/api/support',    require('./routes/support'));
 app.use('/api/seller',     require('./routes/seller'));
 app.use('/api/checkout',   checkoutLimiter, require('./routes/checkout'));
+app.use('/api/orders',     require('./routes/orders'));
 app.use('/api/asaas',      require('./routes/asaasWebhook'));
 
 app.get('/health', (req, res) => res.json({ status: 'ok', version: '2.0.0', uptime: process.uptime(), timestamp: new Date().toISOString() }));
