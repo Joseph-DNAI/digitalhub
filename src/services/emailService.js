@@ -272,4 +272,34 @@ async function sendDeliveryFailedEmail({ userEmail, userName, productName, buyer
   logger.info('Aviso de falha de entrega enviado para ' + userEmail);
 }
 
-module.exports = { sendProductEmail, sendLimitWarningEmail, testSmtpConnection, sendTestEmail, sendDeliveryFailedEmail };
+async function sendPasswordResetEmail({ userEmail, userName, resetUrl }) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const fAddr  = process.env.EMAIL_FROM_ADDRESS || 'entregas@vaultly.digital';
+  if (!apiKey) {
+    logger.warn('RESEND_API_KEY nao configurada — email de reset nao enviado para ' + userEmail);
+    return;
+  }
+  var html = '<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#333;">' +
+    '<div style="background:linear-gradient(135deg,#FF6B35,#FF9F1C);padding:30px 24px;border-radius:8px 8px 0 0;">' +
+    '<h1 style="color:#fff;margin:0;font-size:22px;">Redefinir sua senha</h1>' +
+    '</div>' +
+    '<div style="background:#f9f9f9;padding:28px 24px;border-radius:0 0 8px 8px;border:1px solid #e5e5e5;">' +
+    '<p style="font-size:16px;">Ola, <strong>' + (userName || userEmail) + '</strong>!</p>' +
+    '<p style="font-size:15px;line-height:1.6;">Recebemos um pedido para redefinir a senha da sua conta Vaultly. Clique no botao abaixo para criar uma nova senha.</p>' +
+    '<div style="text-align:center;margin:28px 0;">' +
+    '<a href="' + resetUrl + '" style="background:#FF6B35;color:#fff;padding:14px 32px;border-radius:6px;font-size:15px;font-weight:700;text-decoration:none;">Redefinir senha</a>' +
+    '</div>' +
+    '<p style="font-size:13px;color:#777;line-height:1.6;">Este link expira em 1 hora. Se voce nao solicitou a redefinicao, ignore este email — sua senha continua a mesma.</p>' +
+    '<p style="font-size:12px;color:#aaa;word-break:break-all;margin-top:16px;">Ou copie e cole no navegador: ' + resetUrl + '</p>' +
+    '</div></div>';
+  var response = await fetch('https://api.resend.com/emails', {
+    method:  'POST',
+    headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: 'Vaultly <' + fAddr + '>', to: [userEmail], subject: 'Redefinicao de senha — Vaultly', html: html })
+  });
+  var result = await response.json();
+  if (!response.ok) throw new Error('Resend erro: ' + JSON.stringify(result));
+  logger.info('Email de redefinicao de senha enviado para ' + userEmail);
+}
+
+module.exports = { sendProductEmail, sendLimitWarningEmail, testSmtpConnection, sendTestEmail, sendDeliveryFailedEmail, sendPasswordResetEmail };

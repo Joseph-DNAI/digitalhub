@@ -3,7 +3,8 @@
 
 const express  = require('express');
 const router   = express.Router();
-const { users, sessions, plans } = require('../models/database');
+const { users, sessions, plans, authTokens } = require('../models/database');
+const { sendPasswordResetEmail } = require('../services/emailService');
 const bcrypt   = require('../models/bcrypt');
 const { requireAuth } = require('../middleware/auth');
 const logger   = require('../config/logger');
@@ -61,6 +62,43 @@ router.post('/login', async (req, res) => {
   } catch (err) {
     logger.error(`Erro no login: ${err.message}`);
     res.status(500).json({ success: false, error: 'Erro ao fazer login. Tente novamente.' });
+  }
+});
+
+// POST /api/auth/forgot-password — envia link de redefinicao (sem revelar se o email existe)
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body || {};
+    if (email) {
+      const user = await users.findByEmail(email);
+      if (user) {
+        const raw  = await authTokens.create(user.id, 'reset', 60);
+        const base = process.env.BASE_URL || 'https://vaultly.digital';
+        await sendPasswordResetEmail({ userEmail: user.email, userName: user.name, resetUrl: base + '/redefinir-senha?token=' + raw })
+          .catch(e => logger.error('reset email: ' + e.message));
+      }
+    }
+    res.json({ success: true, message: 'Se o email estiver cadastrado, enviamos um link de recuperacao.' });
+  } catch (err) {
+    logger.error('forgot-password: ' + err.message);
+    res.json({ success: true, message: 'Se o email estiver cadastrado, enviamos um link de recuperacao.' });
+  }
+});
+
+// POST /api/auth/reset-password — define nova senha a partir do token
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, password } = req.body || {};
+    if (!token || !password) return res.status(400).json({ success: false, error: 'Token e nova senha sao obrigatorios.' });
+    if (String(password).length < 8) return res.status(400).json({ success: false, error: 'A senha deve ter ao menos 8 caracteres.' });
+    const userId = await authTokens.consume(token, 'reset');
+    if (!userId) return res.status(400).json({ success: false, error: 'Link invalido ou expirado. Solicite um novo.' });
+    await users.updatePassword(userId, password);
+    await sessions.deleteByUser(userId);
+    res.json({ success: true, message: 'Senha redefinida. Faca login com a nova senha.' });
+  } catch (err) {
+    logger.error('reset-password: ' + err.message);
+    res.status(500).json({ success: false, error: 'Erro ao redefinir a senha.' });
   }
 });
 
