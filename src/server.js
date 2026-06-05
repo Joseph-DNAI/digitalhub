@@ -146,6 +146,13 @@ app.get('/redefinir-senha', (req, res) => {
   res.redirect('/');
 });
 
+// Página pública de confirmação de email (acessada via link do email)
+app.get('/confirmar-email', (req, res) => {
+  const p = path.join(publicPath, 'confirmar-email.html');
+  if (fs.existsSync(p)) return res.sendFile(p);
+  res.redirect('/');
+});
+
 // Página pública de checkout de venda direta
 app.get('/c/:slug', (req, res) => {
   const co = path.join(publicPath, 'checkout.html');

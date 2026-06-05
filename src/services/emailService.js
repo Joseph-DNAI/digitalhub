@@ -302,4 +302,34 @@ async function sendPasswordResetEmail({ userEmail, userName, resetUrl }) {
   logger.info('Email de redefinicao de senha enviado para ' + userEmail);
 }
 
-module.exports = { sendProductEmail, sendLimitWarningEmail, testSmtpConnection, sendTestEmail, sendDeliveryFailedEmail, sendPasswordResetEmail };
+async function sendVerificationEmail({ userEmail, userName, verifyUrl }) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const fAddr  = process.env.EMAIL_FROM_ADDRESS || 'entregas@vaultly.digital';
+  if (!apiKey) {
+    logger.warn('RESEND_API_KEY nao configurada — email de verificacao nao enviado para ' + userEmail);
+    return;
+  }
+  var html = '<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#333;">' +
+    '<div style="background:linear-gradient(135deg,#FF6B35,#FF9F1C);padding:30px 24px;border-radius:8px 8px 0 0;">' +
+    '<h1 style="color:#fff;margin:0;font-size:22px;">Confirme seu email</h1>' +
+    '</div>' +
+    '<div style="background:#f9f9f9;padding:28px 24px;border-radius:0 0 8px 8px;border:1px solid #e5e5e5;">' +
+    '<p style="font-size:16px;">Ola, <strong>' + (userName || userEmail) + '</strong>!</p>' +
+    '<p style="font-size:15px;line-height:1.6;">Bem-vindo a Vaultly. Confirme seu email para garantir o acesso a sua conta e liberar a venda direta.</p>' +
+    '<div style="text-align:center;margin:28px 0;">' +
+    '<a href="' + verifyUrl + '" style="background:#FF6B35;color:#fff;padding:14px 32px;border-radius:6px;font-size:15px;font-weight:700;text-decoration:none;">Confirmar email</a>' +
+    '</div>' +
+    '<p style="font-size:13px;color:#777;line-height:1.6;">Se voce nao criou esta conta, ignore este email.</p>' +
+    '<p style="font-size:12px;color:#aaa;word-break:break-all;margin-top:16px;">Ou copie e cole no navegador: ' + verifyUrl + '</p>' +
+    '</div></div>';
+  var response = await fetch('https://api.resend.com/emails', {
+    method:  'POST',
+    headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: 'Vaultly <' + fAddr + '>', to: [userEmail], subject: 'Confirme seu email — Vaultly', html: html })
+  });
+  var result = await response.json();
+  if (!response.ok) throw new Error('Resend erro: ' + JSON.stringify(result));
+  logger.info('Email de verificacao enviado para ' + userEmail);
+}
+
+module.exports = { sendProductEmail, sendLimitWarningEmail, testSmtpConnection, sendTestEmail, sendDeliveryFailedEmail, sendPasswordResetEmail, sendVerificationEmail };

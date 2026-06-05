@@ -352,6 +352,11 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
       <button class="topbar-eye" id="topbar-eye" onclick="togglePrivacy()" title="Modo privacidade — ocultar dados sensíveis"><i class="ti ti-eye" id="eye-icon"></i></button>
     </div>
     <div class="content">
+      <div id="email-verify-banner" style="display:none;align-items:center;gap:10px;background:var(--yellow-dim);border:1px solid rgba(245,158,11,0.3);border-radius:10px;padding:10px 16px;margin-bottom:16px;font-size:13px;color:var(--text);">
+        <i class="ti ti-mail-exclamation" style="color:var(--yellow);font-size:18px;flex-shrink:0;"></i>
+        <span style="flex:1;">Confirme seu email para garantir seu acesso e liberar a venda direta.</span>
+        <button class="btn btn-ghost btn-sm" id="resend-verify-btn" onclick="resendVerification(this)"><i class="ti ti-send"></i> Reenviar</button>
+      </div>
       <!-- ── DASHBOARD ── -->
       <div id="tab-dashboard" class="section active">
         <div class="page-header">
@@ -1514,6 +1519,24 @@ async function doLogin() {
   }
 }
 
+function checkEmailBanner() {
+  var b = document.getElementById('email-verify-banner');
+  if (!b) return;
+  b.style.display = (currentUser && currentUser.email_verified === false) ? 'flex' : 'none';
+}
+async function resendVerification(btn) {
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i> Enviando...'; }
+  try {
+    var res = await apiFetch('/api/auth/resend-verification', { method: 'POST' });
+    if (!res.success) throw new Error(res.error || 'Erro');
+    showToast(res.message || 'Email de confirmacao reenviado.', 'success');
+    if (btn) { btn.innerHTML = '<i class="ti ti-check"></i> Enviado'; }
+  } catch (e) {
+    showToast(e.message || 'Nao foi possivel reenviar agora.', 'warn');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-send"></i> Reenviar'; }
+  }
+}
+
 function showApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
@@ -1530,6 +1553,7 @@ function showApp() {
   // Oculta aba Loja para usuarios Free
   var navLoja = document.getElementById('nav-loja');
   if (navLoja) navLoja.style.display = (currentUser && currentUser.plan_id && currentUser.plan_id !== 'free') ? '' : 'none';
+  checkEmailBanner();
   // Card de assinatura na aba Config
   var planLabels = { free: 'Free', starter: 'Starter', basic: 'Basic', pro: 'Pro', business: 'Business' };
   var planSubs   = { free: 'Grátis · 1 produto · 50 entregas/mês', starter: 'R$37/mês · 2 produtos · 200 entregas/mês', basic: 'R$77/mês · 5 produtos · 1.000 entregas/mês', pro: 'R$147/mês · produtos ilimitados · 5.000 entregas/mês', business: 'R$247/mês anual · ilimitado' };
