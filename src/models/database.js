@@ -167,6 +167,16 @@ async function initDatabase() {
         created_at TIMESTAMP DEFAULT NOW()
       );
 
+      CREATE TABLE IF NOT EXISTS auth_tokens (
+        id          TEXT PRIMARY KEY,
+        user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        type        TEXT NOT NULL,
+        token_hash  TEXT NOT NULL,
+        expires_at  TIMESTAMP NOT NULL,
+        used_at     TIMESTAMP,
+        created_at  TIMESTAMP DEFAULT NOW()
+      );
+
       -- Chamados de suporte e denúncias (caixa de entrada do admin)
       CREATE TABLE IF NOT EXISTS support_tickets (
         id             TEXT PRIMARY KEY,
@@ -350,6 +360,12 @@ const users = {
     `, [id]);
   },
 
+  async updatePassword(userId, newPassword) {
+    const bcrypt = require('./bcrypt');
+    const hash = await bcrypt.hash(newPassword);
+    await query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, userId]);
+  },
+
   async findByEmail(email) {
     return queryOne(`
       SELECT u.*, p.name as plan_name, p.max_products, p.max_deliveries_month,
@@ -414,7 +430,9 @@ const sessions = {
 
   async cleanup() {
     await query('DELETE FROM sessions WHERE expires_at < NOW()');
-  }
+  },
+
+  async deleteByUser(userId) { await query('DELETE FROM sessions WHERE user_id = $1', [userId]); }
 };
 
 // ─── Tenants ──────────────────────────────────────────────────────────────────
@@ -827,4 +845,30 @@ const orders = {
   }
 };
 
-module.exports = { initDatabase, pool, query, queryOne, users, sessions, tenants, products, deliveries, webhookLogs, plans, unmatchedProducts, supportTickets, productFiles, sellerAccounts, payouts, orders };
+// ─── Auth tokens (reset de senha / verificacao de email) ────────────────────────
+const authTokens = {
+  async create(userId, type, ttlMinutes) {
+    const crypto = require('crypto');
+    const id   = uuidv4();
+    const raw  = crypto.randomBytes(32).toString('hex');
+    const hash = crypto.createHash('sha256').update(raw).digest('hex');
+    const exp  = new Date(Date.now() + (ttlMinutes || 60) * 60 * 1000);
+    await query(
+      'INSERT INTO auth_tokens (id, user_id, type, token_hash, expires_at) VALUES ($1,$2,$3,$4,$5)',
+      [id, userId, type, hash, exp]
+    );
+    return raw;
+  },
+  async consume(raw, type) {
+    if (!raw) return null;
+    const crypto = require('crypto');
+    const hash = crypto.createHash('sha256').update(String(raw)).digest('hex');
+    const rows = await query(
+      "UPDATE auth_tokens SET used_at = NOW() WHERE token_hash = $1 AND type = $2 AND used_at IS NULL AND expires_at > NOW() RETURNING user_id",
+      [hash, type]
+    );
+    return rows.length === 1 ? rows[0].user_id : null;
+  }
+};
+
+module.exports = { initDatabase, pool, query, queryOne, users, sessions, tenants, products, deliveries, webhookLogs, plans, unmatchedProducts, supportTickets, productFiles, sellerAccounts, payouts, orders, authTokens };
