@@ -39,6 +39,9 @@ router.post('/onboarding', requireAuth, async (req, res) => {
     if (!req.user || req.user.plan_id === 'free') {
       return res.status(403).json({ success: false, error: 'A venda direta esta disponivel a partir do plano Starter. Faca upgrade para ativar.', needs_upgrade: true });
     }
+    if (!req.user.email_verified) {
+      return res.status(403).json({ success: false, error: 'Confirme seu email para ativar a venda direta.', needs_verification: true });
+    }
     // Idempotente: se este tenant ja tem subconta registrada, reutiliza (nunca cria outra).
     const existing = await sellerAccounts.findByTenant(req.tenantId);
     if (existing && existing.asaas_account_id) {

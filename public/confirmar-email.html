@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Confirmar email — Vaultly</title>
+<link rel="icon" type="image/svg+xml" href="/img/logo-icon.svg"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+<style>
+  :root{--bg:#0B1020;--bg2:#141A2E;--orange:#FF6B35;--text:#E8ECF5;--muted:#8A93A8;--red:#EF4444;--emerald:#22C55E}
+  *{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;align-items:center;justify-content:center;padding:20px;text-align:center}
+  .card{background:var(--bg2);border:1px solid #222a40;border-radius:16px;max-width:420px;width:100%;padding:32px 28px}
+  .logo{height:34px;margin-bottom:18px}
+  h1{font-size:20px;margin:0 0 8px}.desc{color:var(--muted);font-size:14px;margin:0 0 18px;line-height:1.5}
+  .ic{font-size:42px;margin-bottom:10px}
+  .btn{display:inline-block;margin-top:8px;padding:13px 28px;border:0;border-radius:10px;background:var(--orange);color:#1a0e06;font-weight:700;font-size:15px;cursor:pointer;text-decoration:none}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+  <div class="card">
+    <img class="logo" src="/img/logo-horizontal.png" alt="Vaultly"/>
+    <div id="state">
+      <div class="ic" style="color:var(--muted)"><i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block"></i></div>
+      <h1>Confirmando seu email…</h1>
+      <p class="desc">Aguarde um instante.</p>
+    </div>
+  </div>
+<script>
+var token = new URLSearchParams(location.search).get('token') || '';
+function render(ok, title, desc){
+  document.getElementById('state').innerHTML =
+    '<div class="ic" style="color:' + (ok?'var(--emerald)':'var(--red)') + '"><i class="ti ti-' + (ok?'circle-check':'alert-circle') + '"></i></div>' +
+    '<h1>' + title + '</h1><p class="desc">' + desc + '</p>' +
+    '<a class="btn" href="/app">Ir para o painel</a>';
+}
+(async function(){
+  if(!token){ render(false,'Link inválido','Solicite um novo link de confirmação pelo painel.'); return; }
+  try{
+    var r = await fetch('/api/auth/verify-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token})});
+    var d = await r.json();
+    if(d.success) render(true,'Email confirmado!','Sua conta está pronta. Bom trabalho!');
+    else render(false,'Não foi possível confirmar', d.error || 'Link inválido ou expirado.');
+  }catch(e){ render(false,'Erro de conexão','Tente novamente em instantes.'); }
+})();
+</script>
+</body>
+</html>
