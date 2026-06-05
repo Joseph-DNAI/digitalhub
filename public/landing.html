@@ -744,6 +744,17 @@ footer { position: relative; z-index: 1; background: #09090E; border-top: 1px so
           </div>
         </div>
         <button class="btn-submit" id="loginBtn" onclick="handleLogin()">Entrar</button>
+        <div style="text-align:center;margin-top:12px;"><a href="#" onclick="showForgot();return false;" style="font-size:13px;color:var(--text2);text-decoration:none;">Esqueci minha senha</a></div>
+      </div>
+      <div id="auth-forgot" style="display:none;">
+        <div id="forgot-msg" class="auth-error" style="display:none;"></div>
+        <p style="font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:14px;">Informe o email da sua conta. Se houver cadastro, enviaremos um link para redefinir a senha.</p>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" id="forgotEmail" class="form-input" placeholder="seu@email.com" autocomplete="email" onkeydown="if(event.key==='Enter')handleForgot()"/>
+        </div>
+        <button class="btn-submit" id="forgotBtn" onclick="handleForgot()">Enviar link de recuperação</button>
+        <div style="text-align:center;margin-top:12px;"><a href="#" onclick="switchAuthTab('login');return false;" style="font-size:13px;color:var(--text2);text-decoration:none;">Voltar ao login</a></div>
       </div>
     </div>
   </div>
@@ -800,6 +811,28 @@ function closeAuthModal() {
 function closeModal() { closeAuthModal(); }
 function closeLoginModal() { closeAuthModal(); }
 function openLoginModal() { switchAuthTab('login'); openAuthModal(); }
+
+function showForgot() {
+  document.getElementById('auth-login').style.display = 'none';
+  var f = document.getElementById('auth-forgot'); if (f) f.style.display = 'block';
+  var m = document.getElementById('forgot-msg'); if (m) m.style.display = 'none';
+}
+async function handleForgot() {
+  var btn = document.getElementById('forgotBtn');
+  var msg = document.getElementById('forgot-msg');
+  var email = (document.getElementById('forgotEmail') || {}).value || '';
+  if (!email) { if (msg) { msg.textContent = 'Informe seu email.'; msg.className = 'auth-error'; msg.style.display = 'block'; } return; }
+  btn.disabled = true; btn.textContent = 'Enviando…';
+  try {
+    var res = await fetch('/api/auth/forgot-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email }) });
+    var data = await res.json();
+    if (msg) { msg.textContent = data.message || 'Se o email estiver cadastrado, enviamos o link.'; msg.className = 'auth-success'; msg.style.display = 'block'; }
+  } catch (e) {
+    if (msg) { msg.textContent = 'Erro de conexão. Tente novamente.'; msg.className = 'auth-error'; msg.style.display = 'block'; }
+  } finally {
+    btn.disabled = false; btn.textContent = 'Enviar link de recuperação';
+  }
+}
 function toggleMobileMenu() { document.getElementById('navMobile').classList.toggle('open'); }
 function closeMobileMenu() { var m = document.getElementById('navMobile'); if (m) m.classList.remove('open'); }
 
@@ -808,6 +841,7 @@ function switchAuthTab(tab) {
   document.getElementById('tab-log').classList.toggle('active', tab === 'login');
   document.getElementById('auth-register').style.display = tab === 'register' ? 'block' : 'none';
   document.getElementById('auth-login').style.display    = tab === 'login'    ? 'block' : 'none';
+  var fg = document.getElementById('auth-forgot'); if (fg) fg.style.display = 'none';
   var me = document.getElementById('msgError');
   var lme = document.getElementById('login-msg-error');
   if (me)  me.style.display  = 'none';
