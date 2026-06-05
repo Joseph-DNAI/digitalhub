@@ -366,6 +366,10 @@ const users = {
     await query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, userId]);
   },
 
+  async setEmailVerified(userId) {
+    await query('UPDATE users SET email_verified = true WHERE id = $1', [userId]);
+  },
+
   async findByEmail(email) {
     return queryOne(`
       SELECT u.*, p.name as plan_name, p.max_products, p.max_deliveries_month,
@@ -414,7 +418,7 @@ const sessions = {
 
   async findByToken(token) {
     return queryOne(`
-      SELECT s.*, u.id as user_id, u.name, u.email, u.role, u.plan_id, u.is_active,
+      SELECT s.*, u.id as user_id, u.name, u.email, u.role, u.plan_id, u.is_active, u.email_verified,
              t.id as tenant_id, p.max_products, p.max_deliveries_month
       FROM sessions s
       JOIN users u ON s.user_id = u.id
