@@ -139,6 +139,13 @@ app.get('/termos', (req, res) => {
   res.redirect('/');
 });
 
+// Página pública de redefinição de senha (acessada via link do email)
+app.get('/redefinir-senha', (req, res) => {
+  const p = path.join(publicPath, 'redefinir-senha.html');
+  if (fs.existsSync(p)) return res.sendFile(p);
+  res.redirect('/');
+});
+
 // Página pública de checkout de venda direta
 app.get('/c/:slug', (req, res) => {
   const co = path.join(publicPath, 'checkout.html');
