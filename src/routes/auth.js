@@ -57,9 +57,34 @@ router.post('/login', async (req, res) => {
     if (!user) return res.status(401).json({ success: false, error: 'Credenciais inválidas' });
     if (!user.is_active) return res.status(403).json({ success: false, error: 'Conta desativada' });
 
-    const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) return res.status(401).json({ success: false, error: 'Credenciais inválidas' });
+    const clientIp = req.headers['x-forwarded-for'] || req.ip;
 
+    // Trava escalonada por conta: se ainda esta em cooldown, bloqueia antes do bcrypt
+    if (user.lockout_until && new Date(user.lockout_until) > new Date()) {
+      logger.warn('Login em cooldown — ' + email + ' tentativas=' + user.failed_login_count + ' ip=' + clientIp);
+      if ((user.failed_login_count || 0) >= 20) {
+        return res.status(429).json({ success: false, error: 'Conta bloqueada por seguranca. Redefina sua senha em "Esqueci minha senha" para recuperar o acesso.' });
+      }
+      const mins  = Math.max(1, Math.ceil((new Date(user.lockout_until) - new Date()) / 60000));
+      const extra = (user.failed_login_count || 0) >= 10 ? ' Voce pode redefinir sua senha pelo link "Esqueci minha senha".' : '';
+      return res.status(429).json({ success: false, error: 'Muitas tentativas. Aguarde ' + mins + ' minuto(s).' + extra });
+    }
+
+    const valid = await bcrypt.compare(password, user.password_hash);
+    if (!valid) {
+      const r = await users.recordFailedLogin(user.id);
+      logger.warn('Falha de login — ' + email + ' tentativa=' + r.count + ' ip=' + clientIp);
+      if (r.blocked) {
+        return res.status(429).json({ success: false, error: 'Conta bloqueada por seguranca. Redefina sua senha em "Esqueci minha senha" para recuperar o acesso.' });
+      }
+      if (r.lockMinutes > 0) {
+        const sug = r.count >= 10 ? ' Voce pode redefinir sua senha pelo link "Esqueci minha senha".' : '';
+        return res.status(429).json({ success: false, error: 'Muitas tentativas. Aguarde ' + r.lockMinutes + ' minuto(s).' + sug });
+      }
+      return res.status(401).json({ success: false, error: 'Credenciais inválidas' });
+    }
+
+    await users.resetFailedLogin(user.id);
     const token = await sessions.create(user.id);
     logger.info(`Login: ${email} (${user.role})`);
 
@@ -100,6 +125,7 @@ router.post('/reset-password', async (req, res) => {
     const userId = await authTokens.consume(token, 'reset');
     if (!userId) return res.status(400).json({ success: false, error: 'Link invalido ou expirado. Solicite um novo.' });
     await users.updatePassword(userId, password);
+    await users.resetFailedLogin(userId);
     await sessions.deleteByUser(userId);
     res.json({ success: true, message: 'Senha redefinida. Faca login com a nova senha.' });
   } catch (err) {

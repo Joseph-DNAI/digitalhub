@@ -26,11 +26,13 @@ app.set('trust proxy', 1);
 // Rate limit geral
 app.use(rateLimit({ windowMs: 15*60*1000, max: 300 }));
 
-// Rate limit restrito para auth (anti brute-force)
+// Backstop por IP contra enxurrada de requests (anti-flood). O bloqueio real de
+// login e escalonado POR CONTA (ver routes/auth.js), entao este limite e folgado
+// para nao bloquear quem troca de conta legitimamente.
 const authLimiter = rateLimit({
   windowMs: 15*60*1000,
-  max: 20,
-  message: { success: false, error: 'Muitas tentativas. Aguarde 15 minutos.' }
+  max: 100,
+  message: { success: false, error: 'Muitas requisicoes. Aguarde alguns minutos e tente novamente.' }
 });
 
 const webhookLimiter = rateLimit({ windowMs: 60*1000, max: 60 });
