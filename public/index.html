@@ -314,6 +314,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
       <button class="nav-item" onclick="switchTab('webhook',this)"><i class="ti ti-webhook"></i> Webhook</button>
       <button class="nav-item" onclick="switchTab('email',this)"><i class="ti ti-mail"></i> Email</button>
       <button class="nav-item" id="nav-loja" onclick="switchTab('loja',this)"><i class="ti ti-building-store"></i> Loja<span class="nav-dot" id="dot-loja"></span></button>
+      <button class="nav-item" id="nav-checkout" onclick="switchTab('checkout',this)"><i class="ti ti-brush"></i> Checkout</button>
       <button class="nav-item" onclick="switchTab('config',this)"><i class="ti ti-settings"></i> Configurações</button>
       <button class="nav-item" onclick="switchTab('suporte',this)"><i class="ti ti-lifebuoy"></i> Suporte</button>
       <div id="admin-nav-section" style="display:none;">
@@ -944,6 +945,17 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
         </div>
       </div>
 
+      <!-- ── CHECKOUT ── -->
+      <div id="tab-checkout" class="section">
+        <div class="page-header">
+          <div><div class="page-title">Checkout</div><div class="page-sub">personalize a aparência do seu checkout</div></div>
+          <button class="btn btn-primary btn-sm" onclick="saveCheckoutConfig(this)"><i class="ti ti-device-floppy"></i> Salvar</button>
+        </div>
+        <div id="checkout-config-body">
+          <div style="color:var(--text3);font-size:13px;">Carregando...</div>
+        </div>
+      </div>
+
       <!-- ── SUPORTE ── -->
       <div id="tab-suporte" class="section">
         <div class="page-header">
@@ -1553,6 +1565,8 @@ function showApp() {
   // Oculta aba Loja para usuarios Free
   var navLoja = document.getElementById('nav-loja');
   if (navLoja) navLoja.style.display = (currentUser && currentUser.plan_id && currentUser.plan_id !== 'free') ? '' : 'none';
+  var navCk = document.getElementById('nav-checkout');
+  if (navCk) navCk.style.display = (currentUser && currentUser.plan_id && currentUser.plan_id !== 'free') ? '' : 'none';
   checkEmailBanner();
   // Card de assinatura na aba Config
   var planLabels = { free: 'Free', starter: 'Starter', basic: 'Basic', pro: 'Pro', business: 'Business' };
@@ -1623,6 +1637,107 @@ async function saveNotifyFailure() {
 }
 
 // ── Venda Direta: secao na aba Config ────────────────────────────
+var CK_ACCENTS = ['#FF6B35','#3B82F6','#22C55E','#8B5CF6','#EC4899','#111827'];
+var ckCfg = { theme: 'dark', accent: '#FF6B35', show_guarantee: true, has_logo: false };
+
+async function loadCheckoutTab() {
+  var body = document.getElementById('checkout-config-body');
+  if (!body) return;
+  if (currentUser && currentUser.plan_id === 'free') {
+    body.innerHTML = '<div style="color:var(--text2);font-size:13px;line-height:1.6;">A personalização do checkout é da venda direta (planos pagos). Faça upgrade para ativar.</div>';
+    return;
+  }
+  try {
+    var res = await apiFetch('/api/tenants/me');
+    if (res && res.success && res.data) {
+      ckCfg.theme = res.data.checkout_theme || 'dark';
+      ckCfg.accent = res.data.checkout_accent || '#FF6B35';
+      ckCfg.show_guarantee = res.data.checkout_show_guarantee !== false;
+      ckCfg.has_logo = !!res.data.has_checkout_logo;
+    }
+  } catch (e) {}
+  renderCheckoutTab();
+}
+
+function renderCheckoutTab() {
+  var body = document.getElementById('checkout-config-body');
+  if (!body) return;
+  var swatches = CK_ACCENTS.map(function(c){
+    return '<button onclick="ckSetAccent(\'' + c + '\')" title="' + c + '" style="width:30px;height:30px;border-radius:50%;background:' + c + ';border:2px solid ' + (ckCfg.accent===c?'var(--text)':'transparent') + ';cursor:pointer;"></button>';
+  }).join('');
+  body.innerHTML =
+    '<div class="card"><div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">' +
+      '<div>' +
+        '<div class="form-label" style="margin-bottom:8px;">Tema</div>' +
+        '<div style="display:flex;gap:8px;margin-bottom:18px;">' +
+          '<button class="btn btn-ghost btn-sm" id="ck-theme-light" onclick="ckSetTheme(\'light\')">Claro</button>' +
+          '<button class="btn btn-ghost btn-sm" id="ck-theme-dark" onclick="ckSetTheme(\'dark\')">Escuro</button>' +
+        '</div>' +
+        '<div class="form-label" style="margin-bottom:8px;">Cor de destaque</div>' +
+        '<div style="display:flex;gap:10px;margin-bottom:18px;">' + swatches + '</div>' +
+        '<div class="form-label" style="margin-bottom:8px;">Logo (PNG sem fundo recomendado)</div>' +
+        '<input type="file" id="ck-logo-file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onchange="ckUploadLogo(this)" style="font-size:12px;margin-bottom:6px;" />' +
+        (ckCfg.has_logo ? '<div><button class="btn btn-ghost btn-xs" onclick="ckRemoveLogo()"><i class="ti ti-trash"></i> Remover logo</button></div>' : '') +
+        '<div class="toggle-row" style="margin-top:16px;"><div class="toggle-info"><div class="t-title">Garantia de 7 dias</div><div class="t-desc">Mostra um selo de garantia no checkout</div></div>' +
+          '<button class="toggle' + (ckCfg.show_guarantee?' on':'') + '" id="ck-guarantee" onclick="this.classList.toggle(\'on\');ckCfg.show_guarantee=this.classList.contains(\'on\');ckRenderPreview()"></button></div>' +
+      '</div>' +
+      '<div><div class="form-label" style="margin-bottom:8px;">Pré-visualização</div><div id="ck-preview"></div></div>' +
+    '</div></div>';
+  document.getElementById('ck-theme-light').classList.toggle('btn-primary', ckCfg.theme==='light');
+  document.getElementById('ck-theme-dark').classList.toggle('btn-primary', ckCfg.theme==='dark');
+  ckRenderPreview();
+}
+
+function ckSetTheme(t){ ckCfg.theme=t; renderCheckoutTab(); }
+function ckSetAccent(c){ ckCfg.accent=c; renderCheckoutTab(); }
+
+function ckRenderPreview() {
+  var p = document.getElementById('ck-preview');
+  if (!p) return;
+  var light = ckCfg.theme==='light';
+  var bg = light?'#F1F5F9':'#0B1020', card = light?'#FFFFFF':'#141A2E', text = light?'#0F172A':'#E8ECF5', muted = light?'#64748B':'#8A93A8';
+  var logo = ckCfg.has_logo ? '<div style="text-align:center;color:' + muted + ';font-size:10px;margin-bottom:8px;">[ sua logo aparece aqui no checkout ]</div>' : '';
+  p.innerHTML =
+    '<div style="background:' + bg + ';border-radius:12px;padding:18px;">' +
+      '<div style="background:' + card + ';border:1px solid rgba(125,125,125,0.2);border-radius:12px;padding:16px;color:' + text + ';">' +
+        logo +
+        '<div style="font-weight:700;font-size:15px;">Seu Produto</div>' +
+        '<div style="color:' + muted + ';font-size:12px;margin:2px 0 10px;">Descrição do produto</div>' +
+        '<div style="font-size:22px;font-weight:800;color:' + ckCfg.accent + ';margin-bottom:12px;">R$ 27,00</div>' +
+        '<button style="width:100%;padding:11px;border:0;border-radius:9px;background:' + ckCfg.accent + ';color:#fff;font-weight:700;cursor:default;">Pagar</button>' +
+        (ckCfg.show_guarantee ? '<div style="margin-top:10px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25);color:#16a34a;border-radius:8px;padding:8px 10px;font-size:11px;font-weight:600;">🛡️ Garantia de 7 dias</div>' : '') +
+        '<div style="text-align:center;color:' + muted + ';font-size:10px;margin-top:12px;">🔒 Pagamento seguro pela Vaultly</div>' +
+      '</div>' +
+    '</div>';
+}
+
+async function ckUploadLogo(input) {
+  if (!input.files || !input.files[0]) return;
+  var fd = new FormData(); fd.append('file', input.files[0]);
+  try {
+    var res = await fetch('/api/tenants/me/checkout-logo', { method: 'POST', headers: { 'Authorization': 'Bearer ' + authToken }, body: fd });
+    var d = await res.json();
+    if (!d.success) throw new Error(d.error || 'Erro');
+    ckCfg.has_logo = true; showToast('Logo enviada!', 'success'); renderCheckoutTab();
+  } catch (e) { showToast(e.message || 'Erro ao enviar a logo.', 'warn'); }
+}
+async function ckRemoveLogo() {
+  try {
+    var res = await apiFetch('/api/tenants/me/checkout-logo', { method: 'DELETE' });
+    if (!res.success) throw new Error(res.error || 'Erro');
+    ckCfg.has_logo = false; showToast('Logo removida.', 'success'); renderCheckoutTab();
+  } catch (e) { showToast(e.message || 'Erro.', 'warn'); }
+}
+async function saveCheckoutConfig(btn) {
+  if (btn) btn.disabled = true;
+  try {
+    var res = await apiFetch('/api/tenants/me', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ checkout_theme: ckCfg.theme, checkout_accent: ckCfg.accent, checkout_show_guarantee: ckCfg.show_guarantee }) });
+    if (!res.success) throw new Error(res.error || 'Erro');
+    showToast('Checkout salvo!', 'success');
+  } catch (e) { showToast(e.message || 'Erro ao salvar.', 'warn'); }
+  finally { if (btn) btn.disabled = false; }
+}
+
 async function loadVendaDiretaSection() {
   var body = document.getElementById('cfg-venda-direta-body');
   if (!body) return;
@@ -2155,6 +2270,7 @@ function switchTab(name, el) {
   if (name === 'loja')      loadVendaDiretaSection();
   if (name === 'config')    loadConfig();
   if (name === 'vendas')    loadVendas();
+  if (name === 'checkout')  loadCheckoutTab();
   closeSidebar();
   loadPendings();
 }
