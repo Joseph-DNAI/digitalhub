@@ -260,6 +260,8 @@ async function initDatabase() {
       ALTER TABLE users   ADD COLUMN IF NOT EXISTS terms_accepted_at       TIMESTAMP;
       ALTER TABLE users   ADD COLUMN IF NOT EXISTS terms_version           TEXT;
       ALTER TABLE users    ADD COLUMN IF NOT EXISTS usage_mode          TEXT DEFAULT 'automation';
+      ALTER TABLE users    ADD COLUMN IF NOT EXISTS failed_login_count  INTEGER DEFAULT 0;
+      ALTER TABLE users    ADD COLUMN IF NOT EXISTS lockout_until       TIMESTAMP;
       ALTER TABLE products ADD COLUMN IF NOT EXISTS sellable            BOOLEAN DEFAULT FALSE;
       ALTER TABLE products ADD COLUMN IF NOT EXISTS price_cents         INTEGER;
       ALTER TABLE products ADD COLUMN IF NOT EXISTS slug                TEXT;
@@ -368,6 +370,28 @@ const users = {
 
   async setEmailVerified(userId) {
     await query('UPDATE users SET email_verified = true WHERE id = $1', [userId]);
+  },
+
+  // Registra uma falha de login e aplica a trava escalonada por conta.
+  // 5 falhas -> 5min, 10 -> 10min, 15 -> 15min, 20+ -> conta bloqueada (ate reset de senha).
+  async recordFailedLogin(userId) {
+    const rows = await query('UPDATE users SET failed_login_count = failed_login_count + 1 WHERE id = $1 RETURNING failed_login_count', [userId]);
+    const count = rows.length ? rows[0].failed_login_count : 0;
+    let lockMinutes = 0, blocked = false;
+    if (count >= 20)      blocked = true;
+    else if (count === 15) lockMinutes = 15;
+    else if (count === 10) lockMinutes = 10;
+    else if (count === 5)  lockMinutes = 5;
+    if (blocked) {
+      await query("UPDATE users SET lockout_until = NOW() + INTERVAL '100 years' WHERE id = $1", [userId]);
+    } else if (lockMinutes > 0) {
+      await query("UPDATE users SET lockout_until = NOW() + (($2 || ' minutes')::interval) WHERE id = $1", [userId, String(lockMinutes)]);
+    }
+    return { count: count, lockMinutes: lockMinutes, blocked: blocked };
+  },
+
+  async resetFailedLogin(userId) {
+    await query('UPDATE users SET failed_login_count = 0, lockout_until = NULL WHERE id = $1', [userId]);
   },
 
   async findByEmail(email) {
