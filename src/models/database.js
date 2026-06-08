@@ -273,6 +273,10 @@ async function initDatabase() {
       ALTER TABLE seller_accounts ADD COLUMN IF NOT EXISTS pass_card_fee_to_buyer BOOLEAN DEFAULT FALSE;
       ALTER TABLE seller_accounts ADD COLUMN IF NOT EXISTS asaas_api_key_enc TEXT;
       ALTER TABLE seller_accounts ADD COLUMN IF NOT EXISTS payout_pix_key    TEXT;
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS checkout_theme          TEXT DEFAULT 'dark';
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS checkout_accent         TEXT DEFAULT '#FF6B35';
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS checkout_logo_key       TEXT;
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS checkout_show_guarantee BOOLEAN DEFAULT TRUE;
     `);
 
     // Planos — DO UPDATE garante que mudancas de preco/limite sejam aplicadas no restart
