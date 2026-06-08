@@ -5,6 +5,7 @@ const { products, orders, sellerAccounts, tenants, users } = require('../models/
 const asaas = require('../services/asaasService');
 const { vaultlyFeeCents, cardChargeCents, installmentOptions } = require('../services/pricing');
 const logger = require('../config/logger');
+const { downloadFileBuffer } = require('../services/storageService');
 
 // GET /api/checkout/:slug — dados públicos do produto p/ renderizar a página
 router.get('/:slug', async (req, res) => {
@@ -39,7 +40,13 @@ router.get('/:slug', async (req, res) => {
         pass_card_fee: passFee,
         installments: installments,
         accept_pix: product.accept_pix,
-        accept_card: product.accept_card
+        accept_card: product.accept_card,
+        checkout: {
+          theme:          (tenant && tenant.checkout_theme) || 'dark',
+          accent:         (tenant && tenant.checkout_accent) || '#FF6B35',
+          show_guarantee: tenant ? (tenant.checkout_show_guarantee !== false) : true,
+          logo_url:       (tenant && tenant.checkout_logo_key) ? ('/api/checkout/' + product.slug + '/logo') : null
+        }
       }
     });
   } catch (err) {
@@ -128,6 +135,25 @@ router.post('/:slug', async (req, res) => {
     logger.error('checkout/post: ' + err.message);
     if (orderId) { try { await orders.updateStatus(orderId, 'failed'); } catch (_) {} }
     res.status(502).json({ success: false, error: 'Falha ao processar pagamento. ' + err.message });
+  }
+});
+
+// GET /api/checkout/:slug/logo — serve a logo do checkout (stream do R2)
+router.get('/:slug/logo', async (req, res) => {
+  try {
+    const product = await products.findBySlug(req.params.slug);
+    if (!product) return res.status(404).end();
+    const tenant = await tenants.findById(product.tenant_id);
+    if (!tenant || !tenant.checkout_logo_key) return res.status(404).end();
+    const buf = await downloadFileBuffer(tenant.checkout_logo_key);
+    const key = tenant.checkout_logo_key.toLowerCase();
+    const ct = key.endsWith('.svg') ? 'image/svg+xml' : key.endsWith('.webp') ? 'image/webp' : (key.endsWith('.jpg') || key.endsWith('.jpeg')) ? 'image/jpeg' : 'image/png';
+    res.set('Content-Type', ct);
+    res.set('Cache-Control', 'public, max-age=300');
+    res.send(buf);
+  } catch (err) {
+    logger.error('checkout logo: ' + err.message);
+    res.status(404).end();
   }
 });
 

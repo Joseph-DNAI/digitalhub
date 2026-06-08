@@ -4,6 +4,21 @@ const router  = express.Router();
 const { tenants } = require('../models/database');
 const { requireAuth } = require('../middleware/auth');
 const logger = require('../config/logger');
+const multer = require('multer');
+const { uploadFile, deleteFile } = require('../services/storageService');
+const UPLOADS_PATH = process.env.UPLOADS_PATH || './uploads';
+const ACCENTS = ['#FF6B35', '#3B82F6', '#22C55E', '#8B5CF6', '#EC4899', '#111827'];
+const logoUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, UPLOADS_PATH),
+    filename:    (req, file, cb) => cb(null, Date.now() + '_' + file.originalname.replace(/[^a-z0-9._-]/gi,'_'))
+  }),
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ok = ['image/png','image/jpeg','image/webp','image/svg+xml'].includes(file.mimetype);
+    cb(ok ? null : new Error('Use PNG, JPG, WEBP ou SVG (max 2MB).'), ok);
+  }
+});
 
 router.use(requireAuth);
 
@@ -33,7 +48,11 @@ router.get('/me', async (req, res) => {
         platforms_enabled:      (tenant && tenant.platforms_enabled) || 'kiwify,yampi',
         has_email_template:     !!(tenant && tenant.email_template),
         email_template:         tenant ? (tenant.email_template || '') : '',
-        notify_on_failure:      !!(tenant && tenant.notify_on_failure)
+        notify_on_failure:      !!(tenant && tenant.notify_on_failure),
+        checkout_theme:          (tenant && tenant.checkout_theme) || 'dark',
+        checkout_accent:         (tenant && tenant.checkout_accent) || '#FF6B35',
+        checkout_show_guarantee: tenant ? (tenant.checkout_show_guarantee !== false) : true,
+        has_checkout_logo:       !!(tenant && tenant.checkout_logo_key)
       }
     });
   } catch(err) {
@@ -59,6 +78,17 @@ router.put('/me', async (req, res) => {
     allowed.forEach(function(f) {
       if (req.body[f] !== undefined) updateData[f] = req.body[f];
     });
+    if (req.body.checkout_theme !== undefined) {
+      if (!['light','dark'].includes(req.body.checkout_theme)) return res.status(400).json({ success: false, error: 'Tema invalido.' });
+      updateData.checkout_theme = req.body.checkout_theme;
+    }
+    if (req.body.checkout_accent !== undefined) {
+      if (!ACCENTS.includes(req.body.checkout_accent)) return res.status(400).json({ success: false, error: 'Cor invalida.' });
+      updateData.checkout_accent = req.body.checkout_accent;
+    }
+    if (req.body.checkout_show_guarantee !== undefined) {
+      updateData.checkout_show_guarantee = !!req.body.checkout_show_guarantee;
+    }
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({ success: false, error: 'Nenhum campo valido para atualizar' });
     }
@@ -67,6 +97,35 @@ router.put('/me', async (req, res) => {
     res.json({ success: true, message: 'Configuracoes salvas' });
   } catch(err) {
     res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /me/checkout-logo — upload da logo do checkout (multipart, campo 'file')
+router.post('/me/checkout-logo', function (req, res) {
+  logoUpload.single('file')(req, res, async function (err) {
+    if (err) return res.status(400).json({ success: false, error: err.message });
+    if (!req.file) return res.status(400).json({ success: false, error: 'Nenhum arquivo enviado.' });
+    try {
+      const key = await uploadFile(req.file.path, req.file.originalname);
+      await tenants.update(req.tenantId, { checkout_logo_key: key });
+      res.json({ success: true });
+    } catch (e) {
+      logger.error('checkout-logo upload: ' + e.message);
+      res.status(500).json({ success: false, error: 'Erro ao enviar a logo.' });
+    }
+  });
+});
+
+// DELETE /me/checkout-logo — remove a logo
+router.delete('/me/checkout-logo', async (req, res) => {
+  try {
+    const t = await tenants.findById(req.tenantId);
+    if (t && t.checkout_logo_key) { try { await deleteFile(t.checkout_logo_key); } catch (_) {} }
+    await tenants.update(req.tenantId, { checkout_logo_key: null });
+    res.json({ success: true });
+  } catch (e) {
+    logger.error('checkout-logo delete: ' + e.message);
+    res.status(500).json({ success: false, error: 'Erro ao remover a logo.' });
   }
 });
 
