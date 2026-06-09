@@ -519,6 +519,14 @@ const products = {
     return queryOne("SELECT * FROM products WHERE slug = $1 AND sellable = TRUE AND status = 'active' AND price_cents IS NOT NULL", [slug]);
   },
 
+  // Busca por ID de plataforma exato (qualquer status) — usado p/ validar unicidade
+  async findByKiwifyId(tenantId, kiwifyId) {
+    return queryOne('SELECT id, name FROM products WHERE tenant_id = $1 AND kiwify_id = $2', [tenantId, kiwifyId]);
+  },
+  async findByYampiId(tenantId, yampiId) {
+    return queryOne('SELECT id, name FROM products WHERE tenant_id = $1 AND yampi_id = $2', [tenantId, yampiId]);
+  },
+
   async findAll(tenantId) {
     return query(`
       SELECT p.*,

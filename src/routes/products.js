@@ -5,7 +5,7 @@ const multer   = require('multer');
 const path     = require('path');
 const fs       = require('fs');
 const { products, unmatchedProducts, tenants, productFiles } = require('../models/database');
-const { uploadFile, deleteFile } = require('../services/storageService');
+const { uploadFile, deleteFile, copyFile } = require('../services/storageService');
 const { requireAuth } = require('../middleware/auth');
 const { fetchYampiProducts, fetchKiwifyProducts } = require('../services/platformApiService');
 const { initialStatus, canActivate, atGlobalCap, MAX_PRODUCTS_TOTAL } = require('../services/productLimits');
@@ -98,10 +98,30 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// Verifica se algum ID de plataforma ja pertence a OUTRO produto (unicidade por tenant)
+async function idConflictMessage(tenantId, kiwifyId, yampiId, selfId) {
+  if (kiwifyId) {
+    const e = await products.findByKiwifyId(tenantId, kiwifyId);
+    if (e && e.id !== selfId) return 'Ja existe um produto com este ID Kiwify: "' + (e.name || '') + '". Cada ID so pode pertencer a um produto.';
+  }
+  if (yampiId) {
+    const e = await products.findByYampiId(tenantId, yampiId);
+    if (e && e.id !== selfId) return 'Ja existe um produto com este ID Yampi: "' + (e.name || '') + '". Cada ID so pode pertencer a um produto.';
+  }
+  return null;
+}
+
 router.post('/', uploadMw, async (req, res) => {
   try {
     const { name, description, price, kiwify_id, yampi_id, email_template, confirm_evict } = req.body;
     if (!name) return res.status(400).json({ success: false, error: 'Campo obrigatório: name' });
+
+    // Unicidade dos IDs de plataforma
+    const conflict = await idConflictMessage(req.tenantId, kiwify_id, yampi_id, null);
+    if (conflict) {
+      if (req.file) { try { fs.unlinkSync(req.file.path); } catch (_) {} }
+      return res.status(409).json({ success: false, error: conflict });
+    }
 
     // Teto global anti-abuso (ativos + inativos). Se cheio: descarta o inativo mais antigo
     // (com confirmacao) ou bloqueia se todos estiverem ativos.
@@ -165,6 +185,13 @@ router.put('/:id', uploadMw, async (req, res) => {
       if (req.body[f] !== undefined) updateData[f] = req.body[f];
     });
 
+    // Unicidade dos IDs de plataforma (ignorando o proprio produto)
+    const conflict = await idConflictMessage(req.tenantId, updateData.kiwify_id, updateData.yampi_id, req.params.id);
+    if (conflict) {
+      if (req.file) { try { fs.unlinkSync(req.file.path); } catch (_) {} }
+      return res.status(409).json({ success: false, error: conflict });
+    }
+
     if (req.file) {
       // Trava de total: novo arquivo principal + combo existente nao podem passar do limite
       const comboBytes = await productFiles.totalSize(req.tenantId, req.params.id);
@@ -199,6 +226,53 @@ router.put('/:id', uploadMw, async (req, res) => {
     const { file_path, ...safe } = updated;
     res.json({ success: true, data: safe });
   } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /:id/duplicate — cria uma copia do produto (sem os IDs de plataforma; copia arquivo e combo)
+router.post('/:id/duplicate', async (req, res) => {
+  try {
+    const src = await products.findById(req.tenantId, req.params.id);
+    if (!src) return res.status(404).json({ success: false, error: 'Produto nao encontrado' });
+
+    const total = await products.count(req.tenantId);
+    if (atGlobalCap(total, MAX_PRODUCTS_TOTAL)) {
+      return res.status(409).json({ success: false, error: 'Limite de ' + MAX_PRODUCTS_TOTAL + ' produtos atingido. Apague ou desative algum antes de duplicar.' });
+    }
+
+    // Copia o arquivo principal no R2 (se houver)
+    let newKey = null;
+    if (src.file_path) { try { newKey = await copyFile(src.file_path, src.file_name || 'arquivo'); } catch (e) { logger.error('duplicate copyFile: ' + e.message); } }
+
+    const activeCount = await products.countActive(req.tenantId);
+    const status = initialStatus(activeCount, req.user.max_products);
+
+    const created = await products.create(req.tenantId, {
+      name: (src.name || 'Produto') + ' (cópia)',
+      description: src.description || null,
+      price: src.price || 0,
+      kiwify_id: null, yampi_id: null,             // IDs nao sao duplicados
+      email_template: src.email_template || null,
+      file_path: newKey, file_name: src.file_name || null, file_size: src.file_size || null,
+      status: status
+    });
+
+    // Copia os arquivos do combo, se houver
+    try {
+      const extras = await productFiles.findByProduct(req.tenantId, req.params.id);
+      for (const f of (extras || [])) {
+        try {
+          const k = await copyFile(f.file_path, f.file_name || 'arquivo');
+          await productFiles.create(req.tenantId, created.id, k, f.file_name, f.file_size);
+        } catch (e) { logger.error('duplicate combo: ' + e.message); }
+      }
+    } catch (e) { logger.error('duplicate combo list: ' + e.message); }
+
+    const { file_path, ...safe } = created;
+    res.status(201).json({ success: true, data: safe, status: status });
+  } catch (err) {
+    logger.error('Erro ao duplicar produto: ' + err.message);
     res.status(500).json({ success: false, error: err.message });
   }
 });

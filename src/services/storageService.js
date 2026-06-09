@@ -1,7 +1,7 @@
 // src/services/storageService.js
 // Upload e download de arquivos no Cloudflare R2
 
-const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, CopyObjectCommand } = require('@aws-sdk/client-s3');
 const fs   = require('fs');
 const path = require('path');
 const logger = require('../config/logger');
@@ -86,4 +86,17 @@ async function deleteFile(key) {
   logger.info(`🗑️ Arquivo removido do R2: ${key}`);
 }
 
-module.exports = { uploadFile, downloadFileBuffer, deleteFile };
+// ─── Copia um arquivo no R2 (server-side) e retorna a nova chave ───────────────
+
+async function copyFile(srcKey, fileName) {
+  const key = `products/${Date.now()}_${(fileName || 'arquivo').replace(/[^a-z0-9._-]/gi, '_')}`;
+  await s3.send(new CopyObjectCommand({
+    Bucket:     BUCKET,
+    CopySource: encodeURIComponent(`${BUCKET}/${srcKey}`),
+    Key:        key
+  }));
+  logger.info(`📑 Arquivo copiado no R2: ${srcKey} → ${key}`);
+  return key;
+}
+
+module.exports = { uploadFile, downloadFileBuffer, deleteFile, copyFile };
