@@ -8,7 +8,10 @@ const logger = require('../config/logger');
 const { buildSplit } = require('./pricing');
 
 function baseUrl() {
-  return process.env.ASAAS_BASE_URL || 'https://api-sandbox.asaas.com/v3';
+  let url = (process.env.ASAAS_BASE_URL || 'https://api-sandbox.asaas.com/v3').trim();
+  url = url.replace(/^\/+/, '');                         // remove barras iniciais ("//api...")
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url; // garante o protocolo
+  return url.replace(/\/+$/, '');                        // remove barra final
 }
 
 function headers(apiKey) {
