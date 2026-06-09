@@ -280,6 +280,7 @@ async function initDatabase() {
       ALTER TABLE products      ADD COLUMN IF NOT EXISTS file_size BIGINT;
       ALTER TABLE product_files ADD COLUMN IF NOT EXISTS file_size BIGINT;
       ALTER TABLE products      ADD COLUMN IF NOT EXISTS promo_price_cents INTEGER;
+      ALTER TABLE payouts       ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP;
     `);
 
     // Planos — DO UPDATE garante que mudancas de preco/limite sejam aplicadas no restart
@@ -837,6 +838,12 @@ const payouts = {
   },
   async findAll(tenantId, limit = 100) {
     return query('SELECT * FROM payouts WHERE tenant_id=$1 ORDER BY created_at DESC LIMIT $2', [tenantId, limit]);
+  },
+  async findByTransferId(transferId) {
+    return queryOne('SELECT * FROM payouts WHERE asaas_transfer_id=$1', [transferId]);
+  },
+  async updateStatusByTransferId(transferId, status, error) {
+    await query('UPDATE payouts SET status=$1, error=$2, updated_at=NOW() WHERE asaas_transfer_id=$3', [status, error || null, transferId]);
   }
 };
 

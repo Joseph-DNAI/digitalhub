@@ -28,8 +28,11 @@ async function runPayouts() {
         valueReais: balanceCents / 100,
         externalReference: windowRef
       });
-      await payouts.create({ tenant_id: acc.tenant_id, amount_cents: balanceCents, asaas_transfer_id: transfer && transfer.id, status: 'done' });
-      logger.info('Repasse R$' + (balanceCents / 100).toFixed(2) + ' — tenant ' + acc.tenant_id.slice(0, 8));
+      // Status real chega depois pelo webhook TRANSFER_*; aqui usamos o retorno do Asaas.
+      const st = transfer && transfer.status;
+      const initial = st === 'DONE' ? 'done' : (['FAILED', 'CANCELLED'].includes(st) ? 'failed' : 'pending');
+      await payouts.create({ tenant_id: acc.tenant_id, amount_cents: balanceCents, asaas_transfer_id: transfer && transfer.id, status: initial });
+      logger.info('Repasse R$' + (balanceCents / 100).toFixed(2) + ' (' + initial + ') — tenant ' + acc.tenant_id.slice(0, 8));
     } catch (e) {
       logger.error('Repasse falhou — tenant ' + (acc.tenant_id || '').slice(0, 8) + ': ' + e.message);
       try { await payouts.create({ tenant_id: acc.tenant_id, amount_cents: 0, status: 'failed', error: e.message }); } catch (_) {}

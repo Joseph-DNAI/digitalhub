@@ -2,7 +2,7 @@
 const express = require('express');
 const router  = express.Router();
 const { requireAuth, requireAdmin } = require('../middleware/auth');
-const { sellerAccounts } = require('../models/database');
+const { sellerAccounts, payouts } = require('../models/database');
 const asaas = require('../services/asaasService');
 const { encrypt, decrypt } = require('../services/crypto');
 const { feeSimulation } = require('../services/pricing');
@@ -20,6 +20,17 @@ router.get('/account', requireAuth, async (req, res) => {
     res.json({ success: true, account: safe });
   } catch (err) {
     logger.error('seller/account: ' + err.message);
+    res.status(500).json({ success: false, error: 'Erro interno.' });
+  }
+});
+
+// GET /api/seller/payouts — histórico de saques (repasses Pix) do tenant
+router.get('/payouts', requireAuth, async (req, res) => {
+  try {
+    const list = await payouts.findAll(req.tenantId, 50);
+    res.json({ success: true, payouts: list });
+  } catch (err) {
+    logger.error('seller/payouts: ' + err.message);
     res.status(500).json({ success: false, error: 'Erro interno.' });
   }
 });
