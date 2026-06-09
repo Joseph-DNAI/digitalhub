@@ -1395,33 +1395,28 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
         <label class="form-label">Descrição</label>
         <textarea class="form-textarea" id="m-desc" placeholder="Descreva brevemente seu produto..."></textarea>
       </div>
-      <div class="form-group">
+      <div class="form-group full">
         <label class="form-label">Preço (R$)</label>
         <input type="number" class="form-input" id="m-price" placeholder="97.00" step="0.01" />
+        <div class="form-hint">Mesmo preço do checkout da Vaultly (mín. R$9,00 para vender direto).</div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Status</label>
-        <select class="form-select" id="m-status">
-          <option value="active">Ativo</option>
-          <option value="inactive">Inativo</option>
-        </select>
+
+      <!-- Seletor de anexos: arquivo único ou combo -->
+      <div class="form-group full">
+        <label class="form-label">Anexos</label>
+        <div class="seg" style="display:flex;gap:0;margin-bottom:8px;background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:3px;width:fit-content;">
+          <button type="button" id="attach-single-btn" onclick="setAttachMode('single')" style="border:0;background:var(--orange);color:#fff;font-size:12px;font-weight:600;padding:7px 14px;border-radius:7px;cursor:pointer;">Arquivo único</button>
+          <button type="button" id="attach-combo-btn" onclick="setAttachMode('combo')" style="border:0;background:transparent;color:var(--text2);font-size:12px;font-weight:600;padding:7px 14px;border-radius:7px;cursor:pointer;">Combo (vários)</button>
+        </div>
+        <div class="form-hint" style="display:flex;align-items:center;gap:5px;"><i class="ti ti-info-circle" style="color:var(--orange);"></i> Limite total: <strong style="margin:0 3px;">25&nbsp;MB</strong> somando todos os anexos — garante a entrega por email.</div>
       </div>
-      <div class="form-group">
-        <label class="form-label">ID Kiwify</label>
-        <input type="text" class="form-input" id="m-kiwify" placeholder="xxxxxxxx-xxxx-xxxx" />
-        <div class="form-hint">Kiwify → Produto → URL do produto</div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">ID Yampi</label>
-        <input type="text" class="form-input" id="m-yampi" placeholder="123456" />
-        <div class="form-hint">Yampi → Produto → ID na listagem</div>
-      </div>
+
       <div class="form-group full">
         <label class="form-label">Arquivo principal (PDF / Ebook)</label>
         <div class="upload-zone" id="upload-zone" onclick="document.getElementById('m-file').click()">
           <i class="ti ti-cloud-upload upload-icon" id="upload-icon"></i>
           <div class="upload-title" id="upload-title">Clique para selecionar arquivo</div>
-          <div class="upload-sub" id="upload-sub">PDF, EPUB até 50MB · armazenado no Cloudflare R2</div>
+          <div class="upload-sub" id="upload-sub">PDF, EPUB · armazenado no Cloudflare R2</div>
         </div>
         <input type="file" id="m-file" accept=".pdf,.epub,.zip" style="display:none" onchange="handleFileSelect(this)" />
       </div>
@@ -1451,6 +1446,33 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
           <button type="button" class="btn btn-primary btn-sm" onclick="closeModal();showUpgradeModal();"><i class="ti ti-rocket"></i> Ver Pro</button>
         </div>
       </div>
+
+      <!-- Mais opções: Status + IDs de plataforma (revelação progressiva) -->
+      <div class="form-group full">
+        <button type="button" class="btn btn-ghost btn-sm" id="more-opts-btn" onclick="toggleMoreOpts()" style="width:100%;justify-content:flex-start;"><i class="ti ti-chevron-down" id="more-opts-chevron"></i> Mais opções — Status, ID Kiwify e Yampi</button>
+      </div>
+      <div class="form-group full" id="more-opts" style="display:none;">
+        <div class="form-grid" style="gap:14px;">
+          <div class="form-group">
+            <label class="form-label">Status</label>
+            <select class="form-select" id="m-status">
+              <option value="active">Ativo</option>
+              <option value="inactive">Inativo</option>
+            </select>
+          </div>
+          <div class="form-group"></div>
+          <div class="form-group">
+            <label class="form-label">ID Kiwify</label>
+            <input type="text" class="form-input" id="m-kiwify" placeholder="xxxxxxxx-xxxx-xxxx" />
+            <div class="form-hint">Só se você já vende na Kiwify · Produto → URL</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">ID Yampi</label>
+            <input type="text" class="form-input" id="m-yampi" placeholder="123456" />
+            <div class="form-hint">Só se você já vende na Yampi · Produto → ID</div>
+          </div>
+        </div>
+      </div>
     </div>
     <div id="m-selling-section" style="display:none;margin-top:6px;border-top:1px solid var(--border);padding-top:14px;">
       <div style="font-size:13px;font-weight:700;margin-bottom:10px;"><i class="ti ti-shopping-cart" style="color:var(--orange);"></i> Vender direto pela Vaultly</div>
@@ -1459,12 +1481,10 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
         <button type="button" class="toggle" id="m-sellable" onclick="this.classList.toggle('on');document.getElementById('m-selling-fields').style.display=this.classList.contains('on')?'block':'none'"></button>
       </div>
       <div id="m-selling-fields" style="display:none;">
-        <div class="form-grid">
-          <div class="form-group"><label class="form-label">Preço (R$) <span style="color:var(--red);font-size:10px;">mín. R$9,00</span></label><input type="number" class="form-input" id="m-price-cents" placeholder="27.00" step="0.01" min="9"/></div>
-          <div class="form-group full" style="display:flex;gap:16px;align-items:center;padding-top:6px;">
-            <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;"><input type="checkbox" id="m-accept-pix" checked style="width:16px;height:16px;accent-color:var(--orange);"/> <i class="ti ti-qrcode" style="color:var(--emerald);"></i> Pix</label>
-            <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;"><input type="checkbox" id="m-accept-card" checked style="width:16px;height:16px;accent-color:var(--orange);"/> <i class="ti ti-credit-card" style="color:var(--orange);"></i> Cartão</label>
-          </div>
+        <div class="form-hint" style="margin-bottom:10px;">Usa o <strong>preço acima</strong> como valor do checkout. Formas de pagamento aceitas:</div>
+        <div style="display:flex;gap:16px;align-items:center;">
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;"><input type="checkbox" id="m-accept-pix" checked style="width:16px;height:16px;accent-color:var(--orange);"/> <i class="ti ti-qrcode" style="color:var(--emerald);"></i> Pix</label>
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;"><input type="checkbox" id="m-accept-card" checked style="width:16px;height:16px;accent-color:var(--orange);"/> <i class="ti ti-credit-card" style="color:var(--orange);"></i> Cartão</label>
         </div>
       </div>
     </div>
@@ -3274,6 +3294,42 @@ document.addEventListener('change', function(e) {
 // ── Modal Produto ────────────────────────────────────────────────
 var _pendingImport = null;
 
+// ── Limite total de anexos (entrega por email) ──
+var MAX_TOTAL_BYTES = 25 * 1024 * 1024; // 25 MB
+var _mainFileBytes = 0;
+var _comboFiles = [];
+var attachMode = 'single';
+
+function comboBytes() { return _comboFiles.reduce(function(s,f){ return s + (parseInt(f.file_size,10) || 0); }, 0); }
+function totalBytesWith(extra) { return _mainFileBytes + comboBytes() + (extra || 0); }
+function fmtMB(bytes) { return (bytes/1024/1024).toFixed(1) + ' MB'; }
+
+function setAttachMode(mode) {
+  attachMode = mode;
+  var on = 'background:var(--orange);color:#fff;', off = 'background:transparent;color:var(--text2);';
+  var base = 'border:0;font-size:12px;font-weight:600;padding:7px 14px;border-radius:7px;cursor:pointer;';
+  var sBtn = document.getElementById('attach-single-btn'), cBtn = document.getElementById('attach-combo-btn');
+  if (sBtn) sBtn.style.cssText = base + (mode==='single'?on:off);
+  if (cBtn) cBtn.style.cssText = base + (mode==='combo'?on:off);
+  var wrap = document.getElementById('m-combo-wrap'), upsell = document.getElementById('m-combo-upsell');
+  if (mode === 'combo') {
+    if (isComboPlan()) { if (wrap) wrap.style.display = 'block'; if (upsell) upsell.style.display = 'none'; }
+    else { if (wrap) wrap.style.display = 'none'; if (upsell) upsell.style.display = 'block'; }
+  } else {
+    if (wrap) wrap.style.display = 'none';
+    if (upsell) upsell.style.display = 'none';
+  }
+}
+
+function toggleMoreOpts() {
+  var box = document.getElementById('more-opts'), chev = document.getElementById('more-opts-chevron');
+  if (!box) return;
+  var open = box.style.display === 'none';
+  box.style.display = open ? 'block' : 'none';
+  if (chev) chev.className = open ? 'ti ti-chevron-up' : 'ti ti-chevron-down';
+}
+function ensureMoreOpts() { var b = document.getElementById('more-opts'); if (b && b.style.display === 'none') toggleMoreOpts(); }
+
 function openModal() {
   document.getElementById('m-name').value             = '';
   document.getElementById('m-desc').value             = '';
@@ -3284,7 +3340,7 @@ function openModal() {
   document.getElementById('m-editing-id').value       = '';
   document.getElementById('m-file').value             = '';
   document.getElementById('upload-title').textContent = 'Clique para selecionar arquivo';
-  document.getElementById('upload-sub').textContent   = 'PDF, EPUB até 50MB · armazenado no Cloudflare R2';
+  document.getElementById('upload-sub').textContent   = 'PDF, EPUB · armazenado no Cloudflare R2';
   document.getElementById('modal-title').textContent  = 'Novo produto';
   document.getElementById('save-btn').innerHTML       = '<i class="ti ti-device-floppy"></i> Salvar produto';
   // Esconde o seletor de vinculação por padrão (só importações mostram)
@@ -3293,14 +3349,18 @@ function openModal() {
   if (linkWrap) linkWrap.style.display = 'none';
   var errEl = document.getElementById('m-error');
   if (errEl) { errEl.style.display = 'none'; errEl.innerHTML = ''; }
+  // Reset de anexos + revelação progressiva
+  _mainFileBytes = 0; _comboFiles = []; attachMode = 'single';
+  var moBox = document.getElementById('more-opts'); if (moBox) moBox.style.display = 'none';
+  var moCh = document.getElementById('more-opts-chevron'); if (moCh) moCh.className = 'ti ti-chevron-down';
   setupComboSection('');  // novo produto: sem id ainda
   var sellingSec = document.getElementById('m-selling-section');
   if (sellingSec) {
     var paid = currentUser && currentUser.plan_id && currentUser.plan_id !== 'free';
     sellingSec.style.display = paid ? 'block' : 'none';
-    var tgl = document.getElementById('m-sellable'); if (tgl) tgl.classList.remove('on');
-    var fld = document.getElementById('m-selling-fields'); if (fld) fld.style.display = 'none';
-    var pc = document.getElementById('m-price-cents'); if (pc) pc.value = '';
+    // Vaultly-first: planos pagos já vêm com a venda ligada
+    var tgl = document.getElementById('m-sellable'); if (tgl) tgl.classList.toggle('on', !!paid);
+    var fld = document.getElementById('m-selling-fields'); if (fld) fld.style.display = paid ? 'block' : 'none';
   }
   document.getElementById('modal-bg').classList.add('open');
 }
@@ -3311,29 +3371,20 @@ function isComboPlan() {
 }
 
 function setupComboSection(editingId) {
-  var wrap   = document.getElementById('m-combo-wrap');
-  var upsell = document.getElementById('m-combo-upsell');
+  // Prepara o conteúdo do combo; a visibilidade (único/combo) fica com setAttachMode.
   var list   = document.getElementById('m-combo-list');
   var addBtn = document.getElementById('m-combo-add-btn');
-  if (!wrap || !upsell) return;
-
-  if (!isComboPlan()) {
-    wrap.style.display = 'none';
-    upsell.style.display = 'block';
-    return;
+  if (isComboPlan()) {
+    if (!editingId) {
+      // Produto novo: precisa salvar antes de anexar extras
+      if (addBtn) { addBtn.disabled = true; addBtn.style.opacity = '0.5'; }
+      if (list) list.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:4px 0;">Salve o produto primeiro para adicionar arquivos ao combo.</div>';
+    } else {
+      if (addBtn) { addBtn.disabled = false; addBtn.style.opacity = '1'; }
+      loadComboFiles(editingId);
+    }
   }
-  // Pro+: mostra a seção de combo, esconde upsell
-  upsell.style.display = 'none';
-  wrap.style.display = 'block';
-
-  if (!editingId) {
-    // Produto novo: precisa salvar antes de anexar extras
-    if (addBtn) { addBtn.disabled = true; addBtn.style.opacity = '0.5'; }
-    if (list) list.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:4px 0;">Salve o produto primeiro para adicionar arquivos ao combo.</div>';
-  } else {
-    if (addBtn) { addBtn.disabled = false; addBtn.style.opacity = '1'; }
-    loadComboFiles(editingId);
-  }
+  setAttachMode(attachMode);
 }
 
 async function loadComboFiles(productId) {
@@ -3343,7 +3394,9 @@ async function loadComboFiles(productId) {
   try {
     var res = await apiFetch('/api/products/' + productId);
     var files = (res.success && res.data && res.data.extra_files) ? res.data.extra_files : [];
+    _comboFiles = files;
     renderComboList(files);
+    if (files.length && attachMode !== 'combo') setAttachMode('combo');
   } catch(e) {
     list.innerHTML = '<div style="font-size:12px;color:var(--red);padding:4px 0;">Erro ao carregar arquivos.</div>';
   }
@@ -3371,6 +3424,10 @@ async function addComboFile(input) {
   var productId = document.getElementById('m-editing-id').value;
   var addBtn = document.getElementById('m-combo-add-btn');
   if (!productId) { showToast('Salve o produto antes de adicionar arquivos ao combo.', 'warn'); input.value=''; return; }
+  if (file.size + totalBytesWith(0) > MAX_TOTAL_BYTES) {
+    showToast('Esse arquivo (' + fmtMB(file.size) + ') passa do limite total de 25 MB. Já usados: ' + fmtMB(totalBytesWith(0)) + '.', 'warn');
+    input.value = ''; return;
+  }
   if (addBtn) { addBtn.disabled = true; addBtn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i> Enviando...'; }
   try {
     var form = new FormData();
@@ -3473,6 +3530,8 @@ function editProduct(id) {
   document.getElementById('m-status').value       = p.status         || 'active';
   document.getElementById('m-kiwify').value       = p.kiwify_id      || '';
   document.getElementById('m-yampi').value        = p.yampi_id       || '';
+  // Abre "Mais opções" se o produto já tem ID de plataforma
+  if (p.kiwify_id || p.yampi_id) { var _mo = document.getElementById('more-opts'); if (_mo && _mo.style.display === 'none') toggleMoreOpts(); }
   // email_template agora e global — gerenciado na aba Email
   document.getElementById('m-editing-id').value   = id;
   if (p.file_name) {
@@ -3487,8 +3546,13 @@ function editProduct(id) {
 function handleFileSelect(input) {
   const file = input.files[0];
   if (!file) return;
+  if (file.size + comboBytes() > MAX_TOTAL_BYTES) {
+    showToast('Total passaria de 25 MB (combo atual: ' + fmtMB(comboBytes()) + '). Escolha um arquivo menor.', 'warn');
+    input.value = ''; return;
+  }
+  _mainFileBytes = file.size;
   document.getElementById('upload-title').textContent = file.name;
-  document.getElementById('upload-sub').textContent   = (file.size / 1024 / 1024).toFixed(2) + ' MB selecionado';
+  document.getElementById('upload-sub').textContent   = fmtMB(file.size) + ' · total usado ' + fmtMB(totalBytesWith(0)) + ' / 25 MB';
 }
 
 async function saveProduct() {
@@ -3543,7 +3607,7 @@ async function saveProduct() {
     // Aplica configuracoes de venda direta, se ativado
     var sellToggle = document.getElementById('m-sellable');
     if (sellToggle && sellToggle.classList.contains('on') && data.data && data.data.id) {
-      var priceReais = (document.getElementById('m-price-cents').value || '').replace(',', '.');
+      var priceReais = (document.getElementById('m-price').value || '').replace(',', '.');
       var priceCents = Math.round(parseFloat(priceReais) * 100) || 0;
       if (priceCents < 900) {
         showToast('Produto criado, mas o preço mínimo de venda é R$9,00 — ajuste em "Config." no card.', 'warn');
@@ -3714,6 +3778,7 @@ function openModalFromUnmatched(unmatchedId, platform, platformProductId) {
   } else {
     document.getElementById('m-yampi').value = platformProductId;
   }
+  ensureMoreOpts();
   document.getElementById('modal-title').textContent = 'Vincular produto ao arquivo';
   document.getElementById('m-name').placeholder = 'Ex: Ebook SEO Completo';
   // guarda o unmatchedId para apagar ao salvar
@@ -3980,6 +4045,7 @@ function openModalFromPlatform(platform, platformProductId, name) {
   } else {
     document.getElementById('m-yampi').value = platformProductId;
   }
+  ensureMoreOpts();
   document.getElementById('modal-title').textContent = 'Adicionar produto da ' + (platform === 'kiwify' ? 'Kiwify' : 'Yampi');
   populateLinkDropdown(platform);
 }
@@ -4005,6 +4071,7 @@ function preRegisterKiwify() {
   openModal();
   _pendingImport = { platform: 'kiwify', id: kiwifyId, name: '' };
   document.getElementById('m-kiwify').value = kiwifyId;
+  ensureMoreOpts();
   document.getElementById('modal-title').textContent = 'Pré-cadastrar produto Kiwify';
   document.getElementById('m-name').placeholder = 'Nome do produto (ex: Ebook Marketing Digital)';
   populateLinkDropdown('kiwify');
