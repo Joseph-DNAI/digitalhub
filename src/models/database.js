@@ -842,6 +842,11 @@ const payouts = {
   async findByTransferId(transferId) {
     return queryOne('SELECT * FROM payouts WHERE asaas_transfer_id=$1', [transferId]);
   },
+  // Soma do que ja foi sacado (concluido ou em processamento) — p/ calcular o pendente.
+  async sumSettled(tenantId) {
+    const r = await queryOne("SELECT COALESCE(SUM(amount_cents),0) AS s FROM payouts WHERE tenant_id=$1 AND status IN ('done','pending')", [tenantId]);
+    return parseInt(r.s, 10) || 0;
+  },
   async updateStatusByTransferId(transferId, status, error) {
     await query('UPDATE payouts SET status=$1, error=$2, updated_at=NOW() WHERE asaas_transfer_id=$3', [status, error || null, transferId]);
   }
@@ -889,6 +894,11 @@ const orders = {
        LEFT JOIN products p ON o.product_id = p.id
        WHERE o.tenant_id = $1 ORDER BY o.created_at DESC LIMIT $2`,
       [tenantId, limit]);
+  },
+  // Soma do liquido do vendedor (net_cents) das vendas pagas — base p/ calcular o pendente a receber.
+  async sumNetPaid(tenantId) {
+    const r = await queryOne("SELECT COALESCE(SUM(net_cents),0) AS s FROM orders WHERE tenant_id=$1 AND status='paid'", [tenantId]);
+    return parseInt(r.s, 10) || 0;
   },
   async stats(tenantId) {
     const row = await queryOne(`

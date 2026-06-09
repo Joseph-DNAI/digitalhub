@@ -3,7 +3,7 @@ const express = require('express');
 const router  = express.Router();
 const { products, orders, sellerAccounts, tenants, users } = require('../models/database');
 const asaas = require('../services/asaasService');
-const { vaultlyFeeCents, cardChargeCents, installmentOptions } = require('../services/pricing');
+const { vaultlyFeeCents, asaasFeeCents, cardChargeCents, installmentOptions } = require('../services/pricing');
 const logger = require('../config/logger');
 const { downloadFileBuffer } = require('../services/storageService');
 
@@ -100,6 +100,9 @@ router.post('/:slug', async (req, res) => {
       ? cardChargeCents(eff, nInstall)
       : eff;
     const feeCents = isFreePlan ? vaultlyFeeCents(amountCents) : 0;
+    // Liquido do vendedor (o que cai na subconta via split) — base do "pendente a receber".
+    const gatewayCents = asaasFeeCents(pm, amountCents, { installments: nInstall });
+    const netCents = Math.max(0, amountCents - feeCents - gatewayCents);
 
     const MIN_PARCELA = parseInt(process.env.MIN_PARCELA_CENTS || '500', 10);
     if (pm === 'card' && nInstall > 1 && Math.ceil(amountCents / nInstall) < MIN_PARCELA) {
@@ -109,7 +112,7 @@ router.post('/:slug', async (req, res) => {
     orderId = await orders.create(product.tenant_id, {
       product_id: product.id, buyer_name, buyer_email, buyer_doc,
       amount_cents: amountCents, payment_method: pm,
-      platform_fee_cents: feeCents
+      platform_fee_cents: feeCents, gateway_fee_cents: gatewayCents, net_cents: netCents
     });
 
     const customerId = await asaas.createCustomer({ name: buyer_name || buyer_email, email: buyer_email, cpfCnpj: buyer_doc });

@@ -51,4 +51,35 @@ function startPayoutJob() {
   logger.info('Job de saque automatico iniciado — intervalo: ' + (INTERVAL_MS / 3600000) + 'h');
 }
 
-module.exports = { runPayouts, startPayoutJob };
+// Saque sob demanda de UM vendedor (acionado pelo botao no painel).
+// Transfere o saldo disponivel menos a taxa do Pix; registra o payout.
+async function withdrawForTenant(tenantId) {
+  const acc = await sellerAccounts.findByTenant(tenantId);
+  if (!acc || !acc.payout_pix_key || !acc.asaas_api_key_enc) {
+    return { ok: false, error: 'Conta de recebimento sem chave Pix para saque.' };
+  }
+  const apiKey = decrypt(acc.asaas_api_key_enc);
+  const balanceCents = await asaas.getSubaccountBalance(apiKey);
+  const netCents = balanceCents - PIX_FEE_CENTS;
+  if (netCents < MIN_NET_CENTS) {
+    const minTotal = (MIN_NET_CENTS + PIX_FEE_CENTS) / 100;
+    return { ok: false, error: 'Saldo insuficiente para sacar (disponivel R$' + (balanceCents / 100).toFixed(2).replace('.', ',') + '). Minimo de saque: R$' + minTotal.toFixed(2).replace('.', ',') + ' (inclui a taxa de R$' + (PIX_FEE_CENTS / 100).toFixed(2).replace('.', ',') + ').' };
+  }
+  const ref = 'withdraw_' + tenantId + '_' + Date.now();
+  const transfer = await asaas.createPixTransfer(apiKey, { pixKey: acc.payout_pix_key, valueReais: netCents / 100, externalReference: ref });
+  const st = transfer && transfer.status;
+  const initial = st === 'DONE' ? 'done' : (['FAILED', 'CANCELLED'].includes(st) ? 'failed' : 'pending');
+  await payouts.create({ tenant_id: tenantId, amount_cents: netCents, asaas_transfer_id: transfer && transfer.id, status: initial });
+  logger.info('Saque sob demanda R$' + (netCents / 100).toFixed(2) + ' (' + initial + ') — tenant ' + tenantId.slice(0, 8));
+  return { ok: true, net_cents: netCents, fee_cents: PIX_FEE_CENTS, status: initial };
+}
+
+// Saldo disponivel (Asaas) de um vendedor, em centavos.
+async function availableBalance(tenantId) {
+  const acc = await sellerAccounts.findByTenant(tenantId);
+  if (!acc || !acc.asaas_api_key_enc) return 0;
+  const apiKey = decrypt(acc.asaas_api_key_enc);
+  return asaas.getSubaccountBalance(apiKey);
+}
+
+module.exports = { runPayouts, startPayoutJob, withdrawForTenant, availableBalance, PIX_FEE_CENTS, MIN_NET_CENTS };
