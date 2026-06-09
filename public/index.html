@@ -3534,9 +3534,10 @@ function editProduct(id) {
   if (p.kiwify_id || p.yampi_id) { var _mo = document.getElementById('more-opts'); if (_mo && _mo.style.display === 'none') toggleMoreOpts(); }
   // email_template agora e global — gerenciado na aba Email
   document.getElementById('m-editing-id').value   = id;
+  _mainFileBytes = parseInt(p.file_size, 10) || 0;
   if (p.file_name) {
     document.getElementById('upload-title').textContent = p.file_name;
-    document.getElementById('upload-sub').textContent   = 'Arquivo atual · selecione outro para substituir';
+    document.getElementById('upload-sub').textContent   = (_mainFileBytes ? fmtMB(_mainFileBytes) + ' · ' : '') + 'arquivo atual · selecione outro para substituir';
   }
   document.getElementById('modal-title').textContent = 'Editar produto';
   document.getElementById('save-btn').innerHTML      = '<i class="ti ti-device-floppy"></i> Atualizar produto';

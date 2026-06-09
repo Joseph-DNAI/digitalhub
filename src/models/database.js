@@ -277,6 +277,8 @@ async function initDatabase() {
       ALTER TABLE tenants ADD COLUMN IF NOT EXISTS checkout_accent         TEXT DEFAULT '#FF6B35';
       ALTER TABLE tenants ADD COLUMN IF NOT EXISTS checkout_logo_key       TEXT;
       ALTER TABLE tenants ADD COLUMN IF NOT EXISTS checkout_show_guarantee BOOLEAN DEFAULT TRUE;
+      ALTER TABLE products      ADD COLUMN IF NOT EXISTS file_size BIGINT;
+      ALTER TABLE product_files ADD COLUMN IF NOT EXISTS file_size BIGINT;
     `);
 
     // Planos — DO UPDATE garante que mudancas de preco/limite sejam aplicadas no restart
@@ -487,9 +489,9 @@ const products = {
   async create(tenantId, data) {
     const id = uuidv4();
     await query(`
-      INSERT INTO products (id, tenant_id, name, description, price, kiwify_id, yampi_id, file_path, file_name, email_template, status)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-    `, [id, tenantId, data.name, data.description||null, data.price||0, data.kiwify_id||null, data.yampi_id||null, data.file_path||null, data.file_name||null, data.email_template||null, data.status||'active']);
+      INSERT INTO products (id, tenant_id, name, description, price, kiwify_id, yampi_id, file_path, file_name, file_size, email_template, status)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+    `, [id, tenantId, data.name, data.description||null, data.price||0, data.kiwify_id||null, data.yampi_id||null, data.file_path||null, data.file_name||null, data.file_size||null, data.email_template||null, data.status||'active']);
     return this.findById(tenantId, id);
   },
 
@@ -697,13 +699,19 @@ const unmatchedProducts = {
 // ─── Product Files (arquivos extras de combo — Pro+) ────────────────────────────
 
 const productFiles = {
-  async create(tenantId, productId, filePath, fileName) {
+  async create(tenantId, productId, filePath, fileName, fileSize) {
     const id = uuidv4();
     await query(
-      'INSERT INTO product_files (id, product_id, tenant_id, file_path, file_name) VALUES ($1,$2,$3,$4,$5)',
-      [id, productId, tenantId, filePath, fileName]
+      'INSERT INTO product_files (id, product_id, tenant_id, file_path, file_name, file_size) VALUES ($1,$2,$3,$4,$5,$6)',
+      [id, productId, tenantId, filePath, fileName, fileSize||null]
     );
     return id;
+  },
+
+  // Soma dos tamanhos dos arquivos extras (bytes) de um produto
+  async totalSize(tenantId, productId) {
+    const r = await queryOne('SELECT COALESCE(SUM(file_size),0) AS s FROM product_files WHERE tenant_id=$1 AND product_id=$2', [tenantId, productId]);
+    return parseInt(r.s, 10) || 0;
   },
 
   async findByProduct(tenantId, productId) {

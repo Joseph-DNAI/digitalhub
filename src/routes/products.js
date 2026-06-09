@@ -36,24 +36,43 @@ const ALLOWED_MIMETYPES = [
   'video/webm'
 ];
 
+// Extensoes permitidas (defesa extra contra MIME falsificado — bloqueia exe/js/html/svg etc.)
+const ALLOWED_EXTENSIONS = [
+  '.pdf', '.epub', '.zip', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+  '.txt', '.jpg', '.jpeg', '.png', '.gif', '.mp3', '.m4a', '.mp4', '.webm'
+];
+
+// Limite TOTAL de anexos por produto (principal + combo), para a entrega por email nao falhar.
+// O front mostra 25 MB; o backend deixa uma margem antes de recusar.
+const MAX_ATTACH_TOTAL_MB = parseInt(process.env.MAX_ATTACH_TOTAL_MB || '25', 10);
+const ATTACH_MARGIN_MB    = parseInt(process.env.ATTACH_MARGIN_MB || '3', 10);
+const MAX_TOTAL_BYTES     = (MAX_ATTACH_TOTAL_MB + ATTACH_MARGIN_MB) * 1024 * 1024; // ex.: 28 MB
+
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => cb(null, UPLOADS_PATH),
     filename:    (req, file, cb) => cb(null, `${Date.now()}_${file.originalname.replace(/[^a-z0-9._-]/gi,'_')}`)
   }),
-  limits: { fileSize: parseInt(process.env.MAX_FILE_SIZE_MB||'50') * 1024 * 1024 },
+  // Nenhum arquivo isolado pode exceder o total permitido.
+  limits: { fileSize: MAX_TOTAL_BYTES },
   fileFilter: (req, file, cb) => {
-    if (ALLOWED_MIMETYPES.includes(file.mimetype)) {
+    const ext = (file.originalname.match(/\.[^.\/\\]+$/) || [''])[0].toLowerCase();
+    if (ALLOWED_MIMETYPES.includes(file.mimetype) && ALLOWED_EXTENSIONS.includes(ext)) {
       cb(null, true);
     } else {
-      cb(new Error('Tipo de arquivo nao permitido. Use PDF, ZIP, EPUB, DOCX, MP3, MP4 ou similares.'));
+      cb(new Error('Tipo de arquivo nao permitido. Use PDF, ZIP, EPUB, DOCX, XLSX, PPTX, TXT, imagem, MP3 ou MP4.'));
     }
   }
 });
 
 function uploadMw(req, res, next) {
   upload.single('file')(req, res, err => {
-    if (err) return res.status(400).json({ success: false, error: err.message });
+    if (err) {
+      var msg = err.code === 'LIMIT_FILE_SIZE'
+        ? 'Arquivo acima do limite total de ' + MAX_ATTACH_TOTAL_MB + ' MB por produto.'
+        : err.message;
+      return res.status(400).json({ success: false, error: msg });
+    }
     next();
   });
 }
@@ -74,7 +93,7 @@ router.get('/:id', async (req, res) => {
     const { file_path, ...safe } = p;
     // Inclui arquivos extras do combo (sem expor o file_path interno)
     const extras = await productFiles.findByProduct(req.tenantId, req.params.id);
-    safe.extra_files = (extras || []).map(f => ({ id: f.id, file_name: f.file_name, created_at: f.created_at }));
+    safe.extra_files = (extras || []).map(f => ({ id: f.id, file_name: f.file_name, file_size: f.file_size, created_at: f.created_at }));
     res.json({ success: true, data: safe });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -107,10 +126,11 @@ router.post('/', uploadMw, async (req, res) => {
       await products.delete(req.tenantId, oldest.id);
     }
 
-    let r2Key = null, fileName = null;
+    let r2Key = null, fileName = null, fileSize = null;
     if (req.file) {
       r2Key    = await uploadFile(req.file.path, req.file.originalname);
       fileName = req.file.originalname;
+      fileSize = req.file.size;
     }
 
     // Status inicial: ativo se ha espaco no limite de ativos do plano; senao inativo.
@@ -122,7 +142,7 @@ router.post('/', uploadMw, async (req, res) => {
       price: parseFloat(price) || 0,
       kiwify_id: kiwify_id || null, yampi_id: yampi_id || null,
       email_template: email_template || null,
-      file_path: r2Key, file_name: fileName,
+      file_path: r2Key, file_name: fileName, file_size: fileSize,
       status: status
     });
 
@@ -148,9 +168,17 @@ router.put('/:id', uploadMw, async (req, res) => {
     });
 
     if (req.file) {
+      // Trava de total: novo arquivo principal + combo existente nao podem passar do limite
+      const comboBytes = await productFiles.totalSize(req.tenantId, req.params.id);
+      if (req.file.size + comboBytes > MAX_TOTAL_BYTES) {
+        try { fs.unlinkSync(req.file.path); } catch (_) {}
+        return res.status(400).json({ success: false,
+          error: 'O total de anexos passaria de ' + MAX_ATTACH_TOTAL_MB + ' MB (combo atual ocupa ' + (comboBytes/1024/1024).toFixed(1) + ' MB). Use um arquivo menor.' });
+      }
       if (existing.file_path) { try { await deleteFile(existing.file_path); } catch(e){} }
       updateData.file_path = await uploadFile(req.file.path, req.file.originalname);
       updateData.file_name = req.file.originalname;
+      updateData.file_size = req.file.size;
     }
 
     if (updateData.price !== undefined) updateData.price = parseFloat(updateData.price);
@@ -213,12 +241,21 @@ router.post('/:id/files', requireComboPlan, uploadMw, async (req, res) => {
 
     const count = await productFiles.count(req.tenantId, req.params.id);
     if (count >= MAX_EXTRA_FILES) {
+      try { fs.unlinkSync(req.file.path); } catch (_) {}
       return res.status(400).json({ success: false, error: 'Limite de ' + MAX_EXTRA_FILES + ' arquivos extras atingido para este produto.' });
     }
 
+    // Trava de total: principal + combo existente + novo arquivo nao podem passar do limite
+    const usedBytes = (parseInt(product.file_size, 10) || 0) + await productFiles.totalSize(req.tenantId, req.params.id);
+    if (req.file.size + usedBytes > MAX_TOTAL_BYTES) {
+      try { fs.unlinkSync(req.file.path); } catch (_) {}
+      return res.status(400).json({ success: false,
+        error: 'O total de anexos passaria de ' + MAX_ATTACH_TOTAL_MB + ' MB (ja usados ' + (usedBytes/1024/1024).toFixed(1) + ' MB). Use um arquivo menor.' });
+    }
+
     const r2Key = await uploadFile(req.file.path, req.file.originalname);
-    const id = await productFiles.create(req.tenantId, req.params.id, r2Key, req.file.originalname);
-    res.status(201).json({ success: true, data: { id, file_name: req.file.originalname } });
+    const id = await productFiles.create(req.tenantId, req.params.id, r2Key, req.file.originalname, req.file.size);
+    res.status(201).json({ success: true, data: { id, file_name: req.file.originalname, file_size: req.file.size } });
   } catch (err) {
     logger.error('Erro ao adicionar arquivo extra: ' + err.message);
     res.status(500).json({ success: false, error: err.message });
