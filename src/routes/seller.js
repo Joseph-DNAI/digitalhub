@@ -81,7 +81,14 @@ router.get('/registration-status', requireAuth, async (req, res) => {
       const approved = String(general).toUpperCase() === 'APPROVED';
       await sellerAccounts.upsert(req.tenantId, { kyc_status: String(general), status: approved ? 'active' : (acc.status || 'pending') });
     }
-    res.json({ success: true, account: true, status: status });
+    // Email da ativacao + eventual link de onboarding (p/ o vendedor concluir no Asaas)
+    let email = null, onboardingUrl = null;
+    try {
+      const info = await asaas.getAccountInfo(apiKey);
+      email = info && info.email;
+      onboardingUrl = info && (info.onboardingUrl || info.invoiceUrl || info.loginUrl || info.accountUrl);
+    } catch (e) { /* best-effort */ }
+    res.json({ success: true, account: true, status: status, email: email, onboarding_url: onboardingUrl });
   } catch (err) {
     logger.error('seller/registration-status: ' + err.message);
     res.status(502).json({ success: false, error: 'Nao foi possivel consultar o status no banco. ' + err.message });
