@@ -1418,7 +1418,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
           <div class="upload-title" id="upload-title">Clique para selecionar arquivo</div>
           <div class="upload-sub" id="upload-sub">PDF, EPUB · armazenado no Cloudflare R2</div>
         </div>
-        <input type="file" id="m-file" accept=".pdf,.epub,.zip" style="display:none" onchange="handleFileSelect(this)" />
+        <input type="file" id="m-file" accept=".pdf,.epub,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.gif,.mp3,.m4a,.mp4,.webm" style="display:none" onchange="handleFileSelect(this)" />
       </div>
 
       <!-- Combo: arquivos extras (Pro+) -->
@@ -1432,7 +1432,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
         <button type="button" class="btn btn-ghost btn-sm" id="m-combo-add-btn" onclick="document.getElementById('m-combo-file').click()">
           <i class="ti ti-plus"></i> Adicionar arquivo ao combo
         </button>
-        <input type="file" id="m-combo-file" accept=".pdf,.epub,.zip" style="display:none" onchange="addComboFile(this)" />
+        <input type="file" id="m-combo-file" accept=".pdf,.epub,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.gif,.mp3,.m4a,.mp4,.webm" style="display:none" onchange="addComboFile(this)" />
       </div>
 
       <!-- Upsell de combo para planos sem acesso -->
