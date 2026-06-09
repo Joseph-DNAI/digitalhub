@@ -14,7 +14,9 @@
   .logo{height:34px;margin-bottom:18px}
   .seller-logo{display:block;max-height:46px;margin:0 auto 14px;width:auto}
   h1{font-size:20px;margin:0 0 4px}.desc{color:var(--muted);font-size:14px;margin:0 0 18px}
-  .price{font-size:30px;font-weight:700;color:var(--accent);margin:8px 0 18px}
+  .price{font-size:30px;font-weight:700;color:var(--accent);margin:8px 0 18px;display:flex;align-items:baseline;flex-wrap:wrap;gap:6px}
+  .old{text-decoration:line-through;color:var(--muted);font-size:17px;font-weight:600}
+  .promo-badge{background:rgba(34,197,94,0.12);color:#16a34a;font-size:12px;font-weight:700;padding:2px 9px;border-radius:99px}
   label{display:block;font-size:13px;color:var(--muted);margin:12px 0 4px}
   input,select{width:100%;padding:11px 12px;border-radius:9px;border:1px solid var(--line);background:var(--field);color:var(--text);font-size:14px}
   .methods{display:flex;gap:8px;margin:16px 0}
@@ -38,7 +40,7 @@
       <img id="seller-logo" class="seller-logo" alt="" style="display:none;"/>
       <h1 id="title"></h1>
       <p class="desc" id="desc"></p>
-      <div class="price" id="price"></div>
+      <div class="price"><span id="old-price" class="old" style="display:none;"></span><span id="price"></span><span id="promo-badge" class="promo-badge" style="display:none;"></span></div>
       <div id="fee-note" style="font-size:11px;color:var(--muted);margin-top:6px;display:none;"></div>
 
       <div class="methods" id="methods">
@@ -91,6 +93,11 @@ async function load(){
   if (cfg.logo_url) { var lg = $('seller-logo'); lg.src = cfg.logo_url; lg.style.display = 'block'; }
   if (cfg.show_guarantee) { var gb = $('guarantee-badge'); if (gb) gb.style.display = 'flex'; }
   window._pixCents = d.product.pix_cents;
+  if (d.product.compare_at_cents) {
+    var op = $('old-price'); if (op) { op.textContent = 'R$ ' + (d.product.compare_at_cents/100).toFixed(2).replace('.', ','); op.style.display = 'inline'; }
+    var pct = Math.round((1 - d.product.pix_cents / d.product.compare_at_cents) * 100);
+    var pb = $('promo-badge'); if (pb && pct > 0) { pb.textContent = '-' + pct + '%'; pb.style.display = 'inline-block'; }
+  }
   window._cardCents = d.product.card_cents;
   window._passFee = d.product.pass_card_fee;
   window._installments = d.product.installments || [{ n:1, total_cents: d.product.card_cents, parcela_cents: d.product.card_cents, label:'1x' }];

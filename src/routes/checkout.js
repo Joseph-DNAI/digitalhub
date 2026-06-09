@@ -16,9 +16,10 @@ router.get('/:slug', async (req, res) => {
     const tenant = await tenants.findById(product.tenant_id);
     const sellerUser = tenant ? await users.findById(tenant.user_id) : null;
     const isFreePlan = !sellerUser || sellerUser.plan_id === 'free';
+    const eff = product.promo_price_cents || product.price_cents;
     const passFee = !isFreePlan && !!(acc && acc.pass_card_fee_to_buyer);
-    const cardCents = passFee ? cardChargeCents(product.price_cents, 1) : product.price_cents;
-    const installments = installmentOptions({ priceCents: product.price_cents, passFee: passFee }).map(function (o) {
+    const cardCents = passFee ? cardChargeCents(eff, 1) : eff;
+    const installments = installmentOptions({ priceCents: eff, passFee: passFee }).map(function (o) {
       return {
         n: o.n,
         total_cents: o.total_cents,
@@ -34,9 +35,10 @@ router.get('/:slug', async (req, res) => {
         slug: product.slug,
         title: product.checkout_title || product.name,
         description: product.checkout_description,
-        price_cents: product.price_cents,
-        pix_cents: product.price_cents,
+        price_cents: eff,
+        pix_cents: eff,
         card_cents: cardCents,
+        compare_at_cents: product.promo_price_cents ? product.price_cents : null,
         pass_card_fee: passFee,
         installments: installments,
         accept_pix: product.accept_pix,
@@ -67,7 +69,8 @@ router.post('/:slug', async (req, res) => {
     if (!product) return res.status(404).json({ success: false, error: 'Produto nao encontrado.' });
 
     const MIN = parseInt(process.env.DIRECT_MIN_PRICE_CENTS || '900', 10);
-    if (!Number.isInteger(product.price_cents) || product.price_cents < MIN) {
+    const eff = product.promo_price_cents || product.price_cents;
+    if (!Number.isInteger(eff) || eff < MIN) {
       return res.status(409).json({ success: false, error: 'Produto indisponivel para compra.' });
     }
 
@@ -94,8 +97,8 @@ router.post('/:slug', async (req, res) => {
     // Cartao com repasse ligado: cobra o valor com a taxa embutida (gross-up).
     // Pix sempre cobra o valor real. O split ja entrega ao vendedor (cobrado - taxaAsaas) = preco cheio.
     const amountCents = (pm === 'card' && acc.pass_card_fee_to_buyer && !isFreePlan)
-      ? cardChargeCents(product.price_cents, nInstall)
-      : product.price_cents;
+      ? cardChargeCents(eff, nInstall)
+      : eff;
     const feeCents = isFreePlan ? vaultlyFeeCents(amountCents) : 0;
 
     const MIN_PARCELA = parseInt(process.env.MIN_PARCELA_CENTS || '500', 10);
