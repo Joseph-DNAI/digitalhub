@@ -1920,10 +1920,15 @@ function renderSellerActive(body, account) {
       '<div class="toggle-info"><div class="t-title">Repassar a taxa do cartao ao comprador</div><div class="t-desc">No cartao, o comprador paga o valor com a taxa embutida — voce recebe o preco cheio. No Pix nada muda.</div></div>' +
       '<button class="toggle' + (account.pass_card_fee_to_buyer ? ' on' : '') + '" id="seller-toggle-passfee" onclick="this.classList.toggle(\'on\');saveSellerMethods()"></button>' +
     '</div>' +
-    '<div class="toggle-row">' +
-      '<div class="toggle-info"><div class="t-title">Recebimento rapido (antecipacao automatica)</div><div class="t-desc">Recebe o cartao em ~1-2 dias em vez de ~30. A taxa de antecipacao ja esta refletida nas taxas acima.</div></div>' +
-      '<button class="btn btn-ghost btn-sm" onclick="enableFastPayout(this)"><i class="ti ti-bolt"></i> Ativar</button>' +
-    '</div>' +
+    (account.person_type === 'CPF'
+      ? '<div class="toggle-row">' +
+          '<div class="toggle-info"><div class="t-title">Recebimento rapido (antecipacao automatica)</div><div class="t-desc">Disponível apenas para contas <strong>CNPJ</strong>. Como sua conta é pessoa física (CPF), o cartão é recebido no prazo padrão (~30 dias); o Pix continua na hora.</div></div>' +
+          '<span class="badge badge-gray" style="font-size:10px;flex-shrink:0;">Só CNPJ</span>' +
+        '</div>'
+      : '<div class="toggle-row">' +
+          '<div class="toggle-info"><div class="t-title">Recebimento rapido (antecipacao automatica)</div><div class="t-desc">Recebe o cartao em ~1-2 dias em vez de ~30. A taxa de antecipacao ja esta refletida nas taxas acima.</div></div>' +
+          '<button class="btn btn-ghost btn-sm" onclick="enableFastPayout(this)"><i class="ti ti-bolt"></i> Ativar</button>' +
+        '</div>') +
     sellerFeesNote() + feeSimulatorCard();
   loadFeeSimulator();
 }

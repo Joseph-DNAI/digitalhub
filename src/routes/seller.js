@@ -15,7 +15,9 @@ router.get('/account', requireAuth, async (req, res) => {
     let safe = null;
     if (acc) {
       const { asaas_api_key_enc, ...rest } = acc;
-      safe = { ...rest, has_payout_key: !!asaas_api_key_enc };
+      const _doc = String(acc.payout_pix_key || '').replace(/\D/g, '');
+      const person_type = _doc.length === 14 ? 'CNPJ' : (_doc.length === 11 ? 'CPF' : null);
+      safe = { ...rest, has_payout_key: !!asaas_api_key_enc, person_type };
     }
     res.json({ success: true, account: safe });
   } catch (err) {
@@ -135,11 +137,22 @@ router.post('/enable-anticipation', requireAuth, async (req, res) => {
     if (!acc || !acc.asaas_api_key_enc) {
       return res.status(409).json({ success: false, error: 'Conta de recebimento sem chave para antecipacao. Reative a conta.' });
     }
+    // Antecipacao automatica do Asaas e exclusiva para contas CNPJ (pessoa juridica)
+    const docDigits = String(acc.payout_pix_key || '').replace(/\D/g, '');
+    if (docDigits.length === 11) {
+      return res.status(400).json({ success: false, not_available: true,
+        error: 'O recebimento rapido (antecipacao automatica) e exclusivo para contas CNPJ. Sua conta e pessoa fisica (CPF).' });
+    }
     const apiKey = decrypt(acc.asaas_api_key_enc);
     await asaas.enableAutoAnticipation(apiKey);
     res.json({ success: true });
   } catch (err) {
     logger.error('seller/enable-anticipation: ' + err.message);
+    const pjOnly = /pessoa jur|invalid_action/i.test(err.message || '');
+    if (pjOnly) {
+      return res.status(400).json({ success: false, not_available: true,
+        error: 'O recebimento rapido (antecipacao automatica) e exclusivo para contas CNPJ (pessoa juridica).' });
+    }
     res.status(502).json({ success: false, error: 'Nao foi possivel ativar a antecipacao. ' + err.message });
   }
 });
