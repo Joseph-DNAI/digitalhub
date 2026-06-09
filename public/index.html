@@ -1863,15 +1863,14 @@ async function loadActivation() {
   var box = document.getElementById('activation-card');
   if (!box) return;
   box.innerHTML = '<div class="card"><div class="card-body"><div style="color:var(--text3);font-size:13px;">Carregando ativação da conta...</div></div></div>';
-  var st = null, docs = null;
-  try { var r = await apiFetch('/api/seller/registration-status'); if (r && r.success) st = r.status; } catch (e) {}
+  var st = null, email = '', onb = '';
+  try { var r = await apiFetch('/api/seller/registration-status'); if (r && r.success) { st = r.status; email = r.email || ''; onb = r.onboarding_url || ''; } } catch (e) {}
   var general = st && (st.generalApproval || st.general || st.status);
   var isApproved = String(general || '').toUpperCase() === 'APPROVED';
   if (isApproved) {
     box.innerHTML = '<div class="card"><div class="card-body" style="display:flex;align-items:center;gap:10px;"><i class="ti ti-circle-check" style="color:var(--emerald);font-size:22px;"></i><div><div style="font-weight:700;font-size:14px;">Conta aprovada pelo banco</div><div style="font-size:12px;color:var(--text3);">Cadastro completo — o <strong>saque</strong> está liberado.</div></div></div></div>';
     return;
   }
-  try { var d = await apiFetch('/api/seller/documents'); if (d && d.success) docs = d.documents; } catch (e) {}
   var rows = '';
   if (st) {
     var items = [
@@ -1884,31 +1883,17 @@ async function loadActivation() {
       return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);"><span style="font-size:13px;">' + i[0] + '</span>' + kycBadge(i[1]) + '</div>';
     }).join('');
   }
-  var arr = docs && (docs.data || docs.documents || (Array.isArray(docs) ? docs : null));
-  var docList;
-  if (arr && arr.length) {
-    docList = arr.map(function (doc) {
-      var id = doc.id || '';
-      var title = doc.title || doc.type || 'Documento';
-      var dstatus = doc.status || '';
-      var typeAttr = (doc.documentTypes && doc.documentTypes[0] && (doc.documentTypes[0].type || doc.documentTypes[0])) || doc.type || '';
-      return '<div style="padding:10px 0;border-bottom:1px solid var(--border);">' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:13px;font-weight:600;">' + title + '</span>' + kycBadge(dstatus) + '</div>' +
-        '<input type="file" accept="image/png,image/jpeg,image/webp,application/pdf" onchange="uploadDoc(this,\'' + id + '\',\'' + typeAttr + '\')" style="font-size:12px;" />' +
-        '<span id="docstat-' + id + '" style="font-size:12px;margin-left:8px;"></span>' +
-      '</div>';
-    }).join('');
-  } else {
-    docList = '<div style="font-size:12px;color:var(--text3);padding:6px 0;">Nenhum documento pendente listado pelo banco. Se a conta ainda estiver "aguardando ativação", clique em Atualizar.</div>';
-  }
   box.innerHTML =
     '<div class="card"><div class="card-body">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><div style="font-weight:700;font-size:14px;"><i class="ti ti-id-badge-2" style="color:var(--orange);"></i> Ativação da conta no banco</div>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><div style="font-weight:700;font-size:14px;"><i class="ti ti-id-badge-2" style="color:var(--orange);"></i> Ative sua conta no banco para sacar</div>' +
         '<button class="btn btn-ghost btn-sm" onclick="loadActivation()"><i class="ti ti-refresh"></i> Atualizar</button></div>' +
-      '<div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.5;">Para liberar o <strong>saque</strong>, o banco precisa aprovar seu cadastro. Envie os documentos abaixo (imagem ou PDF). Vender você já pode — o dinheiro fica guardado na sua conta.</div>' +
-      (rows ? '<div style="margin-bottom:14px;">' + rows + '</div>' : '') +
-      '<div style="font-size:13px;font-weight:600;margin-bottom:4px;">Documentos</div>' +
-      docList +
+      '<div style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.6;">' +
+        'Sua conta no banco (<strong>Asaas</strong>, nosso parceiro de pagamentos) está <strong>em ativação</strong>. ' +
+        'O Asaas enviou um <strong>e-mail de ativação</strong>' + (email ? ' para <strong>' + email + '</strong>' : ' para o e-mail do seu cadastro') + ' — abra e conclua o cadastro por lá (verifique também o <strong>spam</strong>). ' +
+        'Você <strong>já pode vender</strong> normalmente; o dinheiro fica guardado na sua conta. Para <strong>sacar</strong>, basta concluir a ativação com o banco.' +
+      '</div>' +
+      (onb ? '<a class="btn btn-primary btn-sm" href="' + onb + '" target="_blank" rel="noopener" style="margin-bottom:12px;"><i class="ti ti-external-link"></i> Ativar no banco</a>' : '') +
+      (rows ? '<div style="font-size:12px;color:var(--text3);margin-bottom:4px;">Situação no banco:</div><div>' + rows + '</div>' : '') +
     '</div></div>';
 }
 async function uploadDoc(input, docId, type) {
@@ -2421,7 +2406,7 @@ async function loadSellerBalance() {
           '<div style="font-family:\'Satoshi\',sans-serif;font-weight:700;font-size:20px;color:var(--emerald);">' + brl(avail) + '</div>' +
           '<button class="btn btn-primary btn-sm" style="margin-top:8px;" ' + (canWithdraw ? '' : 'disabled') + ' onclick="doWithdraw(this)"><i class="ti ti-cash"></i> Sacar</button></div>' +
       '</div>' +
-      (!approved ? '<div style="font-size:12px;color:var(--yellow);line-height:1.5;margin-bottom:6px;"><i class="ti ti-alert-triangle"></i> Conclua a <strong>ativação da sua conta no banco</strong> (aba Loja) para liberar o saque. Suas vendas continuam sendo guardadas.</div>' : '') +
+      (!approved ? '<div style="font-size:12px;color:var(--yellow);line-height:1.5;margin-bottom:6px;"><i class="ti ti-alert-triangle"></i> Para sacar, <strong>conclua a ativação da sua conta no banco (Asaas)</strong> — pelo e-mail de ativação que o banco enviou. Detalhes na aba <strong>Loja</strong>. Vender já funciona; o dinheiro fica guardado.</div>' : '') +
       '<div style="font-size:12px;color:var(--text3);line-height:1.5;"><i class="ti ti-info-circle" style="color:var(--yellow);"></i> Cada saque tem <strong>' + brl(fee) + '</strong> de taxa Pix do banco (descontada do valor). ' +
         (avail >= minW ? 'Vale acumular antes de sacar valores pequenos.' : 'Saldo mínimo para sacar: <strong>' + brl(minW) + '</strong> (já inclui a taxa).') + '</div>';
   } catch (e) {

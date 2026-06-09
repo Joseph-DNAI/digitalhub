@@ -184,6 +184,11 @@ async function getRegistrationStatus(apiKey) {
   return request('GET', '/myAccount/registrationStatus', null, apiKey);
 }
 
+// Dados da propria conta (subconta) — usado p/ saber o email da ativacao e um eventual link de onboarding.
+async function getAccountInfo(apiKey) {
+  return request('GET', '/myAccount', null, apiKey);
+}
+
 // Lista os documentos exigidos/enviados (cada grupo tem id, tipo, status).
 async function listAccountDocuments(apiKey) {
   return request('GET', '/myAccount/documents', null, apiKey);
@@ -216,5 +221,5 @@ module.exports = {
   createSubaccount, createCustomer, createCharge, getPixQrCode, getCharge,
   findSubaccountByCpfCnpj, listSubaccounts,
   pixKeyType, getSubaccountBalance, createPixTransfer, enableAutoAnticipation,
-  getRegistrationStatus, listAccountDocuments, uploadAccountDocument
+  getRegistrationStatus, getAccountInfo, listAccountDocuments, uploadAccountDocument
 };
