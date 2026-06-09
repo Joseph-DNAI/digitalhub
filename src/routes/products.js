@@ -394,6 +394,66 @@ router.post('/:id/files', requireComboPlan, uploadMw, async (req, res) => {
   }
 });
 
+// POST /combo — cria um produto combo juntando os anexos de varios produtos
+router.post('/combo', requireComboPlan, async (req, res) => {
+  try {
+    const { source_ids } = req.body;
+    if (!Array.isArray(source_ids) || !source_ids.length) {
+      return res.status(400).json({ success: false, error: 'Selecione ao menos um produto.' });
+    }
+    if (source_ids.length > 50) return res.status(400).json({ success: false, error: 'Maximo de 50 produtos por combo.' });
+
+    const sources = await products.findByIds(req.tenantId, source_ids);
+    if (!sources.length) return res.status(404).json({ success: false, error: 'Produtos nao encontrados.' });
+
+    // Junta todos os anexos (principal + extras) dos produtos selecionados
+    const files = [];
+    for (const s of sources) {
+      if (s.file_path) files.push({ key: s.file_path, name: s.file_name || 'arquivo', size: parseInt(s.file_size, 10) || 0 });
+      const extras = await productFiles.findByProduct(req.tenantId, s.id);
+      for (const f of (extras || [])) files.push({ key: f.file_path, name: f.file_name || 'arquivo', size: parseInt(f.file_size, 10) || 0 });
+    }
+    if (!files.length) return res.status(400).json({ success: false, error: 'Os produtos selecionados nao tem anexos.' });
+    if (files.length > MAX_EXTRA_FILES + 1) {
+      return res.status(400).json({ success: false, error: 'O combo somaria ' + files.length + ' arquivos; o maximo e ' + (MAX_EXTRA_FILES + 1) + '. Selecione menos produtos.' });
+    }
+    const totalBytes = files.reduce((a, f) => a + f.size, 0);
+    if (totalBytes > MAX_TOTAL_BYTES) {
+      return res.status(400).json({ success: false, error: 'O combo somaria ' + (totalBytes / 1024 / 1024).toFixed(1) + ' MB, acima do limite de ' + MAX_ATTACH_TOTAL_MB + ' MB. Selecione menos produtos.' });
+    }
+
+    const total = await products.count(req.tenantId);
+    if (atGlobalCap(total, MAX_PRODUCTS_TOTAL)) {
+      return res.status(409).json({ success: false, error: 'Limite de ' + MAX_PRODUCTS_TOTAL + ' produtos atingido. Apague ou desative algum antes de criar o combo.' });
+    }
+
+    // Copia o 1o arquivo como principal; o resto como extras
+    const mainKey = await copyFile(files[0].key, files[0].name);
+    const activeCount = await products.countActive(req.tenantId);
+    const status = initialStatus(activeCount, req.user.max_products);
+
+    const created = await products.create(req.tenantId, {
+      name: 'Combo', description: null, price: 0,
+      kiwify_id: null, yampi_id: null, email_template: null,
+      file_path: mainKey, file_name: files[0].name, file_size: files[0].size || null,
+      status: status
+    });
+
+    for (let i = 1; i < files.length; i++) {
+      try {
+        const k = await copyFile(files[i].key, files[i].name);
+        await productFiles.create(req.tenantId, created.id, k, files[i].name, files[i].size || null);
+      } catch (e) { logger.error('combo extra copy: ' + e.message); }
+    }
+
+    const { file_path, ...safe } = created;
+    res.status(201).json({ success: true, data: safe, status: status });
+  } catch (err) {
+    logger.error('products/combo: ' + err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // DELETE /:id/files/:fileId — remove um arquivo extra
 router.delete('/:id/files/:fileId', async (req, res) => {
   try {
