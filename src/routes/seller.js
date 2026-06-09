@@ -48,7 +48,9 @@ router.get('/account', requireAuth, async (req, res) => {
 router.get('/balance', requireAuth, async (req, res) => {
   try {
     const acc = await sellerAccounts.findByTenant(req.tenantId);
-    const approved = !!(acc && (acc.status === 'active' || String(acc.kyc_status || '').toUpperCase() === 'APPROVED'));
+    // Aprovação para SAQUE = KYC do banco aprovado (não confundir com 'status=active', que é só
+    // o flag interno de "venda direta ligada"). Atualizado pelo GET /registration-status (aba Loja).
+    const approved = !!(acc && String(acc.kyc_status || '').toUpperCase() === 'APPROVED');
     const available = await availableBalance(req.tenantId);
     const netPaid = await orders.sumNetPaid(req.tenantId);
     const settled = await payouts.sumSettled(req.tenantId);

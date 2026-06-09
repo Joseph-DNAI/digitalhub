@@ -1835,11 +1835,12 @@ async function loadVendaDiretaSection() {
     var account = res.account;
     if (!account || account.status !== 'active') {
       renderSellerOnboarding(body, account);
-      // Conta já criada mas pendente: mostra a ativação (checklist + envio de documentos).
-      if (account) { body.insertAdjacentHTML('beforeend', '<div id="activation-card" style="margin-top:18px;"></div>'); loadActivation(); }
     } else {
       renderSellerActive(body, account);
     }
+    // Conta já criada: mostra a ativação no banco (checklist + documentos). O card se
+    // resolve sozinho: vira "aprovada" quando o banco libera; senão mostra os pendentes.
+    if (account) { body.insertAdjacentHTML('beforeend', '<div id="activation-card" style="margin-top:18px;"></div>'); loadActivation(); }
     if (currentUser && currentUser.role === 'admin') appendAdminSubaccountsTool(body);
   } catch(e) {
     body.innerHTML =
@@ -1864,6 +1865,12 @@ async function loadActivation() {
   box.innerHTML = '<div class="card"><div class="card-body"><div style="color:var(--text3);font-size:13px;">Carregando ativação da conta...</div></div></div>';
   var st = null, docs = null;
   try { var r = await apiFetch('/api/seller/registration-status'); if (r && r.success) st = r.status; } catch (e) {}
+  var general = st && (st.generalApproval || st.general || st.status);
+  var isApproved = String(general || '').toUpperCase() === 'APPROVED';
+  if (isApproved) {
+    box.innerHTML = '<div class="card"><div class="card-body" style="display:flex;align-items:center;gap:10px;"><i class="ti ti-circle-check" style="color:var(--emerald);font-size:22px;"></i><div><div style="font-weight:700;font-size:14px;">Conta aprovada pelo banco</div><div style="font-size:12px;color:var(--text3);">Cadastro completo — o <strong>saque</strong> está liberado.</div></div></div></div>';
+    return;
+  }
   try { var d = await apiFetch('/api/seller/documents'); if (d && d.success) docs = d.documents; } catch (e) {}
   var rows = '';
   if (st) {
