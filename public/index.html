@@ -3062,6 +3062,9 @@ async function loadProducts() {
           <button class="btn btn-ghost btn-sm" style="flex:1;color:var(--orange);" onclick="openSelling('${p.id}')">
             <i class="ti ti-shopping-cart"></i> ${p.sellable && p.slug ? 'Config.' : 'Vender'}
           </button>
+          <button class="btn btn-ghost btn-sm" onclick="duplicateProduct('${p.id}')" title="Duplicar produto">
+            <i class="ti ti-copy"></i>
+          </button>
           <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}','${p.name.replace(/'/g, "\\'")}')">
             <i class="ti ti-trash"></i>
           </button>
@@ -3516,6 +3519,16 @@ function onLinkExistingChange() {
 
 function closeModal() {
   document.getElementById('modal-bg').classList.remove('open');
+}
+
+async function duplicateProduct(id) {
+  try {
+    var res = await apiFetch('/api/products/' + id + '/duplicate', { method: 'POST' });
+    if (!res || !res.success) throw new Error((res && res.error) || 'Erro ao duplicar');
+    showToast('Produto duplicado — ajuste e adicione os IDs se precisar.', 'success');
+    await loadProducts();
+    if (res.data && res.data.id) editProduct(res.data.id);
+  } catch (e) { showToast(e.message || 'Erro ao duplicar.', 'warn'); }
 }
 
 function editProduct(id) {
