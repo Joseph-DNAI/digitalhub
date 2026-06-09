@@ -1,10 +1,27 @@
 // src/routes/seller.js — onboarding e status da conta de recebimento (Asaas)
 const express = require('express');
 const router  = express.Router();
+const fs     = require('fs');
+const multer = require('multer');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const { sellerAccounts, payouts, orders } = require('../models/database');
 const asaas = require('../services/asaasService');
 const { withdrawForTenant, availableBalance, PIX_FEE_CENTS, MIN_NET_CENTS } = require('../services/payoutService');
+
+const UPLOADS_PATH = process.env.UPLOADS_PATH || './uploads';
+if (!fs.existsSync(UPLOADS_PATH)) fs.mkdirSync(UPLOADS_PATH, { recursive: true });
+// Upload de documentos de KYC (imagem ou PDF, ate 10MB)
+const docUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, UPLOADS_PATH),
+    filename:    (req, file, cb) => cb(null, Date.now() + '_' + file.originalname.replace(/[^a-z0-9._-]/gi, '_'))
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ok = ['image/png', 'image/jpeg', 'image/webp', 'application/pdf'].includes(file.mimetype);
+    cb(ok ? null : new Error('Use imagem (PNG/JPG/WEBP) ou PDF, ate 10MB.'), ok);
+  }
+});
 const { encrypt, decrypt } = require('../services/crypto');
 const { feeSimulation } = require('../services/pricing');
 const logger = require('../config/logger');
@@ -30,6 +47,8 @@ router.get('/account', requireAuth, async (req, res) => {
 // GET /api/seller/balance — saldo disponível, pendente a receber e taxa de saque
 router.get('/balance', requireAuth, async (req, res) => {
   try {
+    const acc = await sellerAccounts.findByTenant(req.tenantId);
+    const approved = !!(acc && (acc.status === 'active' || String(acc.kyc_status || '').toUpperCase() === 'APPROVED'));
     const available = await availableBalance(req.tenantId);
     const netPaid = await orders.sumNetPaid(req.tenantId);
     const settled = await payouts.sumSettled(req.tenantId);
@@ -39,12 +58,66 @@ router.get('/balance', requireAuth, async (req, res) => {
       available_cents: available,
       pending_cents: pending,
       pix_fee_cents: PIX_FEE_CENTS,
-      min_withdraw_cents: MIN_NET_CENTS + PIX_FEE_CENTS
+      min_withdraw_cents: MIN_NET_CENTS + PIX_FEE_CENTS,
+      account_approved: approved
     });
   } catch (err) {
     logger.error('seller/balance: ' + err.message);
     res.status(500).json({ success: false, error: 'Erro ao consultar saldo.' });
   }
+});
+
+// GET /api/seller/registration-status — status do cadastro/KYC da subconta (espelha "Análise cadastral")
+router.get('/registration-status', requireAuth, async (req, res) => {
+  try {
+    const acc = await sellerAccounts.findByTenant(req.tenantId);
+    if (!acc || !acc.asaas_api_key_enc) return res.json({ success: true, account: false, status: null });
+    const apiKey = decrypt(acc.asaas_api_key_enc);
+    const status = await asaas.getRegistrationStatus(apiKey);
+    const general = status && (status.generalApproval || status.general || status.status);
+    if (general) {
+      const approved = String(general).toUpperCase() === 'APPROVED';
+      await sellerAccounts.upsert(req.tenantId, { kyc_status: String(general), status: approved ? 'active' : (acc.status || 'pending') });
+    }
+    res.json({ success: true, account: true, status: status });
+  } catch (err) {
+    logger.error('seller/registration-status: ' + err.message);
+    res.status(502).json({ success: false, error: 'Nao foi possivel consultar o status no banco. ' + err.message });
+  }
+});
+
+// GET /api/seller/documents — lista os documentos exigidos/enviados da subconta
+router.get('/documents', requireAuth, async (req, res) => {
+  try {
+    const acc = await sellerAccounts.findByTenant(req.tenantId);
+    if (!acc || !acc.asaas_api_key_enc) return res.status(409).json({ success: false, error: 'Conta de recebimento nao encontrada.' });
+    const apiKey = decrypt(acc.asaas_api_key_enc);
+    const documents = await asaas.listAccountDocuments(apiKey);
+    res.json({ success: true, documents: documents });
+  } catch (err) {
+    logger.error('seller/documents: ' + err.message);
+    res.status(502).json({ success: false, error: 'Nao foi possivel listar os documentos. ' + err.message });
+  }
+});
+
+// POST /api/seller/documents/:id — envia um documento (multipart 'file', campo opcional 'type')
+router.post('/documents/:id', requireAuth, function (req, res) {
+  docUpload.single('file')(req, res, async function (err) {
+    if (err) return res.status(400).json({ success: false, error: err.message });
+    if (!req.file) return res.status(400).json({ success: false, error: 'Nenhum arquivo enviado.' });
+    try {
+      const acc = await sellerAccounts.findByTenant(req.tenantId);
+      if (!acc || !acc.asaas_api_key_enc) return res.status(409).json({ success: false, error: 'Conta nao encontrada.' });
+      const apiKey = decrypt(acc.asaas_api_key_enc);
+      const out = await asaas.uploadAccountDocument(apiKey, req.params.id, req.body.type, req.file.path, req.file.originalname);
+      res.json({ success: true, data: out });
+    } catch (e) {
+      logger.error('seller/documents upload: ' + e.message);
+      res.status(502).json({ success: false, error: 'Falha ao enviar o documento. ' + e.message });
+    } finally {
+      try { fs.unlinkSync(req.file.path); } catch (_) {}
+    }
+  });
 });
 
 // POST /api/seller/withdraw — saque sob demanda (Pix para a chave do vendedor)

@@ -4,6 +4,7 @@
 // vendedor; a apiKey da subconta NÃO é persistida. O split envia a TAXA da Vaultly
 // para a wallet master. Confirmar o formato exato no sandbox (Task 9).
 
+const fs = require('fs');
 const logger = require('../config/logger');
 const { buildSplit } = require('./pricing');
 
@@ -175,9 +176,45 @@ async function enableAutoAnticipation(apiKey) {
   return request('PUT', '/anticipations/configurations', { creditCardAutomaticEnabled: true }, apiKey);
 }
 
+// ── KYC / ativacao da subconta (white-label). Usam a apiKey da subconta. ──
+// NOTA: caminhos no formato padrao da API Asaas; validar no sandbox e ajustar nomes se divergir.
+
+// Status do cadastro (dados comerciais, bancarios, documentos, aprovacao geral) — espelha a "Analise cadastral".
+async function getRegistrationStatus(apiKey) {
+  return request('GET', '/myAccount/registrationStatus', null, apiKey);
+}
+
+// Lista os documentos exigidos/enviados (cada grupo tem id, tipo, status).
+async function listAccountDocuments(apiKey) {
+  return request('GET', '/myAccount/documents', null, apiKey);
+}
+
+// Envia (upload) um arquivo para um grupo de documento. Multipart: type + documentFile.
+async function uploadAccountDocument(apiKey, documentId, type, filePath, fileName) {
+  const buf = fs.readFileSync(filePath);
+  const form = new FormData();
+  if (type) form.append('type', type);
+  form.append('documentFile', new Blob([buf]), fileName || 'documento');
+  const res = await fetch(baseUrl() + '/myAccount/documents/' + documentId, {
+    method: 'POST',
+    headers: { 'access_token': apiKey || process.env.ASAAS_API_KEY || '' }, // sem Content-Type: o fetch define o boundary
+    body: form
+  });
+  const text = await res.text();
+  let json; try { json = text ? JSON.parse(text) : {}; } catch (e) { json = { raw: text }; }
+  if (!res.ok) {
+    const detail = json && json.errors ? JSON.stringify(json.errors) : String(text).slice(0, 200);
+    const err = new Error('Asaas upload doc HTTP ' + res.status + (detail ? ' — ' + detail : ''));
+    err.status = res.status;
+    throw err;
+  }
+  return json;
+}
+
 module.exports = {
   buildSubaccountPayload, buildChargePayload, isValidWebhookToken,
   createSubaccount, createCustomer, createCharge, getPixQrCode, getCharge,
   findSubaccountByCpfCnpj, listSubaccounts,
-  pixKeyType, getSubaccountBalance, createPixTransfer, enableAutoAnticipation
+  pixKeyType, getSubaccountBalance, createPixTransfer, enableAutoAnticipation,
+  getRegistrationStatus, listAccountDocuments, uploadAccountDocument
 };
