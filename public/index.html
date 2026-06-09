@@ -1874,6 +1874,7 @@ async function loadActivation() {
     box.innerHTML = '<div class="card"><div class="card-body">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;"><div style="font-weight:700;font-size:14px;color:var(--yellow);"><i class="ti ti-alert-triangle"></i> Não consegui consultar sua conta no banco</div><button class="btn btn-ghost btn-sm" onclick="loadActivation()"><i class="ti ti-refresh"></i> Tentar de novo</button></div>' +
       '<div style="font-size:12px;color:var(--text3);line-height:1.6;word-break:break-word;">Detalhe técnico (mostre pro suporte): <br><span style="font-family:monospace;color:var(--text2);">' + String(errMsg).replace(/</g, '&lt;') + '</span></div>' +
+      ((currentUser && currentUser.role === 'admin') ? '<div style="margin-top:14px;border-top:1px dashed var(--border);padding-top:10px;"><button class="btn btn-ghost btn-xs" onclick="runAsaasProbe(this)"><i class="ti ti-bug"></i> Diagnóstico Asaas (admin)</button><pre id="probe-out" style="display:none;white-space:pre-wrap;word-break:break-all;font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px;margin-top:8px;max-height:260px;overflow:auto;"></pre></div>' : '') +
     '</div></div>';
     return;
   }
