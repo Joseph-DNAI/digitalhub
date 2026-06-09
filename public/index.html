@@ -1835,6 +1835,8 @@ async function loadVendaDiretaSection() {
     var account = res.account;
     if (!account || account.status !== 'active') {
       renderSellerOnboarding(body, account);
+      // Conta já criada mas pendente: mostra a ativação (checklist + envio de documentos).
+      if (account) { body.insertAdjacentHTML('beforeend', '<div id="activation-card" style="margin-top:18px;"></div>'); loadActivation(); }
     } else {
       renderSellerActive(body, account);
     }
@@ -1845,6 +1847,78 @@ async function loadVendaDiretaSection() {
         'Receba pagamentos pelos seus produtos direto na Vaultly (Pix e cartao).' +
       '</div>' +
       renderSellerForm(null);
+  }
+}
+
+// ── Ativação da conta no banco (KYC white-label) ──
+function kycBadge(s) {
+  var v = String(s || '').toUpperCase();
+  if (v === 'APPROVED') return '<span class="badge badge-green" style="font-size:10px;">Aprovado</span>';
+  if (v === 'REJECTED') return '<span class="badge badge-red" style="font-size:10px;">Recusado</span>';
+  if (v === 'PENDING' || v === 'AWAITING_APPROVAL' || v === 'NOT_SENT') return '<span class="badge badge-yellow" style="font-size:10px;">Pendente</span>';
+  return '<span class="badge badge-gray" style="font-size:10px;">' + (s || '—') + '</span>';
+}
+async function loadActivation() {
+  var box = document.getElementById('activation-card');
+  if (!box) return;
+  box.innerHTML = '<div class="card"><div class="card-body"><div style="color:var(--text3);font-size:13px;">Carregando ativação da conta...</div></div></div>';
+  var st = null, docs = null;
+  try { var r = await apiFetch('/api/seller/registration-status'); if (r && r.success) st = r.status; } catch (e) {}
+  try { var d = await apiFetch('/api/seller/documents'); if (d && d.success) docs = d.documents; } catch (e) {}
+  var rows = '';
+  if (st) {
+    var items = [
+      ['Dados comerciais', st.commercialInfo],
+      ['Dados bancários', st.bankAccountInfo],
+      ['Documentos', st.documentation],
+      ['Aprovação geral', st.generalApproval || st.general || st.status]
+    ];
+    rows = items.filter(function (i) { return i[1] !== undefined && i[1] !== null; }).map(function (i) {
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);"><span style="font-size:13px;">' + i[0] + '</span>' + kycBadge(i[1]) + '</div>';
+    }).join('');
+  }
+  var arr = docs && (docs.data || docs.documents || (Array.isArray(docs) ? docs : null));
+  var docList;
+  if (arr && arr.length) {
+    docList = arr.map(function (doc) {
+      var id = doc.id || '';
+      var title = doc.title || doc.type || 'Documento';
+      var dstatus = doc.status || '';
+      var typeAttr = (doc.documentTypes && doc.documentTypes[0] && (doc.documentTypes[0].type || doc.documentTypes[0])) || doc.type || '';
+      return '<div style="padding:10px 0;border-bottom:1px solid var(--border);">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:13px;font-weight:600;">' + title + '</span>' + kycBadge(dstatus) + '</div>' +
+        '<input type="file" accept="image/png,image/jpeg,image/webp,application/pdf" onchange="uploadDoc(this,\'' + id + '\',\'' + typeAttr + '\')" style="font-size:12px;" />' +
+        '<span id="docstat-' + id + '" style="font-size:12px;margin-left:8px;"></span>' +
+      '</div>';
+    }).join('');
+  } else {
+    docList = '<div style="font-size:12px;color:var(--text3);padding:6px 0;">Nenhum documento pendente listado pelo banco. Se a conta ainda estiver "aguardando ativação", clique em Atualizar.</div>';
+  }
+  box.innerHTML =
+    '<div class="card"><div class="card-body">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><div style="font-weight:700;font-size:14px;"><i class="ti ti-id-badge-2" style="color:var(--orange);"></i> Ativação da conta no banco</div>' +
+        '<button class="btn btn-ghost btn-sm" onclick="loadActivation()"><i class="ti ti-refresh"></i> Atualizar</button></div>' +
+      '<div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.5;">Para liberar o <strong>saque</strong>, o banco precisa aprovar seu cadastro. Envie os documentos abaixo (imagem ou PDF). Vender você já pode — o dinheiro fica guardado na sua conta.</div>' +
+      (rows ? '<div style="margin-bottom:14px;">' + rows + '</div>' : '') +
+      '<div style="font-size:13px;font-weight:600;margin-bottom:4px;">Documentos</div>' +
+      docList +
+    '</div></div>';
+}
+async function uploadDoc(input, docId, type) {
+  if (!input.files || !input.files[0]) return;
+  var stEl = document.getElementById('docstat-' + docId);
+  if (stEl) { stEl.style.color = 'var(--text3)'; stEl.textContent = 'Enviando...'; }
+  var fd = new FormData(); fd.append('file', input.files[0]); if (type) fd.append('type', type);
+  try {
+    var res = await fetch('/api/seller/documents/' + docId, { method: 'POST', headers: { 'Authorization': 'Bearer ' + authToken }, body: fd });
+    var d = await res.json();
+    if (!d.success) throw new Error(d.error || 'Erro');
+    if (stEl) { stEl.style.color = 'var(--emerald)'; stEl.textContent = '✓ enviado'; }
+    showToast('Documento enviado!', 'success');
+    setTimeout(loadActivation, 1200);
+  } catch (e) {
+    if (stEl) { stEl.style.color = 'var(--yellow)'; stEl.textContent = '✗ ' + (e.message || 'falha'); }
+    showToast(e.message || 'Falha ao enviar o documento.', 'warn');
   }
 }
 
@@ -2329,7 +2403,8 @@ async function loadSellerBalance() {
     if (!res.success) throw new Error(res.error || 'Erro');
     var avail = res.available_cents || 0, pend = res.pending_cents || 0;
     var fee = res.pix_fee_cents || 200, minW = res.min_withdraw_cents || 700;
-    var canWithdraw = avail >= minW;
+    var approved = res.account_approved !== false; // undefined = não bloqueia
+    var canWithdraw = (avail >= minW) && approved;
     box.innerHTML =
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px;">' +
         '<div class="card" style="padding:14px 16px;"><div style="font-size:11px;color:var(--text3);">Pendente a receber</div>' +
@@ -2339,8 +2414,9 @@ async function loadSellerBalance() {
           '<div style="font-family:\'Satoshi\',sans-serif;font-weight:700;font-size:20px;color:var(--emerald);">' + brl(avail) + '</div>' +
           '<button class="btn btn-primary btn-sm" style="margin-top:8px;" ' + (canWithdraw ? '' : 'disabled') + ' onclick="doWithdraw(this)"><i class="ti ti-cash"></i> Sacar</button></div>' +
       '</div>' +
+      (!approved ? '<div style="font-size:12px;color:var(--yellow);line-height:1.5;margin-bottom:6px;"><i class="ti ti-alert-triangle"></i> Conclua a <strong>ativação da sua conta no banco</strong> (aba Loja) para liberar o saque. Suas vendas continuam sendo guardadas.</div>' : '') +
       '<div style="font-size:12px;color:var(--text3);line-height:1.5;"><i class="ti ti-info-circle" style="color:var(--yellow);"></i> Cada saque tem <strong>' + brl(fee) + '</strong> de taxa Pix do banco (descontada do valor). ' +
-        (canWithdraw ? 'Vale acumular antes de sacar valores pequenos.' : 'Saldo mínimo para sacar: <strong>' + brl(minW) + '</strong> (já inclui a taxa).') + '</div>';
+        (avail >= minW ? 'Vale acumular antes de sacar valores pequenos.' : 'Saldo mínimo para sacar: <strong>' + brl(minW) + '</strong> (já inclui a taxa).') + '</div>';
   } catch (e) {
     box.innerHTML = '<div style="color:var(--red);font-size:13px;padding:8px 0;">Erro ao carregar saldo.</div>';
   }
