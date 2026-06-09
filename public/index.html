@@ -1402,12 +1402,25 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   </div>
 </div>
 
+<!-- ── CONFIRMAÇÃO DE FECHAMENTO (alterações não salvas) ── -->
+<div id="modal-close-confirm" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:22px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5);">
+    <div style="font-weight:700;font-size:15px;margin-bottom:6px;"><i class="ti ti-alert-triangle" style="color:var(--yellow);"></i> Sair sem salvar?</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.5;">Você tem alterações não salvas neste produto. O que deseja fazer?</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <button class="btn btn-primary" onclick="confirmCloseSave()"><i class="ti ti-device-floppy"></i> Salvar edições</button>
+      <button class="btn btn-ghost" onclick="confirmCloseKeep()"><i class="ti ti-arrow-back-up"></i> Continuar editando</button>
+      <button class="btn btn-danger" onclick="confirmCloseDiscard()"><i class="ti ti-trash"></i> Descartar edições</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── MODAL PRODUTO ── -->
-<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeModal()">
-  <div class="modal">
+<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)attemptCloseModal()">
+  <div class="modal" oninput="productModalDirty=true" onchange="productModalDirty=true">
     <div class="modal-header">
       <div class="modal-title" id="modal-title">Novo produto</div>
-      <button class="btn btn-ghost btn-sm" onclick="closeModal()"><i class="ti ti-x"></i></button>
+      <button class="btn btn-ghost btn-sm" onclick="attemptCloseModal()"><i class="ti ti-x"></i></button>
     </div>
     <div class="form-grid">
       <!-- Vincular a produto existente (só aparece ao importar) -->
@@ -1529,7 +1542,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
     <div id="m-error" style="display:none;margin-top:14px;"></div>
     <div class="grad-line"></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;">
-      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-ghost" onclick="attemptCloseModal()">Cancelar</button>
       <button class="btn btn-primary" id="save-btn" onclick="saveProduct()">
         <i class="ti ti-device-floppy"></i> Salvar produto
       </button>
@@ -3490,6 +3503,7 @@ function toggleMoreOpts() {
 function ensureMoreOpts() { var b = document.getElementById('more-opts'); if (b && b.style.display === 'none') toggleMoreOpts(); }
 
 function openModal() {
+  productModalDirty = false;
   document.getElementById('m-name').value             = '';
   document.getElementById('m-desc').value             = '';
   document.getElementById('m-price').value            = '';
@@ -3682,9 +3696,22 @@ function onLinkExistingChange() {
   document.getElementById('save-btn').innerHTML = '<i class="ti ti-link"></i> Vincular ao produto';
 }
 
+var productModalDirty = false;
+
 function closeModal() {
   document.getElementById('modal-bg').classList.remove('open');
+  var cc = document.getElementById('modal-close-confirm'); if (cc) cc.style.display = 'none';
+  productModalDirty = false;
 }
+
+// Fechamento protegido: se há alterações não salvas, pede confirmação (continuar/salvar/descartar)
+function attemptCloseModal() {
+  if (!productModalDirty) { closeModal(); return; }
+  var cc = document.getElementById('modal-close-confirm'); if (cc) cc.style.display = 'flex';
+}
+function confirmCloseKeep() { var cc = document.getElementById('modal-close-confirm'); if (cc) cc.style.display = 'none'; }
+function confirmCloseDiscard() { productModalDirty = false; closeModal(); }
+async function confirmCloseSave() { var cc = document.getElementById('modal-close-confirm'); if (cc) cc.style.display = 'none'; await saveProduct(); }
 
 async function duplicateProduct(id) {
   try {
