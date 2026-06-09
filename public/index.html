@@ -1527,7 +1527,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
     <div id="m-selling-section" style="display:none;margin-top:6px;border-top:1px solid var(--border);padding-top:14px;">
       <div style="font-size:13px;font-weight:700;margin-bottom:10px;"><i class="ti ti-shopping-cart" style="color:var(--orange);"></i> Vender direto pela Vaultly</div>
       <div class="toggle-row" style="border-bottom:none;padding:0 0 10px;">
-        <div class="toggle-info"><div class="t-title">Colocar à venda</div><div class="t-desc">Gera um link de checkout para este produto</div></div>
+        <div class="toggle-info"><div class="t-title">Vender pela Vaultly</div><div class="t-desc">Gera um checkout usando o <strong>preço cadastrado acima</strong> — sem preencher de novo</div></div>
         <button type="button" class="toggle" id="m-sellable" onclick="this.classList.toggle('on');document.getElementById('m-selling-fields').style.display=this.classList.contains('on')?'block':'none'"></button>
       </div>
       <div id="m-selling-fields" style="display:none;">
@@ -3727,11 +3727,21 @@ function editProduct(id) {
   const p = productsCache.find(x => x.id === id);
   if (!p) return;
   openModal();
+  // Chave seletora de venda direta — visível na edição para planos pagos, refletindo o estado do produto
   var _editSellSec = document.getElementById('m-selling-section');
-  if (_editSellSec) _editSellSec.style.display = 'none';
+  var _paidEdit = currentUser && currentUser.plan_id && currentUser.plan_id !== 'free';
+  if (_editSellSec) {
+    _editSellSec.style.display = _paidEdit ? 'block' : 'none';
+    var _tgl = document.getElementById('m-sellable');
+    var _on  = !!p.sellable;
+    if (_tgl) _tgl.classList.toggle('on', _on);
+    var _fld = document.getElementById('m-selling-fields'); if (_fld) _fld.style.display = _on ? 'block' : 'none';
+    var _pix = document.getElementById('m-accept-pix');  if (_pix)  _pix.checked  = p.accept_pix  !== false;
+    var _card = document.getElementById('m-accept-card'); if (_card) _card.checked = p.accept_card !== false;
+  }
   document.getElementById('m-name').value         = p.name           || '';
   document.getElementById('m-desc').value         = p.description    || '';
-  document.getElementById('m-price').value        = p.price          || '';
+  document.getElementById('m-price').value        = p.price || (p.price_cents ? (p.price_cents/100).toFixed(2) : '');
   document.getElementById('m-promo').value        = p.promo_price_cents ? (p.promo_price_cents/100).toFixed(2) : '';
   document.getElementById('m-status').value       = p.status         || 'active';
   document.getElementById('m-kiwify').value       = p.kiwify_id      || '';
@@ -3823,30 +3833,41 @@ async function saveProduct() {
 
     if (!data.success) throw new Error(data.error);
 
-    // Aplica configuracoes de venda direta, se ativado
+    // Chave seletora de venda direta — reconcilia o estado conforme o toggle (reusa o preço cadastrado)
+    var sellSec    = document.getElementById('m-selling-section');
     var sellToggle = document.getElementById('m-sellable');
-    if (sellToggle && sellToggle.classList.contains('on') && data.data && data.data.id) {
-      var priceReais = (document.getElementById('m-price').value || '').replace(',', '.');
-      var priceCents = Math.round(parseFloat(priceReais) * 100) || 0;
-      var promoStr = (document.getElementById('m-promo').value || '').replace(',', '.');
-      var promoCents = promoStr ? Math.round(parseFloat(promoStr) * 100) : 0;
-      if (promoCents && promoCents >= priceCents) {
-        showToast('O valor promocional deve ser menor que o preço — promoção ignorada.', 'warn');
-        promoCents = 0;
-      }
-      if (priceCents < 900) {
-        showToast('Produto criado, mas o preço mínimo de venda é R$9,00 — ajuste em "Config." no card.', 'warn');
-      } else {
-        var sres = await apiFetch('/api/products/' + data.data.id + '/selling', {
-          method: 'PUT', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sellable: true, price_cents: priceCents,
-            promo_price_cents: promoCents || null,
-            checkout_title: document.getElementById('m-name').value || '',
-            accept_pix: document.getElementById('m-accept-pix').checked,
-            accept_card: document.getElementById('m-accept-card').checked })
-        });
-        if (sres && !sres.success && sres.needs_onboarding) {
-          showToast('Produto criado. Ative sua conta de recebimento na aba Config para vender.', 'warn');
+    if (sellSec && sellSec.style.display !== 'none' && data.data && data.data.id) {
+      var wantSell = !!(sellToggle && sellToggle.classList.contains('on'));
+      if (wantSell) {
+        var priceReais = (document.getElementById('m-price').value || '').replace(',', '.');
+        var priceCents = Math.round(parseFloat(priceReais) * 100) || 0;
+        var promoStr = (document.getElementById('m-promo').value || '').replace(',', '.');
+        var promoCents = promoStr ? Math.round(parseFloat(promoStr) * 100) : 0;
+        if (promoCents && promoCents >= priceCents) {
+          showToast('O valor promocional deve ser menor que o preço — promoção ignorada.', 'warn');
+          promoCents = 0;
+        }
+        if (priceCents < 900) {
+          showToast('Produto salvo, mas para vender pela Vaultly o preço mínimo é R$9,00 — ajuste e salve de novo.', 'warn');
+        } else {
+          var _ex = productsCache.find(function(x) { return x.id === data.data.id; });
+          var sres = await apiFetch('/api/products/' + data.data.id + '/selling', {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sellable: true, price_cents: priceCents,
+              promo_price_cents: promoCents || null,
+              checkout_title: (_ex && _ex.checkout_title) || document.getElementById('m-name').value || '',
+              accept_pix: document.getElementById('m-accept-pix').checked,
+              accept_card: document.getElementById('m-accept-card').checked })
+          });
+          if (sres && !sres.success && sres.needs_onboarding) {
+            showToast('Produto salvo. Ative sua conta de recebimento na aba Config para vender.', 'warn');
+          }
+        }
+      } else if (editingId) {
+        // Desligou a venda: desativa o checkout só se o produto estava à venda
+        var _exOff = productsCache.find(function(x) { return x.id === editingId; });
+        if (_exOff && _exOff.sellable) {
+          try { await apiFetch('/api/products/' + editingId + '/selling', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sellable: false }) }); } catch(e) {}
         }
       }
     }
