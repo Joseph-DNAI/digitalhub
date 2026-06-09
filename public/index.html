@@ -496,6 +496,18 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
             </table>
           </div>
         </div>
+
+        <div style="font-family:'Satoshi',sans-serif;font-weight:700;font-size:14px;margin:22px 0 10px;display:flex;align-items:center;gap:7px;"><i class="ti ti-cash-banknote" style="color:var(--emerald);"></i> Saques (repasses automáticos via Pix)</div>
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Valor</th><th>Status</th><th>Data</th><th>Observação</th></tr></thead>
+              <tbody id="payouts-table">
+                <tr><td colspan="4" style="text-align:center;color:var(--text3);padding:24px;">Carregando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       <!-- ── ENTREGAS ── -->
@@ -2266,6 +2278,7 @@ function orderStatusBadge(status) {
 async function loadVendas() {
   var tb = document.getElementById('orders-table');
   if (!tb) return;
+  loadPayouts();
   if (currentUser && currentUser.plan_id === 'free') {
     tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text2);padding:32px;">Ative a venda direta na aba <strong>Loja</strong> para vender pela Vaultly.</td></tr>';
     return;
@@ -2294,6 +2307,43 @@ async function loadVendas() {
     }).join('');
   } catch (e) {
     tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--red);padding:32px;">Erro ao carregar.</td></tr>';
+  }
+}
+
+function payoutStatusBadge(s) {
+  if (s === 'done')    return '<span class="badge badge-green" style="font-size:10px;">Concluído</span>';
+  if (s === 'failed')  return '<span class="badge badge-red" style="font-size:10px;">Falhou</span>';
+  if (s === 'pending') return '<span class="badge badge-yellow" style="font-size:10px;">Processando</span>';
+  return '<span class="badge badge-gray" style="font-size:10px;">' + (s || '-') + '</span>';
+}
+async function loadPayouts() {
+  var tb = document.getElementById('payouts-table');
+  if (!tb) return;
+  if (currentUser && currentUser.plan_id === 'free') {
+    tb.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text2);padding:24px;">Disponível na venda direta (planos pagos).</td></tr>';
+    return;
+  }
+  try {
+    var res = await apiFetch('/api/seller/payouts');
+    if (!res.success) throw new Error(res.error || 'Erro');
+    var list = res.payouts || [];
+    if (!list.length) {
+      tb.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:24px;">Nenhum saque ainda. Os repasses são automáticos via Pix a cada ~2h quando há saldo.</td></tr>';
+      return;
+    }
+    tb.innerHTML = list.map(function(p) {
+      var valor = 'R$ ' + ((p.amount_cents || 0) / 100).toFixed(2).replace('.', ',');
+      var data  = p.created_at ? new Date(p.created_at).toLocaleString('pt-BR') : '-';
+      var obs   = p.status === 'failed' ? escAttr(p.error || 'Falha no repasse') : '';
+      return '<tr>' +
+        '<td>' + valor + '</td>' +
+        '<td>' + payoutStatusBadge(p.status) + '</td>' +
+        '<td style="color:var(--text3);">' + data + '</td>' +
+        '<td style="color:var(--text3);font-size:12px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + obs + '">' + obs + '</td>' +
+      '</tr>';
+    }).join('');
+  } catch (e) {
+    tb.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--red);padding:24px;">Erro ao carregar saques.</td></tr>';
   }
 }
 

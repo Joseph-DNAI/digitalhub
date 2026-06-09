@@ -1,13 +1,16 @@
 // src/routes/asaasWebhook.js — recebe eventos de pagamento do Asaas
 const express = require('express');
 const router  = express.Router();
-const { orders } = require('../models/database');
+const { orders, payouts } = require('../models/database');
 const { isValidWebhookToken } = require('../services/asaasService');
 const { processDirectOrder } = require('../services/deliveryService');
 const logger = require('../config/logger');
 
 const PAID_EVENTS = ['PAYMENT_RECEIVED', 'PAYMENT_CONFIRMED'];
 const REFUND_EVENTS = ['PAYMENT_REFUNDED', 'PAYMENT_CHARGEBACK_REQUESTED', 'PAYMENT_CHARGEBACK_DISPUTE'];
+// Saque (repasse Pix para o vendedor)
+const TRANSFER_DONE_EVENTS   = ['TRANSFER_DONE'];
+const TRANSFER_FAILED_EVENTS = ['TRANSFER_FAILED', 'TRANSFER_BLOCKED', 'TRANSFER_CANCELLED'];
 
 router.post('/webhook', async (req, res) => {
   const token = req.headers['asaas-access-token'];
@@ -18,7 +21,31 @@ router.post('/webhook', async (req, res) => {
 
   const event = req.body && req.body.event;
   const payment = (req.body && req.body.payment) || {};
+  const transfer = (req.body && req.body.transfer) || {};
   res.status(200).json({ received: true });
+
+  // Eventos de saque (transferencia Pix) — atualizam o status do payout
+  if (event && event.indexOf('TRANSFER_') === 0) {
+    setImmediate(async () => {
+      try {
+        if (!transfer.id) { logger.warn('Asaas webhook TRANSFER sem id'); return; }
+        const po = await payouts.findByTransferId(transfer.id);
+        if (!po) { logger.warn('Asaas TRANSFER ' + event + ': payout nao encontrado p/ ' + transfer.id); return; }
+        if (TRANSFER_DONE_EVENTS.includes(event)) {
+          await payouts.updateStatusByTransferId(transfer.id, 'done', null);
+          logger.info('Saque concluido — payout ' + po.id);
+        } else if (TRANSFER_FAILED_EVENTS.includes(event)) {
+          await payouts.updateStatusByTransferId(transfer.id, 'failed', transfer.failReason || event);
+          logger.warn('Saque falhou (' + event + ') — payout ' + po.id);
+        } else {
+          logger.debug('Asaas TRANSFER evento ignorado: ' + event);
+        }
+      } catch (err) {
+        logger.error('Asaas webhook transfer: ' + err.message);
+      }
+    });
+    return;
+  }
 
   setImmediate(async () => {
     try {
