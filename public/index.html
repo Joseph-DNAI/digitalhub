@@ -1192,8 +1192,9 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
           <input type="number" class="form-input" id="selling-price" placeholder="27.00" step="0.01" min="9" />
         </div>
         <div class="form-group">
-          <label class="form-label">Link do checkout</label>
-          <div class="form-hint">Gerado automaticamente (codigo unico) ao ativar. Aparece abaixo e no card do produto.</div>
+          <label class="form-label">Valor promocional (R$) <span style="color:var(--text3);font-size:10px;">opcional</span></label>
+          <input type="number" class="form-input" id="selling-promo" placeholder="—" step="0.01" />
+          <div class="form-hint">menor que o preco; aparece riscado no checkout</div>
         </div>
         <div class="form-group full">
           <label class="form-label">Titulo do checkout</label>
@@ -1371,6 +1372,17 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   </div>
 </div>
 
+<!-- ── BARRA DE EDIÇÃO EM MASSA ── -->
+<div id="bulk-bar" style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:60;gap:8px;align-items:center;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:10px 14px;box-shadow:0 10px 30px rgba(0,0,0,.35);flex-wrap:wrap;max-width:94vw;">
+  <span id="bulk-count" style="font-size:12px;font-weight:700;margin-right:4px;"></span>
+  <button class="btn btn-ghost btn-sm" onclick="bulkAction('discount')"><i class="ti ti-discount"></i> Desconto %</button>
+  <button class="btn btn-ghost btn-sm" onclick="bulkAction('set_price')"><i class="ti ti-tag"></i> Preço</button>
+  <button class="btn btn-ghost btn-sm" onclick="bulkAction('clear_promo')"><i class="ti ti-eraser"></i> Remover promo</button>
+  <button class="btn btn-ghost btn-sm" onclick="bulkAction('status_active')"><i class="ti ti-player-play"></i> Ativar</button>
+  <button class="btn btn-ghost btn-sm" onclick="bulkAction('status_inactive')"><i class="ti ti-player-pause"></i> Desativar</button>
+  <button class="btn btn-ghost btn-sm" onclick="clearBulk()" title="Limpar seleção"><i class="ti ti-x"></i></button>
+</div>
+
 <!-- ── MODAL PRODUTO ── -->
 <div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeModal()">
   <div class="modal">
@@ -1395,10 +1407,15 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
         <label class="form-label">Descrição</label>
         <textarea class="form-textarea" id="m-desc" placeholder="Descreva brevemente seu produto..."></textarea>
       </div>
-      <div class="form-group full">
+      <div class="form-group">
         <label class="form-label">Preço (R$)</label>
         <input type="number" class="form-input" id="m-price" placeholder="97.00" step="0.01" />
-        <div class="form-hint">Mesmo preço do checkout da Vaultly (mín. R$9,00 para vender direto).</div>
+        <div class="form-hint">mín. R$9,00 para vender direto</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Valor promocional (R$) <span style="color:var(--text3);font-size:10px;">opcional</span></label>
+        <input type="number" class="form-input" id="m-promo" placeholder="—" step="0.01" />
+        <div class="form-hint">menor que o preço; aparece riscado no checkout</div>
       </div>
 
       <!-- Seletor de anexos: arquivo único ou combo -->
@@ -2997,8 +3014,46 @@ async function loadDashboard() {
 
 // ── Products ─────────────────────────────────────────────────────
 let productsCache = [];
+var bulkSelected = new Set();
 var _productFilter = 'all';
 function setProductFilter(f) { _productFilter = f; loadProducts(); }
+
+// ── Edição em massa ──
+function toggleBulk(id, el) { if (el.checked) bulkSelected.add(id); else bulkSelected.delete(id); renderBulkBar(); }
+function clearBulk() { bulkSelected.clear(); renderBulkBar(); loadProducts(); }
+function renderBulkBar() {
+  var bar = document.getElementById('bulk-bar');
+  if (!bar) return;
+  var n = bulkSelected.size;
+  bar.style.display = n ? 'flex' : 'none';
+  var c = document.getElementById('bulk-count');
+  if (c) c.textContent = n + ' selecionado' + (n > 1 ? 's' : '');
+}
+async function bulkAction(action) {
+  if (!bulkSelected.size) return;
+  var value = null;
+  if (action === 'discount') {
+    value = prompt('Desconto % (1 a 95) — define o valor promocional dos selecionados:');
+    if (value === null || value.trim() === '') return;
+  } else if (action === 'set_price') {
+    value = prompt('Novo preço (R$) para todos os selecionados:');
+    if (value === null || value.trim() === '') return;
+  } else if (action === 'status_active')   { action = 'status'; value = 'active'; }
+  else if (action === 'status_inactive')   { action = 'status'; value = 'inactive'; }
+  else if (action === 'clear_promo') {
+    if (!confirm('Remover a promoção de ' + bulkSelected.size + ' produto(s)?')) return;
+  }
+  try {
+    var res = await apiFetch('/api/products/bulk', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: Array.from(bulkSelected), action: action, value: value })
+    });
+    if (!res.success) throw new Error(res.error || 'Erro');
+    showToast(res.message || 'Atualizado!', 'success');
+    bulkSelected.clear();
+    await loadProducts();
+  } catch (e) { showToast(e.message || 'Erro na edição em massa.', 'warn'); }
+}
 
 async function loadProducts() {
   const grid = document.getElementById('products-grid');
@@ -3023,8 +3078,11 @@ async function loadProducts() {
     grid.innerHTML = _list.map(p => `
       <div class="product-card">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px;">
-          <div style="width:42px;height:42px;border-radius:10px;background:var(--orange-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <i class="ti ti-file-text" style="color:var(--orange);font-size:20px;"></i>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <input type="checkbox" onclick="event.stopPropagation();toggleBulk('${p.id}',this)" ${bulkSelected.has(p.id)?'checked':''} title="Selecionar para edição em massa" style="width:17px;height:17px;accent-color:var(--orange);cursor:pointer;flex-shrink:0;"/>
+            <div style="width:42px;height:42px;border-radius:10px;background:var(--orange-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <i class="ti ti-file-text" style="color:var(--orange);font-size:20px;"></i>
+            </div>
           </div>
           <button class="btn btn-ghost btn-sm" onclick="toggleProductStatus('${p.id}','${p.status === 'active' ? 'inactive' : 'active'}')" title="${p.status === 'active' ? 'Desativar' : 'Ativar'}">
             <i class="ti ti-${p.status === 'active' ? 'player-pause' : 'player-play'}"></i> ${p.status === 'active' ? 'Ativo' : 'Inativo'}
@@ -3047,7 +3105,7 @@ async function loadProducts() {
         <div style="margin-bottom:14px;padding:10px 12px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.2);border-radius:8px;">
           <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px;">
             <span style="font-size:11px;color:var(--text3);">À venda por</span>
-            <span style="font-family:'Satoshi',sans-serif;font-weight:700;font-size:17px;color:var(--orange);">R$ ${((p.price_cents||0)/100).toFixed(2).replace('.',',')}</span>
+            <span style="font-family:'Satoshi',sans-serif;font-weight:700;font-size:17px;color:var(--orange);">${p.promo_price_cents ? `<s style="color:var(--text3);font-size:13px;font-weight:600;margin-right:6px;">R$ ${((p.price_cents||0)/100).toFixed(2).replace('.',',')}</s>R$ ${(p.promo_price_cents/100).toFixed(2).replace('.',',')}` : `R$ ${((p.price_cents||0)/100).toFixed(2).replace('.',',')}`}</span>
           </div>
           <div style="display:flex;gap:6px;align-items:center;">
             <input readonly value="${location.origin}/c/${p.slug}" onclick="this.select()" style="flex:1;min-width:0;font-size:11px;font-family:'JetBrains Mono',monospace;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);"/>
@@ -3070,6 +3128,7 @@ async function loadProducts() {
           </button>
         </div>
       </div>`).join('');
+    renderBulkBar();
   } catch(e) {
     grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--red);padding:48px;">Erro ao carregar: ${e.message}</div>`;
   }
@@ -3337,6 +3396,7 @@ function openModal() {
   document.getElementById('m-name').value             = '';
   document.getElementById('m-desc').value             = '';
   document.getElementById('m-price').value            = '';
+  document.getElementById('m-promo').value            = '';
   document.getElementById('m-status').value           = 'active';
   document.getElementById('m-kiwify').value           = '';
   document.getElementById('m-yampi').value            = '';
@@ -3540,6 +3600,7 @@ function editProduct(id) {
   document.getElementById('m-name').value         = p.name           || '';
   document.getElementById('m-desc').value         = p.description    || '';
   document.getElementById('m-price').value        = p.price          || '';
+  document.getElementById('m-promo').value        = p.promo_price_cents ? (p.promo_price_cents/100).toFixed(2) : '';
   document.getElementById('m-status').value       = p.status         || 'active';
   document.getElementById('m-kiwify').value       = p.kiwify_id      || '';
   document.getElementById('m-yampi').value        = p.yampi_id       || '';
@@ -3623,12 +3684,19 @@ async function saveProduct() {
     if (sellToggle && sellToggle.classList.contains('on') && data.data && data.data.id) {
       var priceReais = (document.getElementById('m-price').value || '').replace(',', '.');
       var priceCents = Math.round(parseFloat(priceReais) * 100) || 0;
+      var promoStr = (document.getElementById('m-promo').value || '').replace(',', '.');
+      var promoCents = promoStr ? Math.round(parseFloat(promoStr) * 100) : 0;
+      if (promoCents && promoCents >= priceCents) {
+        showToast('O valor promocional deve ser menor que o preço — promoção ignorada.', 'warn');
+        promoCents = 0;
+      }
       if (priceCents < 900) {
         showToast('Produto criado, mas o preço mínimo de venda é R$9,00 — ajuste em "Config." no card.', 'warn');
       } else {
         var sres = await apiFetch('/api/products/' + data.data.id + '/selling', {
           method: 'PUT', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sellable: true, price_cents: priceCents,
+            promo_price_cents: promoCents || null,
             checkout_title: document.getElementById('m-name').value || '',
             accept_pix: document.getElementById('m-accept-pix').checked,
             accept_card: document.getElementById('m-accept-card').checked })
@@ -4106,6 +4174,7 @@ function openSelling(id) {
   if (sellable) { toggleEl.classList.add('on'); } else { toggleEl.classList.remove('on'); }
 
   document.getElementById('selling-price').value          = p.price_cents ? (p.price_cents / 100).toFixed(2) : '';
+  document.getElementById('selling-promo').value          = p.promo_price_cents ? (p.promo_price_cents / 100).toFixed(2) : '';
   document.getElementById('selling-checkout-title').value = p.checkout_title || '';
   document.getElementById('selling-checkout-desc').value  = p.checkout_description || '';
   document.getElementById('selling-pix').checked          = p.accept_pix  !== false;
@@ -4148,6 +4217,13 @@ async function saveSelling() {
     return;
   }
 
+  var promoStr2 = (document.getElementById('selling-promo').value || '').replace(',', '.');
+  var promoCents2 = (sellable && promoStr2) ? Math.round(parseFloat(promoStr2) * 100) : 0;
+  if (promoCents2 && promoCents2 >= priceCents) {
+    showToast('O valor promocional deve ser menor que o preco.', 'warn');
+    return;
+  }
+
   var checkoutTitle = (document.getElementById('selling-checkout-title').value || '').trim();
   var checkoutDesc  = (document.getElementById('selling-checkout-desc').value || '').trim();
   var acceptPix     = !!(document.getElementById('selling-pix').checked);
@@ -4160,7 +4236,7 @@ async function saveSelling() {
     var res = await apiFetch('/api/products/' + id + '/selling', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sellable: sellable, price_cents: priceCents, checkout_title: checkoutTitle, checkout_description: checkoutDesc, accept_pix: acceptPix, accept_card: acceptCard })
+      body: JSON.stringify({ sellable: sellable, price_cents: priceCents, promo_price_cents: promoCents2 || null, checkout_title: checkoutTitle, checkout_description: checkoutDesc, accept_pix: acceptPix, accept_card: acceptCard })
     });
     if (!res.success) {
       if (res.needs_onboarding) {

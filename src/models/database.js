@@ -279,6 +279,7 @@ async function initDatabase() {
       ALTER TABLE tenants ADD COLUMN IF NOT EXISTS checkout_show_guarantee BOOLEAN DEFAULT TRUE;
       ALTER TABLE products      ADD COLUMN IF NOT EXISTS file_size BIGINT;
       ALTER TABLE product_files ADD COLUMN IF NOT EXISTS file_size BIGINT;
+      ALTER TABLE products      ADD COLUMN IF NOT EXISTS promo_price_cents INTEGER;
     `);
 
     // Planos — DO UPDATE garante que mudancas de preco/limite sejam aplicadas no restart
@@ -520,6 +521,11 @@ const products = {
   },
 
   // Busca por ID de plataforma exato (qualquer status) — usado p/ validar unicidade
+  async findByIds(tenantId, ids) {
+    if (!ids || !ids.length) return [];
+    return query('SELECT * FROM products WHERE tenant_id = $1 AND id = ANY($2::uuid[])', [tenantId, ids]);
+  },
+
   async findByKiwifyId(tenantId, kiwifyId) {
     return queryOne('SELECT id, name FROM products WHERE tenant_id = $1 AND kiwify_id = $2', [tenantId, kiwifyId]);
   },

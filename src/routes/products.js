@@ -175,6 +175,66 @@ router.post('/', uploadMw, async (req, res) => {
   }
 });
 
+// POST /bulk — edicao em massa (desconto%, preco fixo, remover promo, ativar/desativar)
+router.post('/bulk', async (req, res) => {
+  try {
+    const MIN = parseInt(process.env.DIRECT_MIN_PRICE_CENTS || '900', 10);
+    const { ids, action, value } = req.body;
+    if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ success: false, error: 'Selecione ao menos um produto.' });
+    if (ids.length > 200) return res.status(400).json({ success: false, error: 'Maximo de 200 produtos por vez.' });
+
+    const list = await products.findByIds(req.tenantId, ids);
+    let updated = 0, skipped = 0;
+
+    if (action === 'discount') {
+      const pct = parseFloat(value);
+      if (!(pct > 0 && pct <= 95)) return res.status(400).json({ success: false, error: 'Desconto deve ser entre 1% e 95%.' });
+      for (const p of list) {
+        const base = p.price_cents || Math.round((parseFloat(p.price) || 0) * 100);
+        const promo = Math.round(base * (1 - pct / 100));
+        if (base < MIN || promo < MIN) { skipped++; continue; }
+        await products.update(req.tenantId, p.id, { promo_price_cents: promo });
+        updated++;
+      }
+    } else if (action === 'set_price') {
+      const reais = parseFloat(String(value).replace(',', '.'));
+      if (!(reais > 0)) return res.status(400).json({ success: false, error: 'Informe um preco valido.' });
+      const cents = Math.round(reais * 100);
+      for (const p of list) {
+        if (p.sellable && cents < MIN) { skipped++; continue; }
+        const data = { price: reais, price_cents: cents };
+        if (p.promo_price_cents && p.promo_price_cents >= cents) data.promo_price_cents = null;
+        await products.update(req.tenantId, p.id, data);
+        updated++;
+      }
+    } else if (action === 'clear_promo') {
+      for (const p of list) { await products.update(req.tenantId, p.id, { promo_price_cents: null }); updated++; }
+    } else if (action === 'status') {
+      const target = value === 'active' ? 'active' : 'inactive';
+      if (target === 'inactive') {
+        for (const p of list) { await products.update(req.tenantId, p.id, { status: 'inactive' }); updated++; }
+      } else {
+        let activeCount = await products.countActive(req.tenantId);
+        for (const p of list) {
+          if (p.status === 'active') { updated++; continue; }
+          if (!canActivate(activeCount, req.user.max_products)) { skipped++; continue; }
+          await products.update(req.tenantId, p.id, { status: 'active' });
+          activeCount++; updated++;
+        }
+      }
+    } else {
+      return res.status(400).json({ success: false, error: 'Acao invalida.' });
+    }
+
+    let message = updated + ' produto(s) atualizado(s)';
+    if (skipped) message += ' · ' + skipped + ' ignorado(s)';
+    res.json({ success: true, updated, skipped, message });
+  } catch (err) {
+    logger.error('products/bulk: ' + err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 router.put('/:id', uploadMw, async (req, res) => {
   try {
     const existing = await products.findById(req.tenantId, req.params.id);
@@ -420,6 +480,18 @@ router.put('/:id/selling', requireAuth, async (req, res) => {
       }
     }
 
+    // Valor promocional (opcional): MIN <= promo < price_cents
+    let promoCents = null;
+    if (sellable && req.body.promo_price_cents) {
+      promoCents = parseInt(req.body.promo_price_cents, 10);
+      if (!Number.isInteger(promoCents) || promoCents < MIN) {
+        return res.status(400).json({ success: false, error: 'Valor promocional minimo e R$' + (MIN / 100).toFixed(2).replace('.', ',') + '.' });
+      }
+      if (promoCents >= price_cents) {
+        return res.status(400).json({ success: false, error: 'O valor promocional deve ser menor que o preco.' });
+      }
+    }
+
     // Link estavel: mantem o codigo ja existente; gera um aleatorio unico na 1a ativacao.
     let finalSlug = product.slug;
     if (!finalSlug) {
@@ -430,6 +502,7 @@ router.put('/:id/selling', requireAuth, async (req, res) => {
     const updated = await products.update(req.tenantId, req.params.id, {
       sellable: !!sellable,
       price_cents: price_cents || null,
+      promo_price_cents: promoCents,
       slug: finalSlug,
       checkout_title: checkout_title || product.name,
       checkout_description: checkout_description || null,
