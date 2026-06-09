@@ -189,6 +189,13 @@ async function getAccountInfo(apiKey) {
   return request('GET', '/myAccount', null, apiKey);
 }
 
+// Diagnostico: faz um GET cru e devolve status + amostra do corpo (sem lancar). apiKey=null usa o master.
+async function rawGet(apiKey, path) {
+  const res = await fetch(baseUrl() + path, { headers: headers(apiKey) });
+  const text = await res.text();
+  return { status: res.status, body: String(text).slice(0, 300) };
+}
+
 // Lista os documentos exigidos/enviados (cada grupo tem id, tipo, status).
 async function listAccountDocuments(apiKey) {
   return request('GET', '/myAccount/documents', null, apiKey);
@@ -221,5 +228,5 @@ module.exports = {
   createSubaccount, createCustomer, createCharge, getPixQrCode, getCharge,
   findSubaccountByCpfCnpj, listSubaccounts,
   pixKeyType, getSubaccountBalance, createPixTransfer, enableAutoAnticipation,
-  getRegistrationStatus, getAccountInfo, listAccountDocuments, uploadAccountDocument
+  getRegistrationStatus, getAccountInfo, listAccountDocuments, uploadAccountDocument, rawGet
 };

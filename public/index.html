@@ -1863,8 +1863,20 @@ async function loadActivation() {
   var box = document.getElementById('activation-card');
   if (!box) return;
   box.innerHTML = '<div class="card"><div class="card-body"><div style="color:var(--text3);font-size:13px;">Carregando ativação da conta...</div></div></div>';
-  var st = null, email = '', onb = '';
-  try { var r = await apiFetch('/api/seller/registration-status'); if (r && r.success) { st = r.status; email = r.email || ''; onb = r.onboarding_url || ''; } } catch (e) {}
+  var st = null, email = '', onb = '', errMsg = '';
+  try {
+    var raw = await fetch('/api/seller/registration-status', { headers: { Authorization: 'Bearer ' + authToken } });
+    var j = await raw.json().catch(function () { return null; });
+    if (raw.ok && j && j.success) { st = j.status; email = j.email || ''; onb = j.onboarding_url || ''; }
+    else { errMsg = (j && j.error) || ('HTTP ' + raw.status); }
+  } catch (e) { errMsg = e.message || 'erro de rede'; }
+  if (errMsg) {
+    box.innerHTML = '<div class="card"><div class="card-body">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;"><div style="font-weight:700;font-size:14px;color:var(--yellow);"><i class="ti ti-alert-triangle"></i> Não consegui consultar sua conta no banco</div><button class="btn btn-ghost btn-sm" onclick="loadActivation()"><i class="ti ti-refresh"></i> Tentar de novo</button></div>' +
+      '<div style="font-size:12px;color:var(--text3);line-height:1.6;word-break:break-word;">Detalhe técnico (mostre pro suporte): <br><span style="font-family:monospace;color:var(--text2);">' + String(errMsg).replace(/</g, '&lt;') + '</span></div>' +
+    '</div></div>';
+    return;
+  }
   var general = st && (st.generalApproval || st.general || st.status);
   var isApproved = String(general || '').toUpperCase() === 'APPROVED';
   if (isApproved) {
@@ -1894,7 +1906,19 @@ async function loadActivation() {
       '</div>' +
       (onb ? '<a class="btn btn-primary btn-sm" href="' + onb + '" target="_blank" rel="noopener" style="margin-bottom:12px;"><i class="ti ti-external-link"></i> Ativar no banco</a>' : '') +
       (rows ? '<div style="font-size:12px;color:var(--text3);margin-bottom:4px;">Situação no banco:</div><div>' + rows + '</div>' : '') +
+      ((currentUser && currentUser.role === 'admin') ? '<div style="margin-top:14px;border-top:1px dashed var(--border);padding-top:10px;"><button class="btn btn-ghost btn-xs" onclick="runAsaasProbe(this)"><i class="ti ti-bug"></i> Diagnóstico Asaas (admin)</button><pre id="probe-out" style="display:none;white-space:pre-wrap;word-break:break-all;font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px;margin-top:8px;max-height:260px;overflow:auto;"></pre></div>' : '') +
     '</div></div>';
+}
+async function runAsaasProbe(btn) {
+  var out = document.getElementById('probe-out');
+  if (out) { out.style.display = 'block'; out.textContent = 'Testando endpoints...'; }
+  try {
+    var raw = await fetch('/api/seller/_probe', { headers: { Authorization: 'Bearer ' + authToken } });
+    var j = await raw.json();
+    if (!j.success) throw new Error(j.error || ('HTTP ' + raw.status));
+    var txt = (j.probe || []).map(function (p) { return p.status + '  ' + p.path + '\n    ' + String(p.body || '').replace(/\s+/g, ' ').slice(0, 180); }).join('\n');
+    if (out) out.textContent = txt || '(vazio)';
+  } catch (e) { if (out) out.textContent = 'Erro: ' + (e.message || e); }
 }
 async function uploadDoc(input, docId, type) {
   if (!input.files || !input.files[0]) return;
