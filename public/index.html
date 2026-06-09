@@ -443,6 +443,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
             <span id="products-active-count" style="font-size:12px;color:var(--text2);"></span>
             <button class="btn btn-ghost" onclick="openImportMenu()"><i class="ti ti-download"></i> Importar produtos</button>
+            <button class="btn btn-ghost" onclick="openComboCreate()"><i class="ti ti-stack-2"></i> Criar combo</button>
             <button class="btn btn-primary" onclick="openModal()">
               <i class="ti ti-plus"></i> Novo produto
             </button>
@@ -1381,6 +1382,24 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   <button class="btn btn-ghost btn-sm" onclick="bulkAction('status_active')"><i class="ti ti-player-play"></i> Ativar</button>
   <button class="btn btn-ghost btn-sm" onclick="bulkAction('status_inactive')"><i class="ti ti-player-pause"></i> Desativar</button>
   <button class="btn btn-ghost btn-sm" onclick="clearBulk()" title="Limpar seleção"><i class="ti ti-x"></i></button>
+</div>
+
+<!-- ── MODAL CRIAR COMBO ── -->
+<div class="modal-bg" id="combo-modal" onclick="if(event.target===this)closeComboModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Criar combo</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeComboModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="form-hint" style="margin-bottom:12px;">Selecione os produtos cujos anexos serão juntados em um novo combo. Em seguida você define nome, valor, desconto e descrição.</div>
+    <div id="combo-select-list" style="max-height:48vh;overflow:auto;display:flex;flex-direction:column;gap:8px;"></div>
+    <div id="combo-modal-error" style="display:none;margin-top:10px;"></div>
+    <div class="grad-line"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn btn-ghost" onclick="closeComboModal()">Cancelar</button>
+      <button class="btn btn-primary" id="combo-continue-btn" onclick="createComboFromSelection()"><i class="ti ti-arrow-right"></i> Continuar</button>
+    </div>
+  </div>
 </div>
 
 <!-- ── MODAL PRODUTO ── -->
@@ -3018,6 +3037,49 @@ let productsCache = [];
 var bulkSelected = new Set();
 var _productFilter = 'all';
 function setProductFilter(f) { _productFilter = f; loadProducts(); }
+
+// ── Criar combo (juntar anexos de vários produtos) ──
+var comboSelected = new Set();
+function openComboCreate() {
+  if (!isComboPlan()) { showUpgradeModal(); return; }
+  comboSelected.clear();
+  var list = document.getElementById('combo-select-list');
+  var items = (productsCache || []).filter(function(p) { return p.file_name || (p.extra_files_count > 0); });
+  if (!items.length) {
+    list.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:14px;text-align:center;">Nenhum produto com anexo para combinar. Cadastre produtos com arquivo primeiro.</div>';
+  } else {
+    list.innerHTML = items.map(function(p) {
+      var nfiles = (p.file_name ? 1 : 0) + (p.extra_files_count || 0);
+      return '<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;cursor:pointer;">' +
+        '<input type="checkbox" onchange="toggleComboSel(\'' + p.id + '\',this)" style="width:16px;height:16px;accent-color:var(--orange);cursor:pointer;flex-shrink:0;"/>' +
+        '<span style="flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + (p.name || '') + '">' + (p.name || 'Sem nome') + '</span>' +
+        '<span style="font-size:11px;color:var(--text3);flex-shrink:0;"><i class="ti ti-paperclip"></i> ' + nfiles + '</span>' +
+      '</label>';
+    }).join('');
+  }
+  var err = document.getElementById('combo-modal-error'); if (err) err.style.display = 'none';
+  document.getElementById('combo-modal').classList.add('open');
+}
+function closeComboModal() { document.getElementById('combo-modal').classList.remove('open'); }
+function toggleComboSel(id, el) { if (el.checked) comboSelected.add(id); else comboSelected.delete(id); }
+async function createComboFromSelection() {
+  if (comboSelected.size < 1) { showToast('Selecione ao menos um produto.', 'warn'); return; }
+  var btn = document.getElementById('combo-continue-btn');
+  btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i> Criando...';
+  try {
+    var res = await apiFetch('/api/products/combo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source_ids: Array.from(comboSelected) }) });
+    if (!res.success) throw new Error(res.error || 'Erro');
+    closeComboModal();
+    showToast('Combo criado — confira os anexos e preencha as informações.', 'success');
+    await loadProducts();
+    if (res.data && res.data.id) {
+      editProduct(res.data.id);
+      var mt = document.getElementById('modal-title'); if (mt) mt.textContent = 'Configurar combo';
+      var nm = document.getElementById('m-name'); if (nm) { nm.focus(); nm.select(); }
+    }
+  } catch (e) { showToast(e.message || 'Erro ao criar combo.', 'warn'); }
+  finally { btn.disabled = false; btn.innerHTML = '<i class="ti ti-arrow-right"></i> Continuar'; }
+}
 
 // ── Edição em massa ──
 function toggleBulk(id, el) { if (el.checked) bulkSelected.add(id); else bulkSelected.delete(id); renderBulkBar(); }
