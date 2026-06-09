@@ -69,6 +69,28 @@ router.get('/balance', requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/seller/_probe — diagnóstico (admin): testa caminhos candidatos da API Asaas com a apiKey da subconta
+router.get('/_probe', requireAdmin, async (req, res) => {
+  try {
+    const acc = await sellerAccounts.findByTenant(req.tenantId);
+    if (!acc || !acc.asaas_api_key_enc) return res.status(409).json({ success: false, error: 'Sem conta de recebimento com chave.' });
+    const apiKey = decrypt(acc.asaas_api_key_enc);
+    const paths = ['/finance/balance', '/myAccount', '/myAccount/registrationStatus', '/myAccount/status', '/myAccount/commercialInfo', '/myAccount/documents'];
+    const probe = [];
+    for (const p of paths) {
+      try { const r = await asaas.rawGet(apiKey, p); probe.push({ path: p, status: r.status, body: r.body }); }
+      catch (e) { probe.push({ path: p, status: 'ERR', body: String(e.message).slice(0, 150) }); }
+    }
+    if (acc.asaas_account_id) {
+      try { const r = await asaas.rawGet(null, '/accounts/' + acc.asaas_account_id); probe.push({ path: '/accounts/{id} (master)', status: r.status, body: r.body }); }
+      catch (e) { probe.push({ path: '/accounts/{id} (master)', status: 'ERR', body: String(e.message).slice(0, 150) }); }
+    }
+    res.json({ success: true, probe: probe });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // GET /api/seller/registration-status — status do cadastro/KYC da subconta (espelha "Análise cadastral")
 router.get('/registration-status', requireAuth, async (req, res) => {
   try {
