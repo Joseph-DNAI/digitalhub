@@ -53,13 +53,24 @@ function anticipationFeeCents(amountCents, installments, overrides) {
   return Math.round(amountCents * (anticipPercent(installments, overrides) / 100));
 }
 
+// Percentual do cartao por faixa de parcelas (Asaas cobra escalonado). Configuravel por env.
+// Defaults = tabela promocional atual (a vista 1,99 · 2-6x 2,49 · 7-12x 2,99 · 13-21x 3,29).
+function cardPercent(installments, overrides) {
+  const o = overrides || {};
+  const n = Math.max(1, parseInt(installments || 1, 10));
+  if (n <= 1)  return o.cardPctAvista != null ? o.cardPctAvista : parseFloat(process.env.ASAAS_CARD_PCT_AVISTA || process.env.ASAAS_CARD_PERCENT || '1.99');
+  if (n <= 6)  return o.cardPct2_6   != null ? o.cardPct2_6   : parseFloat(process.env.ASAAS_CARD_PCT_2_6   || '2.49');
+  if (n <= 12) return o.cardPct7_12  != null ? o.cardPct7_12  : parseFloat(process.env.ASAAS_CARD_PCT_7_12  || '2.99');
+  return o.cardPct13_21 != null ? o.cardPct13_21 : parseFloat(process.env.ASAAS_CARD_PCT_13_21 || '3.29');
+}
+
 // Estimativa da taxa do Asaas (gateway), em centavos. Configurável por env porque
 // as taxas mudam (ex.: promoções). O Asaas desconta a taxa dele ANTES do split, então
 // precisamos subtraí-la para o split caber em (cobrança − taxa Asaas).
 function asaasFeeCents(method, amountCents, overrides) {
   const o = overrides || {};
   if (method === 'card') {
-    const pct   = o.cardPercent    != null ? o.cardPercent    : parseFloat(process.env.ASAAS_CARD_PERCENT || '1.99');
+    const pct   = cardPercent(o.installments, o);
     const fixed = o.cardFixedCents != null ? o.cardFixedCents : parseInt(process.env.ASAAS_CARD_FEE_CENTS || '49', 10);
     const base  = Math.round(amountCents * (pct / 100)) + fixed;
     return base + anticipationFeeCents(amountCents, o.installments, o);
@@ -86,7 +97,7 @@ function buildSplit({ amountCents, sellerWalletId, method, chargeVaultlyFee, ins
 // o vendedor receba o preco cheio. Arredonda p/ cima (vendedor nunca recebe a menos).
 function cardChargeCents(priceCents, installments, overrides) {
   const o = overrides || {};
-  const cardPct = (o.cardPercent != null ? o.cardPercent : parseFloat(process.env.ASAAS_CARD_PERCENT || '1.99'));
+  const cardPct = cardPercent(installments, o);
   const fixed   = o.cardFixedCents != null ? o.cardFixedCents : parseInt(process.env.ASAAS_CARD_FEE_CENTS || '49', 10);
   const pctTotal = (cardPct + anticipPercent(installments, o)) / 100;
   if (!(pctTotal < 1)) return priceCents;
@@ -131,4 +142,4 @@ function feeSimulation(amountCents, overrides) {
   return { amount_cents: amountCents, pix: { seller_cents: amountCents }, card: card };
 }
 
-module.exports = { vaultlyFeeCents, asaasFeeCents, centsToReais, buildSplit, cardChargeCents, anticipationFeeCents, anticipPercent, installmentOptions, feeSimulation };
+module.exports = { vaultlyFeeCents, asaasFeeCents, centsToReais, buildSplit, cardChargeCents, cardPercent, anticipationFeeCents, anticipPercent, installmentOptions, feeSimulation };

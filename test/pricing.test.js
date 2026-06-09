@@ -69,9 +69,10 @@ test('anticipationFeeCents: sem parcelas informadas trata como a vista (1x)', ()
   assert.strictEqual(anticipationFeeCents(10000), 115);
 });
 
-test('cardChargeCents 3x embute 1,99%+R$0,49 + antecipacao 3,20%', () => {
-  // P=10000, pctTotal=(1,99+3,20)/100=0,0519 -> ceil((10000+49)/0,9481)=ceil(10599,1)=10600
-  assert.strictEqual(cardChargeCents(10000, 3), 10600);
+test('cardChargeCents 3x embute cartao 2,49% (faixa 2-6x) + R$0,49 + antecipacao 3,20%', () => {
+  // 3x usa a faixa 2-6x (2,49%). P=10000, pctTotal=(2,49+3,20)/100=0,0569
+  // -> ceil((10000+49)/0,9431)=ceil(10655,28)=10656
+  assert.strictEqual(cardChargeCents(10000, 3), 10656);
 });
 
 test('installmentOptions sem repasse: preco fixo, respeita minimo por parcela', () => {
