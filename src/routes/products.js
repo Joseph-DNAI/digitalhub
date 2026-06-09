@@ -19,8 +19,6 @@ if (!fs.existsSync(UPLOADS_PATH)) fs.mkdirSync(UPLOADS_PATH, { recursive: true }
 // Tipos de arquivo permitidos para produtos digitais
 const ALLOWED_MIMETYPES = [
   'application/pdf',
-  'application/zip',
-  'application/x-zip-compressed',
   'application/epub+zip',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -38,7 +36,7 @@ const ALLOWED_MIMETYPES = [
 
 // Extensoes permitidas (defesa extra contra MIME falsificado — bloqueia exe/js/html/svg etc.)
 const ALLOWED_EXTENSIONS = [
-  '.pdf', '.epub', '.zip', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+  '.pdf', '.epub', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
   '.txt', '.jpg', '.jpeg', '.png', '.gif', '.mp3', '.m4a', '.mp4', '.webm'
 ];
 
@@ -60,7 +58,7 @@ const upload = multer({
     if (ALLOWED_MIMETYPES.includes(file.mimetype) && ALLOWED_EXTENSIONS.includes(ext)) {
       cb(null, true);
     } else {
-      cb(new Error('Tipo de arquivo nao permitido. Use PDF, ZIP, EPUB, DOCX, XLSX, PPTX, TXT, imagem, MP3 ou MP4.'));
+      cb(new Error('Tipo de arquivo nao permitido. Use PDF, EPUB, DOCX, XLSX, PPTX, TXT, imagem, MP3 ou MP4.'));
     }
   }
 });
