@@ -3114,17 +3114,17 @@ async function loadProducts() {
             <button class="btn btn-ghost btn-sm" onclick="window.open('/c/${p.slug}','_blank')" title="Abrir checkout"><i class="ti ti-external-link"></i></button>
           </div>
         </div>` : ''}
-        <div style="display:flex;gap:8px;margin-top:auto;padding-top:12px;border-top:1px solid var(--border);">
-          <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="editProduct('${p.id}')">
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:auto;padding-top:12px;border-top:1px solid var(--border);">
+          <button class="btn btn-ghost btn-sm" style="flex:1 1 70px;min-width:0;" onclick="editProduct('${p.id}')">
             <i class="ti ti-pencil"></i> Editar
           </button>
-          <button class="btn btn-ghost btn-sm" style="flex:1;color:var(--orange);" onclick="openSelling('${p.id}')">
+          <button class="btn btn-ghost btn-sm" style="flex:1 1 70px;min-width:0;color:var(--orange);" onclick="openSelling('${p.id}')">
             <i class="ti ti-shopping-cart"></i> ${p.sellable && p.slug ? 'Config.' : 'Vender'}
           </button>
-          <button class="btn btn-ghost btn-sm" onclick="duplicateProduct('${p.id}')" title="Duplicar produto">
+          <button class="btn btn-ghost btn-sm" style="flex:0 0 auto;" onclick="duplicateProduct('${p.id}')" title="Duplicar produto">
             <i class="ti ti-copy"></i>
           </button>
-          <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}','${p.name.replace(/'/g, "\\'")}')">
+          <button class="btn btn-danger btn-sm" style="flex:0 0 auto;" onclick="deleteProduct('${p.id}','${p.name.replace(/'/g, "\\'")}')">
             <i class="ti ti-trash"></i>
           </button>
         </div>
