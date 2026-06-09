@@ -497,8 +497,10 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
           </div>
         </div>
 
-        <div style="font-family:'Satoshi',sans-serif;font-weight:700;font-size:14px;margin:22px 0 6px;display:flex;align-items:center;gap:7px;"><i class="ti ti-cash-banknote" style="color:var(--emerald);"></i> Saques (repasses automáticos via Pix)</div>
-        <div style="font-size:12px;color:var(--text3);margin-bottom:10px;line-height:1.5;">Repasse automático a cada ~2h quando há saldo liberado. Cada saque tem <strong>R$ 2,00</strong> de taxa de transferência Pix do banco, já descontada do valor. O cartão é liberado pelo banco conforme o prazo de antecipação.</div>
+        <div style="font-family:'Satoshi',sans-serif;font-weight:700;font-size:14px;margin:22px 0 10px;display:flex;align-items:center;gap:7px;"><i class="ti ti-wallet" style="color:var(--emerald);"></i> Saldo &amp; saque</div>
+        <div id="seller-balance"><div style="color:var(--text3);font-size:13px;padding:8px 0;">Carregando saldo...</div></div>
+
+        <div style="font-family:'Satoshi',sans-serif;font-weight:700;font-size:14px;margin:24px 0 10px;display:flex;align-items:center;gap:7px;"><i class="ti ti-cash-banknote" style="color:var(--emerald);"></i> Histórico de saques</div>
         <div class="card" style="padding:0;overflow:hidden;">
           <div class="table-wrap">
             <table>
@@ -1018,7 +1020,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
                 <span style="font-size:14px;font-weight:600;">Como recebo o dinheiro das minhas vendas?</span>
                 <i class="ti ti-chevron-down wh-chevron"></i>
               </div>
-              <div class="wh-acc-body" style="padding:0 8px 12px;font-size:13px;color:var(--text2);line-height:1.7;">Na venda direta, o valor cai na sua conta de recebimento e é repassado <strong>automaticamente a cada 2 horas</strong>, via Pix, para a chave CPF/CNPJ que você declarou na aba <strong>Loja</strong>.</div>
+              <div class="wh-acc-body" style="padding:0 8px 12px;font-size:13px;color:var(--text2);line-height:1.7;">Na venda direta, o valor cai <strong>automaticamente</strong> na sua conta de recebimento a cada venda. Você <strong>saca quando quiser</strong>, via Pix, na aba <strong>Vendas</strong> (botão Sacar), para a chave CPF/CNPJ declarada na aba Loja. Cada saque tem R$ 2,00 de taxa Pix do banco, então vale acumular antes de sacar valores pequenos.</div>
             </div>
             <div class="wh-accordion" style="border:none;background:none;margin:0;border-top:1px solid var(--border);">
               <div class="wh-acc-header" onclick="this.parentElement.classList.toggle('open')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:12px 8px;">
@@ -1883,7 +1885,7 @@ function renderSellerForm(prefill) {
     '<div class="form-group full" style="margin-top:6px;">' +
       '<label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:12px;color:var(--text2);line-height:1.5;">' +
         '<input type="checkbox" id="seller-pixdecl" style="width:16px;height:16px;accent-color:var(--orange);margin-top:2px;flex-shrink:0;" /> ' +
-        '<span>Declaro que meu <strong>CPF/CNPJ esta cadastrado como chave Pix</strong> no meu banco e autorizo a Vaultly a usar essa chave para repassar automaticamente os valores das minhas vendas (repasse automatico a cada 2 horas, via Pix). Se a chave nao estiver ativa no banco, o repasse nao sera concluido.</span>' +
+        '<span>Declaro que meu <strong>CPF/CNPJ esta cadastrado como chave Pix</strong> no meu banco e autorizo a Vaultly a transferir, quando eu solicitar o saque, os valores das minhas vendas via Pix para essa chave. Cada saque tem R$ 2,00 de taxa do banco. Se a chave nao estiver ativa no banco, o saque nao sera concluido.</span>' +
       '</label>' +
     '</div>' +
   '</div>' +
@@ -2284,6 +2286,7 @@ function orderStatusBadge(status) {
 async function loadVendas() {
   var tb = document.getElementById('orders-table');
   if (!tb) return;
+  loadSellerBalance();
   loadPayouts();
   if (currentUser && currentUser.plan_id === 'free') {
     tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text2);padding:32px;">Ative a venda direta na aba <strong>Loja</strong> para vender pela Vaultly.</td></tr>';
@@ -2316,6 +2319,47 @@ async function loadVendas() {
   }
 }
 
+async function loadSellerBalance() {
+  var box = document.getElementById('seller-balance');
+  if (!box) return;
+  if (currentUser && currentUser.plan_id === 'free') { box.innerHTML = ''; return; }
+  var brl = function(c) { return 'R$ ' + ((c || 0) / 100).toFixed(2).replace('.', ','); };
+  try {
+    var res = await apiFetch('/api/seller/balance');
+    if (!res.success) throw new Error(res.error || 'Erro');
+    var avail = res.available_cents || 0, pend = res.pending_cents || 0;
+    var fee = res.pix_fee_cents || 200, minW = res.min_withdraw_cents || 700;
+    var canWithdraw = avail >= minW;
+    box.innerHTML =
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px;">' +
+        '<div class="card" style="padding:14px 16px;"><div style="font-size:11px;color:var(--text3);">Pendente a receber</div>' +
+          '<div style="font-family:\'Satoshi\',sans-serif;font-weight:700;font-size:20px;color:var(--yellow);">' + brl(pend) + '</div>' +
+          '<div style="font-size:11px;color:var(--text3);margin-top:2px;">vendas pagas ainda não liberadas pelo banco</div></div>' +
+        '<div class="card" style="padding:14px 16px;"><div style="font-size:11px;color:var(--text3);">Disponível para saque</div>' +
+          '<div style="font-family:\'Satoshi\',sans-serif;font-weight:700;font-size:20px;color:var(--emerald);">' + brl(avail) + '</div>' +
+          '<button class="btn btn-primary btn-sm" style="margin-top:8px;" ' + (canWithdraw ? '' : 'disabled') + ' onclick="doWithdraw(this)"><i class="ti ti-cash"></i> Sacar</button></div>' +
+      '</div>' +
+      '<div style="font-size:12px;color:var(--text3);line-height:1.5;"><i class="ti ti-info-circle" style="color:var(--yellow);"></i> Cada saque tem <strong>' + brl(fee) + '</strong> de taxa Pix do banco (descontada do valor). ' +
+        (canWithdraw ? 'Vale acumular antes de sacar valores pequenos.' : 'Saldo mínimo para sacar: <strong>' + brl(minW) + '</strong> (já inclui a taxa).') + '</div>';
+  } catch (e) {
+    box.innerHTML = '<div style="color:var(--red);font-size:13px;padding:8px 0;">Erro ao carregar saldo.</div>';
+  }
+}
+async function doWithdraw(btn) {
+  if (!confirm('Confirmar saque do saldo disponível? Vai por Pix para a sua chave cadastrada, menos a taxa de R$2,00 do banco.')) return;
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i> Sacando...'; }
+  try {
+    var res = await apiFetch('/api/seller/withdraw', { method: 'POST' });
+    if (!res.success) throw new Error(res.error || 'Erro');
+    showToast('Saque de R$ ' + ((res.net_cents || 0) / 100).toFixed(2).replace('.', ',') + ' a caminho via Pix.', 'success');
+    loadSellerBalance();
+    loadPayouts();
+  } catch (e) {
+    showToast(e.message || 'Não foi possível sacar agora.', 'warn');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-cash"></i> Sacar'; }
+  }
+}
+
 function payoutStatusBadge(s) {
   if (s === 'done')    return '<span class="badge badge-green" style="font-size:10px;">Concluído</span>';
   if (s === 'failed')  return '<span class="badge badge-red" style="font-size:10px;">Falhou</span>';
@@ -2334,7 +2378,7 @@ async function loadPayouts() {
     if (!res.success) throw new Error(res.error || 'Erro');
     var list = res.payouts || [];
     if (!list.length) {
-      tb.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:24px;">Nenhum saque ainda. Os repasses são automáticos via Pix a cada ~2h quando há saldo.</td></tr>';
+      tb.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:24px;">Nenhum saque ainda. Use o botão <strong>Sacar</strong> acima quando tiver saldo disponível.</td></tr>';
       return;
     }
     tb.innerHTML = list.map(function(p) {

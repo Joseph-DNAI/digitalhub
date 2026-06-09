@@ -2,8 +2,9 @@
 const express = require('express');
 const router  = express.Router();
 const { requireAuth, requireAdmin } = require('../middleware/auth');
-const { sellerAccounts, payouts } = require('../models/database');
+const { sellerAccounts, payouts, orders } = require('../models/database');
 const asaas = require('../services/asaasService');
+const { withdrawForTenant, availableBalance, PIX_FEE_CENTS, MIN_NET_CENTS } = require('../services/payoutService');
 const { encrypt, decrypt } = require('../services/crypto');
 const { feeSimulation } = require('../services/pricing');
 const logger = require('../config/logger');
@@ -23,6 +24,38 @@ router.get('/account', requireAuth, async (req, res) => {
   } catch (err) {
     logger.error('seller/account: ' + err.message);
     res.status(500).json({ success: false, error: 'Erro interno.' });
+  }
+});
+
+// GET /api/seller/balance — saldo disponível, pendente a receber e taxa de saque
+router.get('/balance', requireAuth, async (req, res) => {
+  try {
+    const available = await availableBalance(req.tenantId);
+    const netPaid = await orders.sumNetPaid(req.tenantId);
+    const settled = await payouts.sumSettled(req.tenantId);
+    const pending = Math.max(0, netPaid - settled - available);
+    res.json({
+      success: true,
+      available_cents: available,
+      pending_cents: pending,
+      pix_fee_cents: PIX_FEE_CENTS,
+      min_withdraw_cents: MIN_NET_CENTS + PIX_FEE_CENTS
+    });
+  } catch (err) {
+    logger.error('seller/balance: ' + err.message);
+    res.status(500).json({ success: false, error: 'Erro ao consultar saldo.' });
+  }
+});
+
+// POST /api/seller/withdraw — saque sob demanda (Pix para a chave do vendedor)
+router.post('/withdraw', requireAuth, async (req, res) => {
+  try {
+    const r = await withdrawForTenant(req.tenantId);
+    if (!r.ok) return res.status(400).json({ success: false, error: r.error });
+    res.json({ success: true, net_cents: r.net_cents, fee_cents: r.fee_cents, status: r.status });
+  } catch (err) {
+    logger.error('seller/withdraw: ' + err.message);
+    res.status(502).json({ success: false, error: 'Nao foi possivel sacar agora. ' + err.message });
   }
 });
 
