@@ -1450,6 +1450,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
           <i class="ti ti-plus"></i> Adicionar arquivo ao combo
         </button>
         <input type="file" id="m-combo-file" accept=".pdf,.epub,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.gif,.mp3,.m4a,.mp4,.webm" style="display:none" onchange="addComboFile(this)" />
+        <div id="m-combo-status" style="display:none;font-size:12px;font-weight:600;margin-top:8px;"></div>
       </div>
 
       <!-- Upsell de combo para planos sem acesso -->
@@ -3366,6 +3367,40 @@ function comboBytes() { return _comboFiles.reduce(function(s,f){ return s + (par
 function totalBytesWith(extra) { return _mainFileBytes + comboBytes() + (extra || 0); }
 function fmtMB(bytes) { return (bytes/1024/1024).toFixed(1) + ' MB'; }
 
+// Extensoes aceitas (espelha o backend) — p/ feedback imediato no navegador
+var ALLOWED_EXT = ['.pdf','.epub','.doc','.docx','.xls','.xlsx','.ppt','.pptx','.txt','.jpg','.jpeg','.png','.gif','.mp3','.m4a','.mp4','.webm'];
+function fileExt(name) { return (String(name).match(/\.[^.\/\\]+$/) || [''])[0].toLowerCase(); }
+
+// Pinta a zona de upload do arquivo principal: 'ok' (verde), 'warn' (amarelo) ou neutro
+function applyUploadColor(state) {
+  var zone = document.getElementById('upload-zone'), icon = document.getElementById('upload-icon'),
+      t = document.getElementById('upload-title'), s = document.getElementById('upload-sub');
+  if (!zone) return;
+  if (state === 'ok') {
+    zone.style.borderColor = 'var(--emerald)'; zone.style.background = 'rgba(34,197,94,0.07)';
+    icon.className = 'ti ti-circle-check upload-icon'; icon.style.color = 'var(--emerald)';
+    t.style.color = 'var(--emerald)'; s.style.color = 'var(--emerald)';
+  } else if (state === 'warn') {
+    zone.style.borderColor = 'var(--yellow)'; zone.style.background = 'rgba(234,179,8,0.07)';
+    icon.className = 'ti ti-alert-triangle upload-icon'; icon.style.color = 'var(--yellow)';
+    t.style.color = 'var(--yellow)'; s.style.color = 'var(--yellow)';
+  } else {
+    zone.style.borderColor = ''; zone.style.background = '';
+    icon.className = 'ti ti-cloud-upload upload-icon'; icon.style.color = '';
+    t.style.color = ''; s.style.color = '';
+  }
+}
+
+// Status do combo: 'ok' (verde), 'warn' (amarelo) ou null (esconde)
+function setComboStatus(state, msg) {
+  var el = document.getElementById('m-combo-status');
+  if (!el) return;
+  if (!state) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.display = 'block';
+  el.style.color = state === 'ok' ? 'var(--emerald)' : 'var(--yellow)';
+  el.innerHTML = '<i class="ti ti-' + (state === 'ok' ? 'circle-check' : 'alert-triangle') + '"></i> ' + msg;
+}
+
 function setAttachMode(mode) {
   attachMode = mode;
   var on = 'background:var(--orange);color:#fff;', off = 'background:transparent;color:var(--text2);';
@@ -3404,6 +3439,8 @@ function openModal() {
   document.getElementById('m-file').value             = '';
   document.getElementById('upload-title').textContent = 'Clique para selecionar arquivo';
   document.getElementById('upload-sub').textContent   = 'PDF, EPUB · armazenado no Cloudflare R2';
+  applyUploadColor('neutral');
+  setComboStatus(null);
   document.getElementById('modal-title').textContent  = 'Novo produto';
   document.getElementById('save-btn').innerHTML       = '<i class="ti ti-device-floppy"></i> Salvar produto';
   // Esconde o seletor de vinculação por padrão (só importações mostram)
@@ -3474,7 +3511,7 @@ function renderComboList(files) {
   }
   list.innerHTML = files.map(function(f) {
     return '<div style="display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;">' +
-      '<i class="ti ti-file" style="color:var(--orange);font-size:16px;flex-shrink:0;"></i>' +
+      '<i class="ti ti-circle-check" style="color:var(--emerald);font-size:16px;flex-shrink:0;" title="Anexo válido"></i>' +
       '<span style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + (f.file_name||'') + '">' + (f.file_name||'arquivo') + '</span>' +
       '<button type="button" class="btn btn-danger btn-xs" onclick="removeComboFile(\'' + f.id + '\')"><i class="ti ti-trash"></i></button>' +
     '</div>';
@@ -3484,14 +3521,20 @@ function renderComboList(files) {
 async function addComboFile(input) {
   var file = input.files[0];
   if (!file) return;
+  var fname = file.name;
   var productId = document.getElementById('m-editing-id').value;
   var addBtn = document.getElementById('m-combo-add-btn');
-  if (!productId) { showToast('Salve o produto antes de adicionar arquivos ao combo.', 'warn'); input.value=''; return; }
+  if (!productId) { setComboStatus('warn', 'Salve o produto antes de adicionar arquivos ao combo.'); input.value=''; return; }
+  if (ALLOWED_EXT.indexOf(fileExt(fname)) === -1) {
+    setComboStatus('warn', '"' + fname + '" recusado: tipo não permitido (use PDF, EPUB, DOCX, imagem, MP3, MP4…).');
+    input.value=''; return;
+  }
   if (file.size + totalBytesWith(0) > MAX_TOTAL_BYTES) {
-    showToast('Esse arquivo (' + fmtMB(file.size) + ') passa do limite total de 25 MB. Já usados: ' + fmtMB(totalBytesWith(0)) + '.', 'warn');
-    input.value = ''; return;
+    setComboStatus('warn', '"' + fname + '" (' + fmtMB(file.size) + ') passaria do limite total de 25 MB. Já usados: ' + fmtMB(totalBytesWith(0)) + '.');
+    input.value=''; return;
   }
   if (addBtn) { addBtn.disabled = true; addBtn.innerHTML = '<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i> Enviando...'; }
+  setComboStatus(null);
   try {
     var form = new FormData();
     form.append('file', file);
@@ -3499,10 +3542,10 @@ async function addComboFile(input) {
     var raw = await fetch(getApiUrl() + '/api/products/' + productId + '/files', { method: 'POST', headers: headers, body: form });
     var data = await raw.json();
     if (!data.success) throw new Error(data.error);
-    showToast('Arquivo adicionado ao combo!', 'success');
+    setComboStatus('ok', '"' + fname + '" adicionado ao combo.');
     loadComboFiles(productId);
   } catch(e) {
-    showToast('Erro: ' + e.message, 'error');
+    setComboStatus('warn', '"' + fname + '" recusado: ' + e.message);
   } finally {
     input.value = '';
     if (addBtn) { addBtn.disabled = false; addBtn.innerHTML = '<i class="ti ti-plus"></i> Adicionar arquivo ao combo'; }
@@ -3621,13 +3664,25 @@ function editProduct(id) {
 function handleFileSelect(input) {
   const file = input.files[0];
   if (!file) return;
+  var ext = fileExt(file.name);
+  if (ALLOWED_EXT.indexOf(ext) === -1) {
+    _mainFileBytes = 0; input.value = '';
+    document.getElementById('upload-title').textContent = 'Tipo não permitido: ' + (ext || '?');
+    document.getElementById('upload-sub').textContent   = 'Use PDF, EPUB, DOCX, XLSX, PPTX, TXT, imagem, MP3 ou MP4.';
+    applyUploadColor('warn');
+    return;
+  }
   if (file.size + comboBytes() > MAX_TOTAL_BYTES) {
-    showToast('Total passaria de 25 MB (combo atual: ' + fmtMB(comboBytes()) + '). Escolha um arquivo menor.', 'warn');
-    input.value = ''; return;
+    _mainFileBytes = 0; input.value = '';
+    document.getElementById('upload-title').textContent = 'Acima do limite: ' + fmtMB(file.size);
+    document.getElementById('upload-sub').textContent   = 'O total passaria de 25 MB (combo atual: ' + fmtMB(comboBytes()) + '). Escolha um arquivo menor.';
+    applyUploadColor('warn');
+    return;
   }
   _mainFileBytes = file.size;
   document.getElementById('upload-title').textContent = file.name;
-  document.getElementById('upload-sub').textContent   = fmtMB(file.size) + ' · total usado ' + fmtMB(totalBytesWith(0)) + ' / 25 MB';
+  document.getElementById('upload-sub').textContent   = fmtMB(file.size) + ' · total usado ' + fmtMB(totalBytesWith(0)) + ' / 25 MB · pronto para salvar';
+  applyUploadColor('ok');
 }
 
 async function saveProduct() {
