@@ -195,6 +195,7 @@ tbody tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="stat"><div class="stat-label">Free</div><div class="stat-val" id="s-free">—</div></div>
       <div class="stat"><div class="stat-label">Basic</div><div class="stat-val" id="s-basic">—</div></div>
       <div class="stat"><div class="stat-label">Pro</div><div class="stat-val" id="s-pro">—</div></div>
+      <div class="stat"><div class="stat-label">Inativos</div><div class="stat-val" style="color:var(--text3)" id="s-inactive">—</div></div>
       <div class="stat"><div class="stat-label">Próx. do limite</div><div class="stat-val" style="color:var(--yellow)" id="s-warn">—</div></div>
       <div class="stat" style="cursor:pointer;" onclick="document.getElementById('support-list').scrollIntoView({behavior:'smooth'})"><div class="stat-label">Suporte aberto</div><div class="stat-val" style="color:var(--red)" id="s-support">—</div></div>
     </div>
@@ -542,12 +543,13 @@ async function loadUsers() {
 }
 
 function updateStats(users) {
-  document.getElementById('s-total').textContent    = users.length;
-  document.getElementById('s-free').textContent     = users.filter(u=>u.plan_id==='free').length;
-  document.getElementById('s-basic').textContent    = users.filter(u=>u.plan_id==='basic').length;
-  document.getElementById('s-pro').textContent      = users.filter(u=>u.plan_id==='pro').length;
-  document.getElementById('s-inactive').textContent = users.filter(u=>!u.is_active).length;
-  document.getElementById('s-warn').textContent     = users.filter(u=>deliveryPct(u)>=70).length;
+  var set = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
+  set('s-total',    users.length);
+  set('s-free',     users.filter(u=>u.plan_id==='free').length);
+  set('s-basic',    users.filter(u=>u.plan_id==='basic').length);
+  set('s-pro',      users.filter(u=>u.plan_id==='pro').length);
+  set('s-inactive', users.filter(u=>!u.is_active).length);
+  set('s-warn',     users.filter(u=>deliveryPct(u)>=70).length);
 }
 
 function deliveryPct(u) {
