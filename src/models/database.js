@@ -524,7 +524,7 @@ const products = {
   // Busca por ID de plataforma exato (qualquer status) — usado p/ validar unicidade
   async findByIds(tenantId, ids) {
     if (!ids || !ids.length) return [];
-    return query('SELECT * FROM products WHERE tenant_id = $1 AND id = ANY($2::uuid[])', [tenantId, ids]);
+    return query('SELECT * FROM products WHERE tenant_id = $1 AND id = ANY($2::text[])', [tenantId, ids]);
   },
 
   async findByKiwifyId(tenantId, kiwifyId) {
