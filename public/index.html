@@ -450,6 +450,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
             <span id="products-active-count" style="font-size:12px;color:var(--text2);"></span>
             <button class="btn btn-ghost" onclick="openImportMenu()"><i class="ti ti-download"></i> Importar produtos</button>
+            <button class="btn btn-ghost" onclick="openExportModal()"><i class="ti ti-file-spreadsheet"></i> Exportar</button>
             <button class="btn btn-ghost" onclick="openComboCreate()"><i class="ti ti-stack-2"></i> Criar combo</button>
             <button class="btn btn-primary" onclick="openModal()">
               <i class="ti ti-plus"></i> Novo produto
@@ -1409,6 +1410,22 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   <button class="btn btn-ghost btn-sm" onclick="bulkAction('status_active')"><i class="ti ti-player-play"></i> Ativar</button>
   <button class="btn btn-ghost btn-sm" onclick="bulkAction('status_inactive')"><i class="ti ti-player-pause"></i> Desativar</button>
   <button class="btn btn-ghost btn-sm" onclick="clearBulk()" title="Limpar seleção"><i class="ti ti-x"></i></button>
+</div>
+
+<!-- ── MODAL EXPORTAR PRODUTOS ── -->
+<div class="modal-bg" id="export-modal" onclick="if(event.target===this)closeExportModal()">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <div class="modal-title">Exportar produtos</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeExportModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:16px;">Gera um arquivo <strong>CSV</strong> (abre no Excel, Google Sheets e importa na maioria das plataformas) com seus produtos. Você quer incluir os <strong>links de checkout</strong> dos produtos à venda?</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <button class="btn btn-primary" onclick="exportProducts(true)"><i class="ti ti-link"></i> Exportar COM links de checkout</button>
+      <button class="btn btn-ghost" onclick="exportProducts(false)"><i class="ti ti-file-spreadsheet"></i> Exportar SEM links</button>
+      <button class="btn btn-ghost" onclick="closeExportModal()" style="margin-top:4px;">Cancelar</button>
+    </div>
+  </div>
 </div>
 
 <!-- ── MODAL CRIAR COMBO ── -->
@@ -3220,6 +3237,49 @@ let productsCache = [];
 var bulkSelected = new Set();
 var _productFilter = 'all';
 function setProductFilter(f) { _productFilter = f; loadProducts(); }
+
+// ── Exportar produtos (CSV) ──
+function openExportModal() { document.getElementById('export-modal').classList.add('open'); }
+function closeExportModal() { document.getElementById('export-modal').classList.remove('open'); }
+function csvCell(v) {
+  var s = (v === null || v === undefined) ? '' : String(v);
+  if (/[",\r\n]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+function exportProducts(withLinks) {
+  closeExportModal();
+  var data = productsCache || [];
+  if (!data.length) { showToast('Nenhum produto para exportar.', 'warn'); return; }
+  var headers = ['Nome', 'Descricao', 'Preco', 'Valor promocional', 'Status', 'A venda', 'ID Kiwify', 'ID Yampi', 'Arquivo principal', 'Anexos (combo)'];
+  if (withLinks) headers.push('Link do checkout');
+  var rows = data.map(function (p) {
+    var priceCents = p.sellable ? (p.price_cents || 0) : Math.round((parseFloat(p.price) || 0) * 100);
+    var combo = (p.file_name ? 1 : 0) + (p.extra_files_count || 0);
+    var row = [
+      p.name || '',
+      p.description || '',
+      priceCents ? (priceCents / 100).toFixed(2) : '',
+      p.promo_price_cents ? (p.promo_price_cents / 100).toFixed(2) : '',
+      p.status === 'active' ? 'Ativo' : 'Inativo',
+      (p.sellable && p.slug) ? 'Sim' : 'Nao',
+      p.kiwify_id || '',
+      p.yampi_id || '',
+      p.file_name || '',
+      combo
+    ];
+    if (withLinks) row.push((p.sellable && p.slug) ? (location.origin + '/c/' + p.slug) : '');
+    return row;
+  });
+  var csv = [headers].concat(rows).map(function (r) { return r.map(csvCell).join(','); }).join('\r\n');
+  var blob = new Blob([String.fromCharCode(0xFEFF) + csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'produtos-vaultly-' + new Date().toISOString().slice(0, 10) + (withLinks ? '-com-links' : '') + '.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  showToast('Exportado: ' + data.length + ' produto(s).', 'success');
+}
 
 // ── Criar combo (juntar anexos de vários produtos) ──
 var comboSelected = new Set();
