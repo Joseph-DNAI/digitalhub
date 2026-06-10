@@ -1446,6 +1446,13 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
         </select>
         <div class="form-hint">Já tem esse produto cadastrado? Vincule o ID a ele para compartilhar o mesmo arquivo PDF entre Kiwify e Yampi.</div>
       </div>
+      <!-- Chave seletora: Vender pela Vaultly (topo, acima do nome) -->
+      <div class="form-group full" id="m-selling-section" style="display:none;">
+        <div class="toggle-row" style="border-bottom:none;padding:12px 14px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.2);border-radius:var(--radius);">
+          <div class="toggle-info"><div class="t-title"><i class="ti ti-shopping-cart" style="color:var(--orange);"></i> Vender pela Vaultly</div><div class="t-desc">Gera um checkout usando o preço do produto — sem preencher de novo</div></div>
+          <button type="button" class="toggle" id="m-sellable" onclick="this.classList.toggle('on');document.getElementById('m-selling-fields').style.display=this.classList.contains('on')?'block':'none'"></button>
+        </div>
+      </div>
       <div class="form-group full">
         <label class="form-label">Nome do produto *</label>
         <input type="text" class="form-input" id="m-name" placeholder="Ex: Ebook Marketing Digital" />
@@ -1512,11 +1519,21 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
         </div>
       </div>
 
-      <!-- Mais opções: Status + IDs de plataforma (revelação progressiva) -->
-      <div class="form-group full">
-        <button type="button" class="btn btn-ghost btn-sm" id="more-opts-btn" onclick="toggleMoreOpts()" style="width:100%;justify-content:flex-start;"><i class="ti ti-chevron-down" id="more-opts-chevron"></i> Mais opções — Status, ID Kiwify e Yampi</button>
+    </div>
+    <!-- Configurações de venda (formas de pagamento) — parte inferior -->
+    <div id="m-selling-fields" style="display:none;margin-top:6px;border-top:1px solid var(--border);padding-top:14px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:6px;"><i class="ti ti-credit-card" style="color:var(--orange);"></i> Formas de pagamento aceitas</div>
+      <div class="form-hint" style="margin-bottom:10px;">Usa o <strong>preço do produto</strong> como valor do checkout.</div>
+      <div style="display:flex;gap:16px;align-items:center;">
+        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;"><input type="checkbox" id="m-accept-pix" checked style="width:16px;height:16px;accent-color:var(--orange);"/> <i class="ti ti-qrcode" style="color:var(--emerald);"></i> Pix</label>
+        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;"><input type="checkbox" id="m-accept-card" checked style="width:16px;height:16px;accent-color:var(--orange);"/> <i class="ti ti-credit-card" style="color:var(--orange);"></i> Cartão</label>
       </div>
-      <div class="form-group full" id="more-opts" style="display:none;">
+    </div>
+
+    <!-- Mais opções: Status + IDs de plataforma — no final de tudo -->
+    <div style="margin-top:14px;">
+      <button type="button" class="btn btn-ghost btn-sm" id="more-opts-btn" onclick="toggleMoreOpts()" style="width:100%;justify-content:flex-start;"><i class="ti ti-chevron-down" id="more-opts-chevron"></i> Mais opções — Status, ID Kiwify e Yampi</button>
+      <div id="more-opts" style="display:none;margin-top:10px;">
         <div class="form-grid" style="gap:14px;">
           <div class="form-group">
             <label class="form-label">Status</label>
@@ -1536,20 +1553,6 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
             <input type="text" class="form-input" id="m-yampi" placeholder="123456" />
             <div class="form-hint">Só se você já vende na Yampi · Produto → ID</div>
           </div>
-        </div>
-      </div>
-    </div>
-    <div id="m-selling-section" style="display:none;margin-top:6px;border-top:1px solid var(--border);padding-top:14px;">
-      <div style="font-size:13px;font-weight:700;margin-bottom:10px;"><i class="ti ti-shopping-cart" style="color:var(--orange);"></i> Vender direto pela Vaultly</div>
-      <div class="toggle-row" style="border-bottom:none;padding:0 0 10px;">
-        <div class="toggle-info"><div class="t-title">Vender pela Vaultly</div><div class="t-desc">Gera um checkout usando o <strong>preço cadastrado acima</strong> — sem preencher de novo</div></div>
-        <button type="button" class="toggle" id="m-sellable" onclick="this.classList.toggle('on');document.getElementById('m-selling-fields').style.display=this.classList.contains('on')?'block':'none'"></button>
-      </div>
-      <div id="m-selling-fields" style="display:none;">
-        <div class="form-hint" style="margin-bottom:10px;">Usa o <strong>preço acima</strong> como valor do checkout. Formas de pagamento aceitas:</div>
-        <div style="display:flex;gap:16px;align-items:center;">
-          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;"><input type="checkbox" id="m-accept-pix" checked style="width:16px;height:16px;accent-color:var(--orange);"/> <i class="ti ti-qrcode" style="color:var(--emerald);"></i> Pix</label>
-          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;"><input type="checkbox" id="m-accept-card" checked style="width:16px;height:16px;accent-color:var(--orange);"/> <i class="ti ti-credit-card" style="color:var(--orange);"></i> Cartão</label>
         </div>
       </div>
     </div>
