@@ -28,6 +28,23 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 99px; }
 
+/* ── Checkboxes estilizados (tema escuro) ── */
+input[type="checkbox"] {
+  appearance: none; -webkit-appearance: none;
+  width: 16px; height: 16px; border: 1.5px solid var(--border2); border-radius: 5px;
+  background: var(--bg3); cursor: pointer; position: relative; flex-shrink: 0;
+  vertical-align: middle; display: inline-grid; place-content: center;
+  transition: background .15s ease, border-color .15s ease;
+}
+input[type="checkbox"]::after {
+  content: ""; width: 4px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translateY(-1px); opacity: 0;
+}
+input[type="checkbox"]:hover { border-color: var(--orange); }
+input[type="checkbox"]:checked { background: var(--orange); border-color: var(--orange); }
+input[type="checkbox"]:checked::after { opacity: 1; }
+input[type="checkbox"]:focus-visible { outline: 2px solid var(--orange); outline-offset: 1px; }
+
 /* ── Layout ── */
 .app { display: flex; height: 100vh; overflow: hidden; position: relative; z-index: 1; }
 
