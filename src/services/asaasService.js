@@ -179,21 +179,15 @@ async function enableAutoAnticipation(apiKey) {
 // ── KYC / ativacao da subconta (white-label). Usam a apiKey da subconta. ──
 // NOTA: caminhos no formato padrao da API Asaas; validar no sandbox e ajustar nomes se divergir.
 
-// Status do cadastro (dados comerciais, bancarios, documentos, aprovacao geral) — espelha a "Analise cadastral".
+// Status do cadastro (commercialInfo, bankAccountInfo, documentation, general) — espelha a "Analise cadastral".
+// Endpoint confirmado em producao: GET /myAccount/status.
 async function getRegistrationStatus(apiKey) {
-  return request('GET', '/myAccount/registrationStatus', null, apiKey);
+  return request('GET', '/myAccount/status', null, apiKey);
 }
 
-// Dados da propria conta (subconta) — usado p/ saber o email da ativacao e um eventual link de onboarding.
+// Dados da propria conta (subconta) — usado p/ saber o email da ativacao.
 async function getAccountInfo(apiKey) {
   return request('GET', '/myAccount', null, apiKey);
-}
-
-// Diagnostico: faz um GET cru e devolve status + amostra do corpo (sem lancar). apiKey=null usa o master.
-async function rawGet(apiKey, path) {
-  const res = await fetch(baseUrl() + path, { headers: headers(apiKey) });
-  const text = await res.text();
-  return { status: res.status, body: String(text).slice(0, 300) };
 }
 
 // Lista os documentos exigidos/enviados (cada grupo tem id, tipo, status).
@@ -228,5 +222,5 @@ module.exports = {
   createSubaccount, createCustomer, createCharge, getPixQrCode, getCharge,
   findSubaccountByCpfCnpj, listSubaccounts,
   pixKeyType, getSubaccountBalance, createPixTransfer, enableAutoAnticipation,
-  getRegistrationStatus, getAccountInfo, listAccountDocuments, uploadAccountDocument, rawGet
+  getRegistrationStatus, getAccountInfo, listAccountDocuments, uploadAccountDocument
 };
