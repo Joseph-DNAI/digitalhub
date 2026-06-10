@@ -1570,8 +1570,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
     </div>
     <input type="hidden" id="m-editing-id" value="" />
     <div id="m-error" style="display:none;margin-top:14px;"></div>
-    <div class="grad-line"></div>
-    <div style="display:flex;gap:10px;justify-content:flex-end;">
+    <div style="position:sticky;bottom:-28px;background:var(--bg2);margin:18px -28px -28px;padding:12px 28px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;z-index:5;">
       <button class="btn btn-ghost" onclick="attemptCloseModal()">Cancelar</button>
       <button class="btn btn-primary" id="save-btn" onclick="saveProduct()">
         <i class="ti ti-device-floppy"></i> Salvar produto
@@ -4008,7 +4007,7 @@ function editProduct(id) {
     document.getElementById('upload-sub').textContent   = (_mainFileBytes ? fmtMB(_mainFileBytes) + ' · ' : '') + 'arquivo atual · selecione outro para substituir';
   }
   document.getElementById('modal-title').textContent = 'Editar produto';
-  document.getElementById('save-btn').innerHTML      = '<i class="ti ti-device-floppy"></i> Atualizar produto';
+  document.getElementById('save-btn').innerHTML      = '<i class="ti ti-device-floppy"></i> Salvar Alterações';
   setupComboSection(id);  // carrega arquivos do combo (Pro+)
 }
 
