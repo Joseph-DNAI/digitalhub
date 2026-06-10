@@ -69,8 +69,8 @@ router.get('/balance', requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/seller/_probe — diagnóstico (admin): testa caminhos candidatos da API Asaas com a apiKey da subconta
-router.get('/_probe', requireAdmin, async (req, res) => {
+// GET /api/seller/_probe — diagnóstico (temporário): testa caminhos candidatos da API Asaas com a apiKey da subconta do próprio tenant
+router.get('/_probe', requireAuth, async (req, res) => {
   try {
     const acc = await sellerAccounts.findByTenant(req.tenantId);
     if (!acc || !acc.asaas_api_key_enc) return res.status(409).json({ success: false, error: 'Sem conta de recebimento com chave.' });
