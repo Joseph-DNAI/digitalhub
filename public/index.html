@@ -3375,9 +3375,9 @@ function renderProductCompact(p) {
       <div style="flex:1;min-width:0;font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${escAttr(p.name)}">${p.name}</div>
       <span class="badge ${p.status==='active'?'badge-green':'badge-gray'}" style="font-size:9px;flex-shrink:0;">${p.status==='active'?'Ativo':'Inativo'}</span>
     </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-      <span style="font-size:13px;font-weight:700;color:var(--orange);">${_prodPriceHtml(p)}</span>
-      <div style="display:flex;gap:3px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+      <span style="font-size:14px;font-weight:700;color:var(--orange);white-space:nowrap;flex:1;min-width:0;">${_prodPriceHtml(p)}</span>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;flex-shrink:0;">
         <button class="btn btn-ghost btn-xs" onclick="editProduct('${p.id}')" title="Editar"><i class="ti ti-pencil"></i></button>
         <button class="btn btn-ghost btn-xs" style="color:var(--orange);" onclick="openSelling('${p.id}')" title="${p.sellable&&p.slug?'Config.':'Vender'}"><i class="ti ti-shopping-cart"></i></button>
         <button class="btn btn-ghost btn-xs" onclick="duplicateProduct('${p.id}')" title="Duplicar"><i class="ti ti-copy"></i></button>
