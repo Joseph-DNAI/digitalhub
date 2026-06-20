@@ -332,4 +332,59 @@ async function sendVerificationEmail({ userEmail, userName, verifyUrl }) {
   logger.info('Email de verificacao enviado para ' + userEmail);
 }
 
-module.exports = { sendProductEmail, sendLimitWarningEmail, testSmtpConnection, sendTestEmail, sendDeliveryFailedEmail, sendPasswordResetEmail, sendVerificationEmail };
+// ─── Entrega por webhook (código/licença): e-mail templado, SEM anexo ──────────
+
+function escHtmlVar(s) {
+  return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+    return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c];
+  });
+}
+
+const DEFAULT_CODE_TEMPLATE =
+  '<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:auto;color:#1a1a1a;">' +
+    '<p style="font-size:15px;">Olá, {{nome}}! 🎉</p>' +
+    '<p style="font-size:15px;">Obrigado pela compra de <strong>{{produto}}</strong>. Aqui está o seu acesso:</p>' +
+    '<div style="background:#f4f4f7;border:1px solid #e3e3ea;border-radius:12px;padding:18px;text-align:center;margin:18px 0;">' +
+      '<div style="font-size:12px;color:#666;letter-spacing:.5px;">SEU CÓDIGO / LICENÇA</div>' +
+      '<div style="font-size:24px;font-weight:800;letter-spacing:3px;margin-top:6px;">{{codigo}}</div>' +
+    '</div>' +
+    '<p style="text-align:center;margin:18px 0;"><a href="{{link}}" style="background:#FF6B35;color:#fff;text-decoration:none;font-weight:700;padding:13px 26px;border-radius:8px;display:inline-block;">Acessar agora</a></p>' +
+    '<p style="font-size:13px;color:#666;">Ou acesse: <a href="{{link}}">{{link}}</a></p>' +
+  '</div>';
+
+// Substitui {{codigo}} {{link}} {{nome}} {{email}} {{produto}} (com escape de HTML).
+function renderCodeTemplate(tpl, vars) {
+  var v = vars || {};
+  var html = (tpl && String(tpl).trim()) ? String(tpl) : DEFAULT_CODE_TEMPLATE;
+  return html
+    .replace(/\{\{\s*codigo\s*\}\}/gi, escHtmlVar(v.codigo))
+    .replace(/\{\{\s*link\s*\}\}/gi,   escHtmlVar(v.link))
+    .replace(/\{\{\s*nome\s*\}\}/gi,   escHtmlVar(v.nome))
+    .replace(/\{\{\s*email\s*\}\}/gi,  escHtmlVar(v.email))
+    .replace(/\{\{\s*produto\s*\}\}/gi, escHtmlVar(v.produto));
+}
+
+async function sendCodeEmail({ buyerEmail, productName, subject, html, resendApiKey, fromName, fromAddress }) {
+  const apiKey = resendApiKey || process.env.RESEND_API_KEY || process.env.SMTP_PASS;
+  const fName  = fromName    || process.env.EMAIL_FROM_NAME    || 'Vaultly';
+  const fAddr  = fromAddress || process.env.EMAIL_FROM_ADDRESS || 'onboarding@resend.dev';
+  if (!apiKey) throw new Error('RESEND_API_KEY nao configurada');
+
+  const htmlBody = (html || '') + DISCLAIMER;
+  const response = await fetch('https://api.resend.com/emails', {
+    method:  'POST',
+    headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from:    fName + ' <' + fAddr + '>',
+      to:      [buyerEmail],
+      subject: subject || ('Seu acesso — ' + productName),
+      html:    htmlBody
+    })
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error('Resend erro: ' + JSON.stringify(result));
+  logger.info('Email (codigo) enviado! ID: ' + result.id);
+  return result;
+}
+
+module.exports = { sendProductEmail, sendCodeEmail, renderCodeTemplate, sendLimitWarningEmail, testSmtpConnection, sendTestEmail, sendDeliveryFailedEmail, sendPasswordResetEmail, sendVerificationEmail };

@@ -281,6 +281,11 @@ async function initDatabase() {
       ALTER TABLE product_files ADD COLUMN IF NOT EXISTS file_size BIGINT;
       ALTER TABLE products      ADD COLUMN IF NOT EXISTS promo_price_cents INTEGER;
       ALTER TABLE payouts       ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP;
+      ALTER TABLE products      ADD COLUMN IF NOT EXISTS delivery_type               TEXT DEFAULT 'file';
+      ALTER TABLE products      ADD COLUMN IF NOT EXISTS delivery_webhook_url        TEXT;
+      ALTER TABLE products      ADD COLUMN IF NOT EXISTS delivery_webhook_secret_enc TEXT;
+      ALTER TABLE products      ADD COLUMN IF NOT EXISTS delivery_email_subject      TEXT;
+      ALTER TABLE products      ADD COLUMN IF NOT EXISTS delivery_email_html         TEXT;
     `);
 
     // Planos — DO UPDATE garante que mudancas de preco/limite sejam aplicadas no restart

@@ -1519,7 +1519,7 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--orange); outline
       </div>
 
       <!-- Seletor de anexos: arquivo único ou combo -->
-      <div class="form-group full">
+      <div class="form-group full" id="m-attach-sel">
         <label class="form-label">Anexos</label>
         <div class="seg" style="display:flex;gap:0;margin-bottom:8px;background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:3px;width:fit-content;">
           <button type="button" id="attach-single-btn" onclick="setAttachMode('single')" style="border:0;background:var(--orange);color:#fff;font-size:12px;font-weight:600;padding:7px 14px;border-radius:7px;cursor:pointer;">Arquivo único</button>
@@ -1528,7 +1528,7 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--orange); outline
         <div class="form-hint" style="display:flex;align-items:center;gap:5px;"><i class="ti ti-info-circle" style="color:var(--orange);"></i> Limite total: <strong style="margin:0 3px;">25&nbsp;MB</strong> somando todos os anexos — garante a entrega por email.</div>
       </div>
 
-      <div class="form-group full">
+      <div class="form-group full" id="m-mainfile">
         <label class="form-label">Arquivo principal (PDF / Ebook)</label>
         <div class="upload-zone" id="upload-zone" onclick="document.getElementById('m-file').click()">
           <i class="ti ti-cloud-upload upload-icon" id="upload-icon"></i>
@@ -1573,6 +1573,36 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--orange); outline
       <div style="display:flex;gap:16px;align-items:center;">
         <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;"><input type="checkbox" id="m-accept-pix" checked style="width:16px;height:16px;accent-color:var(--orange);"/> <i class="ti ti-qrcode" style="color:var(--emerald);"></i> Pix</label>
         <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;"><input type="checkbox" id="m-accept-card" checked style="width:16px;height:16px;accent-color:var(--orange);"/> <i class="ti ti-credit-card" style="color:var(--orange);"></i> Cartão</label>
+      </div>
+    </div>
+
+    <!-- Tipo de entrega -->
+    <div id="m-delivery-section" style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px;"><i class="ti ti-truck-delivery" style="color:var(--orange);"></i> Tipo de entrega</div>
+      <div style="display:flex;gap:0;margin-bottom:10px;background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:3px;width:fit-content;">
+        <button type="button" id="dt-file" onclick="setDeliveryType('file')" style="border:0;background:var(--orange);color:#fff;font-size:12px;font-weight:600;padding:7px 14px;border-radius:7px;cursor:pointer;">Arquivo (padrão)</button>
+        <button type="button" id="dt-webhook" onclick="setDeliveryType('webhook')" style="border:0;background:transparent;color:var(--text2);font-size:12px;font-weight:600;padding:7px 14px;border-radius:7px;cursor:pointer;">Webhook (código/licença)</button>
+      </div>
+      <div id="m-delivery-webhook" style="display:none;">
+        <div class="form-hint" style="margin-bottom:10px;line-height:1.5;"><i class="ti ti-info-circle" style="color:var(--orange);"></i> Na venda, a Vaultly chama seu endpoint (assinado), recebe <code>{codigo, link}</code> e <strong>envia o e-mail</strong> com a sua marca. Não precisa de arquivo.</div>
+        <div class="form-group full">
+          <label class="form-label">URL do webhook</label>
+          <input type="text" class="form-input" id="m-dw-url" placeholder="https://script.google.com/macros/s/.../exec" style="font-family:'JetBrains Mono',monospace;font-size:12px;" />
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Segredo HMAC</label>
+          <input type="text" class="form-input" id="m-dw-secret" placeholder="cole o segredo do seu endpoint" style="font-family:'JetBrains Mono',monospace;font-size:12px;" />
+          <div class="form-hint">É o mesmo segredo que o seu endpoint usa pra validar a assinatura. Fica criptografado.</div>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Assunto do e-mail</label>
+          <input type="text" class="form-input" id="m-dw-subject" placeholder="Seu acesso ao produto" />
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Template do e-mail (HTML, opcional)</label>
+          <textarea class="form-textarea" id="m-dw-html" rows="4" placeholder="Deixe vazio para usar o modelo padrão (código + botão de acesso)."></textarea>
+          <div class="form-hint">Variáveis: <code>{{codigo}}</code> · <code>{{link}}</code> · <code>{{nome}}</code> · <code>{{email}}</code> · <code>{{produto}}</code></div>
+        </div>
       </div>
     </div>
 
@@ -3820,6 +3850,26 @@ function setAttachMode(mode) {
   }
 }
 
+// ── Tipo de entrega (arquivo vs webhook/código) ──
+var deliveryType = 'file';
+function setDeliveryType(t) {
+  deliveryType = (t === 'webhook') ? 'webhook' : 'file';
+  var on = 'background:var(--orange);color:#fff;', off = 'background:transparent;color:var(--text2);';
+  var base = 'border:0;font-size:12px;font-weight:600;padding:7px 14px;border-radius:7px;cursor:pointer;';
+  var fb = document.getElementById('dt-file'), wb = document.getElementById('dt-webhook');
+  if (fb) fb.style.cssText = base + (deliveryType === 'file' ? on : off);
+  if (wb) wb.style.cssText = base + (deliveryType === 'webhook' ? on : off);
+  var wh = document.getElementById('m-delivery-webhook'); if (wh) wh.style.display = (deliveryType === 'webhook') ? 'block' : 'none';
+  var attachSel = document.getElementById('m-attach-sel'); if (attachSel) attachSel.style.display = (deliveryType === 'webhook') ? 'none' : '';
+  var mainFile = document.getElementById('m-mainfile'); if (mainFile) mainFile.style.display = (deliveryType === 'webhook') ? 'none' : '';
+  if (deliveryType === 'webhook') {
+    var cw = document.getElementById('m-combo-wrap'); if (cw) cw.style.display = 'none';
+    var cu = document.getElementById('m-combo-upsell'); if (cu) cu.style.display = 'none';
+  } else {
+    setAttachMode(attachMode);
+  }
+}
+
 function toggleMoreOpts() {
   var box = document.getElementById('more-opts'), chev = document.getElementById('more-opts-chevron');
   if (!box) return;
@@ -3856,6 +3906,13 @@ function openModal() {
   _mainFileBytes = 0; _comboFiles = []; attachMode = 'single';
   var moBox = document.getElementById('more-opts'); if (moBox) moBox.style.display = 'none';
   var moCh = document.getElementById('more-opts-chevron'); if (moCh) moCh.className = 'ti ti-chevron-down';
+  // Entrega: volta pro padrão (arquivo) e limpa os campos de webhook
+  document.getElementById('m-dw-url').value = '';
+  document.getElementById('m-dw-secret').value = '';
+  document.getElementById('m-dw-secret').placeholder = 'cole o segredo do seu endpoint';
+  document.getElementById('m-dw-subject').value = '';
+  document.getElementById('m-dw-html').value = '';
+  setDeliveryType('file');
   setupComboSection('');  // novo produto: sem id ainda
   var sellingSec = document.getElementById('m-selling-section');
   if (sellingSec) {
@@ -4082,6 +4139,14 @@ function editProduct(id) {
     document.getElementById('upload-title').textContent = p.file_name;
     document.getElementById('upload-sub').textContent   = (_mainFileBytes ? fmtMB(_mainFileBytes) + ' · ' : '') + 'arquivo atual · selecione outro para substituir';
   }
+  // Entrega
+  document.getElementById('m-dw-url').value     = p.delivery_webhook_url || '';
+  document.getElementById('m-dw-subject').value = p.delivery_email_subject || '';
+  document.getElementById('m-dw-html').value    = p.delivery_email_html || '';
+  var _dws = document.getElementById('m-dw-secret');
+  _dws.value = '';
+  _dws.placeholder = p.has_delivery_secret ? '•••••• (mantém o atual; preencha p/ trocar)' : 'cole o segredo do seu endpoint';
+  setDeliveryType(p.delivery_type === 'webhook' ? 'webhook' : 'file');
   document.getElementById('modal-title').textContent = 'Editar produto';
   document.getElementById('save-btn').innerHTML      = '<i class="ti ti-device-floppy"></i> Salvar Alterações';
   setupComboSection(id);  // carrega arquivos do combo (Pro+)
@@ -4197,6 +4262,21 @@ async function saveProduct() {
           try { await apiFetch('/api/products/' + editingId + '/selling', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sellable: false }) }); } catch(e) {}
         }
       }
+    }
+
+    // Tipo de entrega (arquivo vs webhook)
+    if (data.data && data.data.id) {
+      var dres = await apiFetch('/api/products/' + data.data.id + '/delivery', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          delivery_type: deliveryType,
+          delivery_webhook_url: (document.getElementById('m-dw-url').value || '').trim(),
+          delivery_webhook_secret: (document.getElementById('m-dw-secret').value || '').trim(),
+          delivery_email_subject: (document.getElementById('m-dw-subject').value || '').trim(),
+          delivery_email_html: document.getElementById('m-dw-html').value || ''
+        })
+      });
+      if (dres && !dres.success) showToast(dres.error || 'Erro ao salvar a entrega.', 'warn');
     }
 
     // Se veio de "Vincular" em Produtos Pendentes, apaga o registro da fila
