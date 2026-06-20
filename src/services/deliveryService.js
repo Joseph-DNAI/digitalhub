@@ -1,6 +1,7 @@
 // src/services/deliveryService.js — multi-tenant
 const { products, deliveries, tenants, unmatchedProducts, users, productFiles, orders, queryOne } = require('../models/database');
-const { sendProductEmail, sendLimitWarningEmail, sendDeliveryFailedEmail } = require('./emailService');
+const { sendProductEmail, sendCodeEmail, renderCodeTemplate, sendLimitWarningEmail, sendDeliveryFailedEmail } = require('./emailService');
+const { callSaleWebhook } = require('./saleWebhookService');
 const { normalizePayload, isApprovedEvent } = require('./platformAdapter');
 const logger = require('../config/logger');
 
@@ -109,28 +110,49 @@ async function processDirectOrder(order) {
 
 async function attemptDelivery(deliveryId, product, normalized, tenant, showBranding, user) {
   try {
-    // Monta a lista de anexos: arquivo principal + extras do combo (Pro+)
-    var attachments = [];
-    if (product.file_path) attachments.push({ filePath: product.file_path, fileName: product.file_name });
-    try {
-      var extras = await productFiles.findByProduct(product.tenant_id || (tenant && tenant.id), product.id);
-      (extras || []).forEach(function(f) { attachments.push({ filePath: f.file_path, fileName: f.file_name }); });
-    } catch (e) { logger.warn('Falha ao buscar arquivos extras: ' + e.message); }
+    const resendApiKey = tenant?.resend_api_key  || process.env.RESEND_API_KEY || process.env.SMTP_PASS;
+    const fromName     = tenant?.email_from_name    || process.env.EMAIL_FROM_NAME    || 'Vaultly';
+    const fromAddress  = tenant?.email_from_address || process.env.EMAIL_FROM_ADDRESS || 'onboarding@resend.dev';
 
-    await sendProductEmail({
-      buyerEmail:    normalized.buyerEmail,
-      buyerName:     normalized.buyerName,
-      productName:   product.name,
-      attachments:   attachments,
-      filePath:      product.file_path,
-      fileName:      product.file_name,
-      emailTemplate: product.email_template || (tenant && tenant.email_template) || null,
-      orderId:       normalized.orderId,
-      resendApiKey:  tenant?.resend_api_key  || process.env.RESEND_API_KEY || process.env.SMTP_PASS,
-      fromName:      tenant?.email_from_name    || process.env.EMAIL_FROM_NAME    || 'Vaultly',
-      fromAddress:   tenant?.email_from_address || process.env.EMAIL_FROM_ADDRESS || 'onboarding@resend.dev',
-      showBranding:  showBranding || false
-    });
+    if (product.delivery_type === 'webhook') {
+      // Entrega por webhook (Modelo A): chama o endpoint do vendedor, templa e envia (sem anexo).
+      const { codigo, link } = await callSaleWebhook(product, {
+        id: normalized.orderId, buyer_email: normalized.buyerEmail, buyer_name: normalized.buyerName,
+        amount_cents: product.price_cents
+      });
+      const html = renderCodeTemplate(product.delivery_email_html, {
+        codigo: codigo, link: link, nome: normalized.buyerName || normalized.buyerEmail,
+        email: normalized.buyerEmail, produto: product.name
+      });
+      await sendCodeEmail({
+        buyerEmail: normalized.buyerEmail, productName: product.name,
+        subject: product.delivery_email_subject || ('Seu acesso — ' + product.name),
+        html: html, resendApiKey: resendApiKey, fromName: fromName, fromAddress: fromAddress
+      });
+    } else {
+      // Monta a lista de anexos: arquivo principal + extras do combo (Pro+)
+      var attachments = [];
+      if (product.file_path) attachments.push({ filePath: product.file_path, fileName: product.file_name });
+      try {
+        var extras = await productFiles.findByProduct(product.tenant_id || (tenant && tenant.id), product.id);
+        (extras || []).forEach(function(f) { attachments.push({ filePath: f.file_path, fileName: f.file_name }); });
+      } catch (e) { logger.warn('Falha ao buscar arquivos extras: ' + e.message); }
+
+      await sendProductEmail({
+        buyerEmail:    normalized.buyerEmail,
+        buyerName:     normalized.buyerName,
+        productName:   product.name,
+        attachments:   attachments,
+        filePath:      product.file_path,
+        fileName:      product.file_name,
+        emailTemplate: product.email_template || (tenant && tenant.email_template) || null,
+        orderId:       normalized.orderId,
+        resendApiKey:  resendApiKey,
+        fromName:      fromName,
+        fromAddress:   fromAddress,
+        showBranding:  showBranding || false
+      });
+    }
     await deliveries.updateStatus(deliveryId, 'delivered');
     logger.info('Email entregue — delivery: ' + deliveryId);
     if (tenant && user) {

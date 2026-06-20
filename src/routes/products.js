@@ -6,6 +6,7 @@ const path     = require('path');
 const fs       = require('fs');
 const { products, unmatchedProducts, tenants, productFiles } = require('../models/database');
 const { uploadFile, deleteFile, copyFile } = require('../services/storageService');
+const { encrypt } = require('../services/crypto');
 const { requireAuth } = require('../middleware/auth');
 const { fetchYampiProducts, fetchKiwifyProducts } = require('../services/platformApiService');
 const { initialStatus, canActivate, atGlobalCap, MAX_PRODUCTS_TOTAL } = require('../services/productLimits');
@@ -77,7 +78,7 @@ function uploadMw(req, res, next) {
 
 router.get('/', async (req, res) => {
   try {
-    const all = (await products.findAll(req.tenantId)).map(({ file_path, ...p }) => p);
+    const all = (await products.findAll(req.tenantId)).map(({ file_path, delivery_webhook_secret_enc, ...p }) => ({ ...p, has_delivery_secret: !!delivery_webhook_secret_enc }));
     res.json({ success: true, data: all });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -88,7 +89,8 @@ router.get('/:id', async (req, res) => {
   try {
     const p = await products.findById(req.tenantId, req.params.id);
     if (!p) return res.status(404).json({ success: false, error: 'Produto não encontrado' });
-    const { file_path, ...safe } = p;
+    const { file_path, delivery_webhook_secret_enc, ...safe } = p;
+    safe.has_delivery_secret = !!delivery_webhook_secret_enc;
     // Inclui arquivos extras do combo (sem expor o file_path interno)
     const extras = await productFiles.findByProduct(req.tenantId, req.params.id);
     safe.extra_files = (extras || []).map(f => ({ id: f.id, file_name: f.file_name, file_size: f.file_size, created_at: f.created_at }));
@@ -573,6 +575,36 @@ router.put('/:id/selling', requireAuth, async (req, res) => {
   } catch (err) {
     logger.error('products/selling: ' + err.message);
     res.status(500).json({ success: false, error: 'Erro interno.' });
+  }
+});
+
+// PUT /api/products/:id/delivery — configura a entrega por webhook (Modelo A)
+router.put('/:id/delivery', requireAuth, async (req, res) => {
+  try {
+    const existing = await products.findById(req.tenantId, req.params.id);
+    if (!existing) return res.status(404).json({ success: false, error: 'Produto nao encontrado' });
+    const { delivery_type, delivery_webhook_url, delivery_webhook_secret, delivery_email_subject, delivery_email_html } = req.body;
+    const type = delivery_type === 'webhook' ? 'webhook' : 'file';
+    const data = { delivery_type: type };
+    if (type === 'webhook') {
+      const url = String(delivery_webhook_url || '').trim();
+      if (!/^https:\/\//i.test(url)) return res.status(400).json({ success: false, error: 'Informe uma URL https valida para o webhook.' });
+      data.delivery_webhook_url = url;
+      data.delivery_email_subject = (delivery_email_subject || '').trim() || null;
+      data.delivery_email_html = (delivery_email_html || '').trim() || null;
+      if (delivery_webhook_secret && String(delivery_webhook_secret).trim()) {
+        data.delivery_webhook_secret_enc = encrypt(String(delivery_webhook_secret).trim());
+      } else if (!existing.delivery_webhook_secret_enc) {
+        return res.status(400).json({ success: false, error: 'Informe o segredo HMAC do webhook (do seu endpoint).' });
+      }
+    }
+    const updated = await products.update(req.tenantId, req.params.id, data);
+    const { file_path, delivery_webhook_secret_enc, ...safe } = updated;
+    safe.has_delivery_secret = !!delivery_webhook_secret_enc;
+    res.json({ success: true, data: safe });
+  } catch (err) {
+    logger.error('products/delivery: ' + err.message);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 

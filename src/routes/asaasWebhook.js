@@ -1,9 +1,10 @@
 // src/routes/asaasWebhook.js — recebe eventos de pagamento do Asaas
 const express = require('express');
 const router  = express.Router();
-const { orders, payouts } = require('../models/database');
+const { orders, payouts, products } = require('../models/database');
 const { isValidWebhookToken } = require('../services/asaasService');
 const { processDirectOrder } = require('../services/deliveryService');
+const { callRefundWebhook } = require('../services/saleWebhookService');
 const logger = require('../config/logger');
 
 const PAID_EVENTS = ['PAYMENT_RECEIVED', 'PAYMENT_CONFIRMED'];
@@ -67,6 +68,11 @@ router.post('/webhook', async (req, res) => {
         const newStatus = event === 'PAYMENT_REFUNDED' ? 'refunded' : 'chargeback';
         await orders.updateStatus(order.id, newStatus);
         logger.info('Order ' + order.id + ' -> ' + newStatus + ' (sem desentrega; ver disclaimer)');
+        // Entrega por webhook: avisa o endpoint do vendedor p/ revogar (ex.: licenca)
+        try {
+          const prod = await products.findById(order.tenant_id, order.product_id);
+          if (prod && prod.delivery_type === 'webhook') setImmediate(() => callRefundWebhook(prod, order));
+        } catch (e) { logger.warn('refund webhook (order ' + order.id + '): ' + e.message); }
       } else {
         logger.debug('Asaas evento ignorado: ' + event);
       }
